@@ -293,3 +293,5 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.YAMLRenderer'
     )                                    
 }
+
+AUTH_USER_MODEL = 'filemaster.CustomUser'
