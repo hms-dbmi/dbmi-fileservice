@@ -1,0 +1,11 @@
+django
+django-guardian
+boto
+django-social-auth
+django-bootstrap3
+djangorestframework
+drf-compound-fields
+markdown
+django-filter
+django-debug-toolbar
+django-encrypted-fields
