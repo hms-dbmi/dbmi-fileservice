@@ -13,7 +13,7 @@ urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'', include('social_auth.urls')),
-    #url(r'^secrets/',include('secrets.urls')),
+    url(r'^filemaster/',include('filemaster.urls')),
     url(r'^api-token-auth/', 'rest_framework.authtoken.views.obtain_auth_token'),    
 
 )

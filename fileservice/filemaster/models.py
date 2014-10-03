@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-import re
+import re,urllib
 
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
@@ -9,6 +9,12 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
+from guardian.shortcuts import assign_perm,remove_perm
+from rest_framework.authtoken.models import Token
+import random,string
+
+class HealthCheck(models.Model):
+    message = models.CharField(max_length=255)
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     """
@@ -47,7 +53,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
     def get_absolute_url(self):
-        return "/users/%s/" % urlquote(self.username)
+        return "/users/%s/" % urllib.quote(self.username)
 
     def get_full_name(self):
         """
