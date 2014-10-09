@@ -8,10 +8,22 @@ from django.core import validators
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
+from django.dispatch import receiver
+from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save,post_syncdb
 
 from guardian.shortcuts import assign_perm,remove_perm
 from rest_framework.authtoken.models import Token
 import random,string
+
+
+def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+#@receiver(post_save, sender=get_user_model())
+#def create_auth_token(sender, instance=None, created=False, **kwargs):
+#    if created:
+#        Token.objects.create(user=instance)
 
 class HealthCheck(models.Model):
     message = models.CharField(max_length=255)
@@ -51,6 +63,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __unicode__(self):
         return self.username
+    
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            super(CustomUser, self).save(*args, **kwargs)
+            Token.objects.create(user=self)
+        else:
+            super(CustomUser, self).save(*args, **kwargs)  
 
     def get_absolute_url(self):
         return "/users/%s/" % urllib.quote(self.username)

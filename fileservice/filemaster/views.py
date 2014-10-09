@@ -27,7 +27,7 @@ from rest_framework.permissions import IsAuthenticated
 
 
 from .models import HealthCheck
-from .authenticate import ExampleAuthentication
+from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer
 #from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from guardian.shortcuts import assign_perm
@@ -35,6 +35,7 @@ from guardian.shortcuts import assign_perm
 class HealthCheckList(viewsets.ModelViewSet):
     queryset = HealthCheck.objects.all()
     serializer_class = HealthCheckSerializer
-    authentication_classes = (ExampleAuthentication,)
+    authentication_classes = (ExampleAuthentication,Auth0Authentication,)
     permission_classes = (IsAuthenticated,)
-    filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('message', 'id')
