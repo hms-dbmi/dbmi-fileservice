@@ -1,5 +1,6 @@
 django
 django-guardian
+django-extensions
 boto
 django-social-auth
 django-bootstrap3
@@ -11,3 +12,5 @@ django-debug-toolbar
 django-encrypted-fields
 PyJWT
 drf-extensions
+jsonfield
+django-taggit

@@ -11,19 +11,43 @@ from django.utils import timezone
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save,post_syncdb
+from django_extensions.db.fields import UUIDField
+from jsonfield import JSONField
 
 from guardian.shortcuts import assign_perm,remove_perm
 from rest_framework.authtoken.models import Token
 import random,string
 
+from taggit.managers import TaggableManager
+
+
+GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS"]
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
-#@receiver(post_save, sender=get_user_model())
-#def create_auth_token(sender, instance=None, created=False, **kwargs):
-#    if created:
-#        Token.objects.create(user=instance)
+class AutoUUIDField(UUIDField):
+    def contribute_to_class(self, cls, name):
+        assert not cls._meta.has_auto_field, "A model can't have more than one AutoField."
+        super(UUIDField, self).contribute_to_class(cls, name)
+        cls._meta.has_auto_field = True
+        cls._meta.auto_field = self
+ 
+class ArchiveFile(models.Model):
+    id = AutoUUIDField(primary_key=True)
+    description = models.CharField(max_length=255,blank=True,null=True)
+    metadata=JSONField(blank=True,null=True)
+    
+    tags = TaggableManager()
+
+    def __unicode__(self):
+        return "%s" % (self.id)
+
+    class Meta:
+        permissions = (
+            ('download_archivefile', 'Download File'),
+        )
+
 
 class HealthCheck(models.Model):
     message = models.CharField(max_length=255)

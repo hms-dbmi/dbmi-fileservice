@@ -26,15 +26,14 @@ from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated
 
 
-from .models import HealthCheck
+from .models import HealthCheck,GROUPTYPES,ArchiveFile
 from .authenticate import ExampleAuthentication,Auth0Authentication
-from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer
+from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
 
-GROUPTYPES=["READ","WRITE","ADMIN"]
 User = get_user_model()        
 
 class HealthCheckList(viewsets.ModelViewSet):
@@ -44,6 +43,15 @@ class HealthCheckList(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('message', 'id')
+
+class ArchiveFileList(viewsets.ModelViewSet):
+    queryset = ArchiveFile.objects.all()
+    serializer_class = ArchiveFileSerializer
+    authentication_classes = (Auth0Authentication,)
+    permission_classes = (IsAuthenticated,)
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('id',)
+
 
 def serializeGroup(user,group=None):
     groupstructure=None
@@ -92,7 +100,7 @@ class GroupList(APIView):
     
             for u in self.request.DATA['users']:
                 try:
-                    user = User.objects.get(email=u)
+                    user = User.objects.get(email=u["email"])
                     user.groups.add(group)
                 except Exception,e:
                     print "ERROR: %s" % e
@@ -132,7 +140,7 @@ class GroupDetail(APIView):
 
         for u in self.request.DATA['users']:
             try:
-                user = User.objects.get(email=u)
+                user = User.objects.get(email=u["email"])
                 user.groups.add(group)
             except Exception,e:
                 print "ERROR: %s" % e
@@ -141,14 +149,6 @@ class GroupDetail(APIView):
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
 
-
-#    def put(self, request, pk, format=None):
-#        snippet = self.get_object(pk)
-#        serializer = SnippetSerializer(snippet, data=request.DATA)
-#        if serializer.is_valid():
-#            serializer.save()
-#            return Response(serializer.data)
-#        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         snippet = self.get_object(pk)

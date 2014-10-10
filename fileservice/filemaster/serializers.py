@@ -2,8 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth.models import User, Group, Permission
 from rest_framework.authtoken.models import Token
 from drf_compound_fields.fields import ListField,DictField,ListOrItemField
+from rest_framework import relations
 
-from .models import HealthCheck
+from .models import HealthCheck,ArchiveFile
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -31,3 +32,8 @@ class HealthCheckSerializer(serializers.ModelSerializer):
         model = HealthCheck
         fields = ('id', 'message')
         
+class ArchiveFileSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = ArchiveFile
+        fields = ('id','description','metadata',)

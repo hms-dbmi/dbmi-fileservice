@@ -1,13 +1,15 @@
 from django.conf.urls import patterns, include, url
 from django.contrib.auth import views
 from rest_framework.urlpatterns import format_suffix_patterns
-from .views import HealthCheckList,GroupList,GroupDetail
+from .views import HealthCheckList,GroupList,GroupDetail,ArchiveFileList
 from rest_framework.routers import DefaultRouter
 from rest_framework import renderers
 
 
 router = DefaultRouter()
 router.register(r'healthcheck', HealthCheckList)
+router.register(r'file', ArchiveFileList)
+
 
 urlpatterns = patterns(
                        'filemaster.views',
