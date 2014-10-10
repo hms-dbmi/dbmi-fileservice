@@ -62,7 +62,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = _('users')
 
     def __unicode__(self):
-        return self.username
+        return self.email
     
     def save(self, *args, **kwargs):
         if self.pk is None:

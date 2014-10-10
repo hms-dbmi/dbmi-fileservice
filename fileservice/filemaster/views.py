@@ -51,16 +51,16 @@ def serializeGroup(user,group=None):
         userstructure=[]
         if user.has_perm('auth.view_group', group):
             for u in group.user_set.all():
-                userstructure.append({"id":u.id,"email":u.email})
-            groupstructure={"name":group.name,"id":group.id,"users":userstructure}
+                userstructure.append({"email":u.email})
+            groupstructure={"name":group.name,"id":group.id,"users":group.user_set.all()}
     else:
         groupstructure=[]
         for group in Group.objects.all():
             userstructure=[]
             if user.has_perm('auth.view_group', group):
                 for u in group.user_set.all():
-                    userstructure.append({"id":u.id,"email":u.email})
-                groupstructure.append({"name":group.name,"id":group.id,"users":userstructure})
+                    userstructure.append({"email":u.email})
+                groupstructure.append({"name":group.name,"id":group.id,"users":group.user_set.all()})
     return groupstructure
 
 
@@ -92,13 +92,13 @@ class GroupList(APIView):
     
             for u in self.request.DATA['users']:
                 try:
-                    user = User.objects.get(id=u)
+                    user = User.objects.get(email=u)
                     user.groups.add(group)
                 except Exception,e:
                     print "ERROR: %s" % e
             
             for user in group.user_set.all():
-                userstructure.append({"id":user.id,"email":user.email})
+                userstructure.append({"email":user.email})
 
             sdata.append({"name":group.name,"id":group.id,"users":userstructure}) 
         
@@ -132,7 +132,7 @@ class GroupDetail(APIView):
 
         for u in self.request.DATA['users']:
             try:
-                user = User.objects.get(id=u)
+                user = User.objects.get(email=u)
                 user.groups.add(group)
             except Exception,e:
                 print "ERROR: %s" % e

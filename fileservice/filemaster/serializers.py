@@ -10,16 +10,16 @@ class GroupSerializer(serializers.ModelSerializer):
         model = Group
         fields = ('id', 'name')
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.Serializer):
+    email = serializers.CharField(required=False)
 
     class Meta:
-        model = User
-        fields = ('id', 'email')
+        fields = ('email',)
         
 class SpecialGroupSerializer(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
-    users = ListOrItemField(DictField(required=False),required=False)
+    users = UserSerializer(required=False)
 
     class Meta:
         fields = ('id','name','users')    
