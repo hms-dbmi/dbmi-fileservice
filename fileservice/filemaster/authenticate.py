@@ -38,6 +38,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
         except jwt.DecodeError:
             return None        
         
+        
         try:
             user = User.objects.get(email=payload["email"])
         except User.DoesNotExist:
