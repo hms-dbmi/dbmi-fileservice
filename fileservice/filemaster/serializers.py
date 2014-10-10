@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'email')
         
 class SpecialGroupSerializer(serializers.Serializer):
-    id = serializers.Field()
+    id = serializers.CharField()
     name = serializers.CharField()
     users = ListOrItemField(DictField(required=False),required=False)
 

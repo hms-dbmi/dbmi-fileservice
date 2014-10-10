@@ -45,6 +45,25 @@ class HealthCheckList(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('message', 'id')
 
+def serializeGroup(user,group=None):
+    groupstructure=None
+    if group:
+        userstructure=[]
+        if user.has_perm('auth.view_group', group):
+            for u in group.user_set.all():
+                userstructure.append({"id":u.id,"email":u.email})
+            groupstructure={"name":group.name,"id":group.id,"users":userstructure}
+    else:
+        groupstructure=[]
+        for group in Group.objects.all():
+            userstructure=[]
+            if user.has_perm('auth.view_group', group):
+                for u in group.user_set.all():
+                    userstructure.append({"id":u.id,"email":u.email})
+                groupstructure.append({"name":group.name,"id":group.id,"users":userstructure})
+    return groupstructure
+
+
 class GroupList(APIView):
     authentication_classes = (Auth0Authentication,)
     permission_classes = (IsAuthenticated,)
@@ -53,13 +72,7 @@ class GroupList(APIView):
     List all groups that user can see, or create a new group.
     """
     def get(self, request, format=None):
-        groupstructure = []
-        for group in Group.objects.all():
-            userstructure=[]
-            if request.user.has_perm('auth.view_group', group):
-                for user in group.user_set.all():
-                    userstructure.append({"id":user.id,"email":user.email})
-                groupstructure.append({"name":group.name,"id":group.id,"users":userstructure})
+        groupstructure = serializeGroup(request.user)
         serializer = SpecialGroupSerializer(groupstructure, many=True)
         return Response(serializer.data)
 
@@ -72,10 +85,10 @@ class GroupList(APIView):
             group, created = Group.objects.get_or_create(name=request.DATA['name']+"__"+types)
 
             self.request.user.groups.add(group)
-            if types=="ADMIN":
-                assign_perm('view_group', self.request.user, group)
-                assign_perm('change_group', self.request.user, group)
-                assign_perm('delete_group', self.request.user, group)
+            assign_perm('view_group', self.request.user, group)
+            assign_perm('add_group', self.request.user, group)                
+            assign_perm('change_group', self.request.user, group)
+            assign_perm('delete_group', self.request.user, group)
     
             for u in self.request.DATA['users']:
                 try:
@@ -90,6 +103,59 @@ class GroupList(APIView):
             sdata.append({"name":group.name,"id":group.id,"users":userstructure}) 
         
         return Response(sdata, status=status.HTTP_201_CREATED)
+
+class GroupDetail(APIView):
+    """
+    Retrieve, update or delete a Group instance.
+    """
+    authentication_classes = (Auth0Authentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self, pk):
+        try:
+            return Group.objects.get(pk=pk)
+        except Group.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        group = self.get_object(pk)
+        if not request.user.has_perm('auth.view_group', group):
+            return HttpResponseForbidden()        
+        groupstructure = serializeGroup(request.user,group=group)
+        serializer = SpecialGroupSerializer(groupstructure, many=False)
+        return Response(serializer.data)
+
+    def put(self, request, pk, format=None):
+        group = self.get_object(pk)
+        if not request.user.has_perm('auth.change_group', group):
+            return HttpResponseForbidden()        
+
+        for u in self.request.DATA['users']:
+            try:
+                user = User.objects.get(id=u)
+                user.groups.add(group)
+            except Exception,e:
+                print "ERROR: %s" % e
+
+        groupstructure = serializeGroup(request.user,group=group)
+        serializer = SpecialGroupSerializer(groupstructure, many=False)
+        return Response(serializer.data)
+
+
+#    def put(self, request, pk, format=None):
+#        snippet = self.get_object(pk)
+#        serializer = SnippetSerializer(snippet, data=request.DATA)
+#        if serializer.is_valid():
+#            serializer.save()
+#            return Response(serializer.data)
+#        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        snippet = self.get_object(pk)
+        if not request.user.has_perm('auth.delete_group', snippet):
+            return HttpResponseForbidden()        
+        snippet.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
 # class GroupViewSet(viewsets.ModelViewSet):
 #     serializer_class = GroupSerializer
