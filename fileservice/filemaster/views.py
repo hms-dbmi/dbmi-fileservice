@@ -47,10 +47,11 @@ class HealthCheckList(viewsets.ModelViewSet):
 class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
+    lookup_field = 'uuid'    
     authentication_classes = (Auth0Authentication,)
     permission_classes = (IsAuthenticated,)
     filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('id',)
+    filter_fields = ('uuid',)
 
 
 def serializeGroup(user,group=None):

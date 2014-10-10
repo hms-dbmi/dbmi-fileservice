@@ -3,10 +3,10 @@ from __future__ import unicode_literals
 
 from django.db import models, migrations
 import re
-import filemaster.models
 import jsonfield.fields
 import taggit.managers
 import django.utils.timezone
+import uuidfield.fields
 import django.core.validators
 
 
@@ -44,7 +44,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ArchiveFile',
             fields=[
-                ('id', filemaster.models.AutoUUIDField(primary_key=True, serialize=False, editable=False, blank=True, name=b'id')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
                 ('description', models.CharField(max_length=255, null=True, blank=True)),
                 ('metadata', jsonfield.fields.JSONField(null=True, blank=True)),
                 ('tags', taggit.managers.TaggableManager(to='taggit.Tag', through='taggit.TaggedItem', help_text='A comma-separated list of tags.', verbose_name='Tags')),

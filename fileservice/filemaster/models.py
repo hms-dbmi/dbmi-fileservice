@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save,post_syncdb
+#from uuidfield import UUIDField
 from django_extensions.db.fields import UUIDField
 from jsonfield import JSONField
 
@@ -25,20 +26,16 @@ GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS"]
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
-
-class AutoUUIDField(UUIDField):
-    def contribute_to_class(self, cls, name):
-        assert not cls._meta.has_auto_field, "A model can't have more than one AutoField."
-        super(UUIDField, self).contribute_to_class(cls, name)
-        cls._meta.has_auto_field = True
-        cls._meta.auto_field = self
  
 class ArchiveFile(models.Model):
-    id = AutoUUIDField(primary_key=True)
+    uuid = UUIDField()
     description = models.CharField(max_length=255,blank=True,null=True)
     metadata=JSONField(blank=True,null=True)
     
     tags = TaggableManager()
+
+    def get_tags_display(self):
+        return self.tags.values_list('name', flat=True)
 
     def __unicode__(self):
         return "%s" % (self.id)

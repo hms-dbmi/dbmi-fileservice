@@ -33,7 +33,8 @@ class HealthCheckSerializer(serializers.ModelSerializer):
         fields = ('id', 'message')
         
 class ArchiveFileSerializer(serializers.ModelSerializer):
-    
+    tags = serializers.Field(source='get_tags_display')
     class Meta:
         model = ArchiveFile
-        fields = ('id','description','metadata',)
+        lookup_field = 'uuid'
+        fields = ('id','uuid','description','metadata','tags',)

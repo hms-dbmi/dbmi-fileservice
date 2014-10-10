@@ -205,7 +205,8 @@ LOCAL_APPS = (
     'rest_framework.authtoken',
     'filemaster',   
     'bootstrap3',
-    'taggit'
+    'taggit',
+    'django_extensions',
 )
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
