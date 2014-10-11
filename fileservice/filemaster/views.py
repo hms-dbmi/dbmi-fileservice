@@ -34,6 +34,7 @@ from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,Dj
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
+import json
 
 User = get_user_model()        
 
@@ -55,16 +56,37 @@ class ArchiveFileList(viewsets.ModelViewSet):
     filter_fields = ('uuid',)
 
     def pre_save(self, obj):
-        obj.owner = self.request.user
+        u = User.objects.get(email=self.request.user.email)
+        obj.owner = u
+        
 
-    def post_save(self, *args, **kwargs):
-        if 'tags' in self.request.DATA:
-            self.object.tags.set(*self.request.DATA['tags']) # type(self.object.tags) == <taggit.managers._TaggableManager>
-        return super(ArchiveFileList, self).post_save(*args, **kwargs)        
+    def post_save(self, obj, created=False):
+        #if 'tags' in self.request.DATA:
+        #    self.object.tags.set(*self.request.DATA['tags']) # type(self.object.tags) == <taggit.managers._TaggableManager>
+        removeTags = self.request.QUERY_PARAMS.get('removeTags', None)
+        tagstash=[]        
+        if removeTags and 'tags' in self.request.DATA:
+            try:
+                af = ArchiveFile.objects.get(uuid=obj.uuid)
+                af.tags.clear()                
+            except Exception,e:
+                print "ERROR %s " % e
+        for t in self.request.DATA['tags']:
+            tagstash.append(t)
+        map(obj.tags.add, tagstash)
+        return super(ArchiveFileList, self).post_save(obj)        
 
     @detail_route(methods=['get'])
     def download(self, request, uuid=None):
-        return Response({'status': 'password set'})
+        url = None
+        #get presigned url
+        return Response({'url': url})
+
+    @detail_route(methods=['get'])
+    def upload(self, request, uuid=None):
+        url = None
+        #get presigned url
+        return Response({'url': url})
 
 
 def serializeGroup(user,group=None):

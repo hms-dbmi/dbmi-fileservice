@@ -50,7 +50,7 @@ def callback(request):
     user_info = requests.get(user_url).json()
 
     try:
-        User = get_user_model()        
+        User = get_user_model()
         User.objects.create_user(id_generator(16), email=user_info["email"], password=id_generator(16))
     except Exception,e:
         print "ERROR %s" % e
