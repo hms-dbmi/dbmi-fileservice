@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import detail_route, list_route
 
 
 from .models import HealthCheck,GROUPTYPES,ArchiveFile
@@ -49,9 +50,21 @@ class ArchiveFileList(viewsets.ModelViewSet):
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'    
     authentication_classes = (Auth0Authentication,)
-    permission_classes = (IsAuthenticated,)
-    filter_backends = (filters.DjangoFilterBackend,)
+    permission_classes = (DjangoObjectPermissionsChange,)
+    filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
     filter_fields = ('uuid',)
+
+    def pre_save(self, obj):
+        obj.owner = self.request.user
+
+    def post_save(self, *args, **kwargs):
+        if 'tags' in self.request.DATA:
+            self.object.tags.set(*self.request.DATA['tags']) # type(self.object.tags) == <taggit.managers._TaggableManager>
+        return super(ArchiveFileList, self).post_save(*args, **kwargs)        
+
+    @detail_route(methods=['get'])
+    def download(self, request, uuid=None):
+        return Response({'status': 'password set'})
 
 
 def serializeGroup(user,group=None):

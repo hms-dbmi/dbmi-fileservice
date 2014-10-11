@@ -16,6 +16,11 @@ class UserSerializer(serializers.Serializer):
 
     class Meta:
         fields = ('email',)
+
+class UserModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+
         
 class SpecialGroupSerializer(serializers.Serializer):
     id = serializers.CharField()
@@ -31,10 +36,17 @@ class HealthCheckSerializer(serializers.ModelSerializer):
     class Meta:
         model = HealthCheck
         fields = ('id', 'message')
+
+class JSONFieldSerializer(serializers.WritableField):
+    def to_native(self, obj):
+        return obj
         
 class ArchiveFileSerializer(serializers.ModelSerializer):
     tags = serializers.Field(source='get_tags_display')
+    metadata = JSONFieldSerializer(required=False)
+    owner = UserSerializer(required=False)
+    
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id','uuid','description','metadata','tags',)
+        fields = ('id','uuid','description','metadata','tags','owner')

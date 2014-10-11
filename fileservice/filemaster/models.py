@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-import re,urllib
+import re,urllib,json
 
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
@@ -14,10 +14,13 @@ from django.db.models.signals import post_save,post_syncdb
 #from uuidfield import UUIDField
 from django_extensions.db.fields import UUIDField
 from jsonfield import JSONField
+from django.contrib.auth.models import User,Group
+
 
 from guardian.shortcuts import assign_perm,remove_perm
 from rest_framework.authtoken.models import Token
 import random,string
+from django.conf import settings
 
 from taggit.managers import TaggableManager
 
@@ -31,8 +34,44 @@ class ArchiveFile(models.Model):
     uuid = UUIDField()
     description = models.CharField(max_length=255,blank=True,null=True)
     metadata=JSONField(blank=True,null=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL,blank=True,null=True)
     
     tags = TaggableManager()
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            super(ArchiveFile,self).save(*args, **kwargs)
+            self.setPerms()
+        else:
+            #extra stuff like permissions
+            super(ArchiveFile,self).save(*args, **kwargs)
+            self.setPerms()
+
+    def setDefaultPerms(self,group,types):
+        try:
+            g = Group.objects.get(name=group+"__"+types)
+            if types=="ADMINS":
+                assign_perm('view_archivefile', g, self)
+                assign_perm('add_archivefile', g, self)                
+                assign_perm('change_archivefile', g, self)
+                assign_perm('delete_archivefile', g, self)            
+                assign_perm('download_archivefile', g, self)            
+            elif types=="READERS":
+                assign_perm('view_archivefile', g, self)
+            elif types=="WRITERS":
+                assign_perm('change_archivefile', g, self)
+            elif types=="DOWNLOADERS":
+                assign_perm('download_archivefile', g, self)
+        except Exception,e:
+            print "ERROR %s" % e
+            return         
+            
+    def setPerms(self):
+        if self.metadata and self.metadata["permissions"]:
+            for g in self.metadata["permissions"]:
+                for types in GROUPTYPES:
+                    self.setDefaultPerms(g,types)
+
 
     def get_tags_display(self):
         return self.tags.values_list('name', flat=True)
