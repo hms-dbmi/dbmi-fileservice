@@ -34,8 +34,10 @@ class Auth0Authentication(authentication.BaseAuthentication):
                                  base64.b64decode(settings.AUTH0_CLIENT_SECRET.replace("_","/").replace("-","+"))
         )
         except jwt.ExpiredSignature:
+            print "Expired"
             return None
         except jwt.DecodeError:
+            print "bad decode"
             return None        
         
         
@@ -45,5 +47,6 @@ class Auth0Authentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed('No such user')
         except Exception,e:
             print "error %s" % e
+        print user
 
         return (user, None)    

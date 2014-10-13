@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.db import models
-from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseForbidden, HttpResponseServerError, HttpResponse, HttpResponseRedirect
+from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 from django.conf import settings
@@ -51,7 +51,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'    
     authentication_classes = (Auth0Authentication,)
-    permission_classes = (DjangoObjectPermissionsChange,)
+    permission_classes = (IsAuthenticated,DjangoObjectPermissionsChange,)
     filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
     filter_fields = ('uuid',)
 
@@ -79,11 +79,20 @@ class ArchiveFileList(viewsets.ModelViewSet):
     @detail_route(methods=['get'])
     def download(self, request, uuid=None):
         url = None
+        archivefile=None
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+        
+        if not request.user.has_perm('filemaster.download_archivefile',archivefile):
+            return HttpResponseForbidden()
         #get presigned url
         return Response({'url': url})
 
     @detail_route(methods=['get'])
     def upload(self, request, uuid=None):
+        #take uuid, create presigned url, put location into original file
         url = None
         #get presigned url
         return Response({'url': url})
