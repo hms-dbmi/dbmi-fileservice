@@ -27,14 +27,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import detail_route, list_route
 
 
-from .models import HealthCheck,GROUPTYPES,ArchiveFile
+from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
 from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
-import json
+import json,uuid
+from boto.s3.connection import S3Connection
 
 User = get_user_model()        
 
@@ -71,9 +72,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af.tags.clear()                
             except Exception,e:
                 print "ERROR %s " % e
-        for t in self.request.DATA['tags']:
-            tagstash.append(t)
-        map(obj.tags.add, tagstash)
+        if 'tags' in self.request.DATA:        
+            for t in self.request.DATA['tags']:
+                tagstash.append(t)
+            map(obj.tags.add, tagstash)
         return super(ArchiveFileList, self).post_save(obj)        
 
     @detail_route(methods=['get'])
@@ -88,16 +90,59 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.download_archivefile',archivefile):
             return HttpResponseForbidden()
         #get presigned url
+        url = signedUrlDownload(archivefile)
         return Response({'url': url})
 
     @detail_route(methods=['get'])
     def upload(self, request, uuid=None):
         #take uuid, create presigned url, put location into original file
+        archivefile=None
+        message=None
         url = None
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+        
+        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
+            return HttpResponseForbidden()
+        
+        if 'location' in self.request.DATA:
+            if self.request.DATA['location'].startswith("file://"):
+                fl = FileLocation(url=self.request.DATA['location'])
+                fl.save()
+                archivefile.locations.add(fl)
+                url = self.request.DATA['location']
+                message="Local location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
+        else:
+            url = signedUrlUpload(archivefile)
+            message = "PUT to this url"
+            
         #get presigned url
-        return Response({'url': url})
+        return Response({'url': url,'message':message})
 
+def signedUrlUpload(archiveFile=None):
+    conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
+    foldername = str(uuid.uuid4())
+    url = "S3://%s/%s" % (settings.S3_UPLOAD_BUCKET,foldername+"/"+archiveFile.filename)
+    fl = FileLocation(url=url)
+    fl.save()
+    archiveFile.locations.add(fl)
+    return conn.generate_url(3600*24, 'PUT', settings.S3_UPLOAD_BUCKET, foldername+"/"+archiveFile.filename)
 
+def signedUrlDownload(archiveFile=None):
+    conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
+    url = archiveFile.locations.all()[0].url
+    bucket = ""
+    key = ""
+    _, path = url.split(":", 1)
+    path = path.lstrip("/")
+    bucket, path = path.split("/", 1)
+    
+    return conn.generate_url(3600*24, 'GET', bucket, path)
+
+    
 def serializeGroup(user,group=None):
     groupstructure=None
     if group:

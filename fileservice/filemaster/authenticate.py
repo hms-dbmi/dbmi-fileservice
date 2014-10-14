@@ -47,6 +47,5 @@ class Auth0Authentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed('No such user')
         except Exception,e:
             print "error %s" % e
-        print user
 
         return (user, None)    

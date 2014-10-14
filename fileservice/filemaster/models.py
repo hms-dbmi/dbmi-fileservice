@@ -25,16 +25,30 @@ from django.conf import settings
 from taggit.managers import TaggableManager
 
 
-GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS"]
+GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
+class FileLocation(models.Model):
+    creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
+    modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    url = models.TextField(blank=False,null=False)
+
+    class Meta:
+        ordering = ('-creationdate',)
+
+    def __unicode__(self):
+        return "%s" % (self.id)
+ 
  
 class ArchiveFile(models.Model):
     uuid = UUIDField()
     description = models.CharField(max_length=255,blank=True,null=True)
+    filename = models.TextField()
     metadata=JSONField(blank=True,null=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL,blank=True,null=True)
+    locations = models.ManyToManyField(FileLocation)
     
     tags = TaggableManager()
 
@@ -60,6 +74,9 @@ class ArchiveFile(models.Model):
                 assign_perm('view_archivefile', g, self)
             elif types=="WRITERS":
                 assign_perm('change_archivefile', g, self)
+                assign_perm('upload_archivefile', g, self)                
+            elif types=="UPLOADERS":
+                assign_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
         except Exception,e:
@@ -77,11 +94,12 @@ class ArchiveFile(models.Model):
         return self.tags.values_list('name', flat=True)
 
     def __unicode__(self):
-        return "%s" % (self.id)
+        return "%s" % (self.uuid)
 
     class Meta:
         permissions = (
             ('download_archivefile', 'Download File'),
+            ('upload_archivefile', 'Upload File'),
         )
 
 

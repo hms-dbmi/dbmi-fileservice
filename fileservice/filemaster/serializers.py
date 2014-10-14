@@ -4,12 +4,18 @@ from rest_framework.authtoken.models import Token
 from drf_compound_fields.fields import ListField,DictField,ListOrItemField
 from rest_framework import relations
 
-from .models import HealthCheck,ArchiveFile
+from .models import HealthCheck,ArchiveFile,FileLocation
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ('id', 'name')
+
+class FileLocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileLocation
+        fields = ('id', 'url')
+
 
 class UserSerializer(serializers.Serializer):
     email = serializers.CharField(required=False)
@@ -45,8 +51,8 @@ class ArchiveFileSerializer(serializers.ModelSerializer):
     tags = serializers.Field(source='get_tags_display')
     metadata = JSONFieldSerializer(required=False)
     owner = UserSerializer(required=False)
-    
+    locations = FileLocationSerializer(required=False)
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id','uuid','description','metadata','tags','owner')
+        fields = ('id','uuid','description','metadata','tags','owner','filename','locations')
