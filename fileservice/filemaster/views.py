@@ -19,17 +19,19 @@ from django.contrib.admin.sites import site
 from django.template import RequestContext, loader
 
 from rest_framework import status,filters,viewsets
-from rest_framework.decorators import api_view,permission_classes
+from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import detail_route, list_route
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
 
 
 from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
 from .authenticate import ExampleAuthentication,Auth0Authentication
-from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer
+from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
@@ -42,7 +44,7 @@ User = get_user_model()
 class HealthCheckList(viewsets.ModelViewSet):
     queryset = HealthCheck.objects.all()
     serializer_class = HealthCheckSerializer
-    authentication_classes = (Auth0Authentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('message', 'id')
@@ -51,7 +53,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'    
-    authentication_classes = (Auth0Authentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,)
     permission_classes = (IsAuthenticated,DjangoObjectPermissionsChange,)
     filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
     filter_fields = ('uuid',)
@@ -108,6 +110,27 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
+        url = signedUrlUpload(archivefile)
+        message = "PUT to this url"
+            
+        #get presigned url
+        return Response({'url': url,'message':message})
+
+    @detail_route(methods=['post'])
+    def register(self, request, uuid=None):
+        #take uuid, create presigned url, put location into original file
+        archivefile=None
+        message=None
+        url = None
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+        
+        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
+            return HttpResponseForbidden()
+        
         if 'location' in self.request.DATA:
             if self.request.DATA['location'].startswith("file://"):
                 fl = FileLocation(url=self.request.DATA['location'])
@@ -115,12 +138,24 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 archivefile.locations.add(fl)
                 url = self.request.DATA['location']
                 message="Local location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
-        else:
-            url = signedUrlUpload(archivefile)
-            message = "PUT to this url"
-            
+            elif self.request.DATA['location'].startswith("s3://"):
+                fl = None
+                try:
+                    fl = FileLocation.objects.get(url=self.request.DATA['location'])
+                    for af in ArchiveFile.objects.filter(locations__id=fl.pk):
+                        if not request.user.has_perm('filemaster.upload_archivefile',af):
+                            return HttpResponseForbidden()
+                    archivefile.locations.add(fl)
+                    message = "S3 location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
+                except:
+                    fl = FileLocation(url=self.request.DATA['location'])
+                    fl.save()
+                    archivefile.locations.add(fl)
+                    message="Local location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
+                                
         #get presigned url
-        return Response({'url': url,'message':message})
+        return Response({'message':message})
+
 
 def signedUrlUpload(archiveFile=None):
     conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
@@ -163,7 +198,7 @@ def serializeGroup(user,group=None):
 
 
 class GroupList(APIView):
-    authentication_classes = (Auth0Authentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     """
@@ -206,7 +241,7 @@ class GroupDetail(APIView):
     """
     Retrieve, update or delete a Group instance.
     """
-    authentication_classes = (Auth0Authentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def get_object(self, pk):
@@ -263,4 +298,16 @@ class GroupDetail(APIView):
 #         except Exception,e:
 #             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@authentication_classes((Auth0Authentication,TokenAuthentication,))
+@permission_classes((IsAuthenticated,))
+def token(request):
+    """
+    Retrieve a token
+    """
 
+    if request.method == 'GET':
+        u = User.objects.get(email=request.user.email)
+        t = Token.objects.get(user=u)
+        serializer = TokenSerializer(t)
+        return Response(serializer.data)

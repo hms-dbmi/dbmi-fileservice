@@ -16,6 +16,11 @@ class FileLocationSerializer(serializers.ModelSerializer):
         model = FileLocation
         fields = ('id', 'url')
 
+class TokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Token
+        fields = ('key',)
+
 
 class UserSerializer(serializers.Serializer):
     email = serializers.CharField(required=False)
