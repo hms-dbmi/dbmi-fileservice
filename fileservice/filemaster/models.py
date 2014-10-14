@@ -49,6 +49,9 @@ class ArchiveFile(models.Model):
     metadata=JSONField(blank=True,null=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL,blank=True,null=True)
     locations = models.ManyToManyField(FileLocation)
+    creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
+    modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    
     
     tags = TaggableManager()
 
