@@ -1,0 +1,8 @@
+ImageId: ami-9aaa1cf2
+InstanceType: t2.medium
+KeyPair: udndevelopment
+ChefRole: fileservice
+IPAddress: 54.164.47.47
+environment: develop
+InstanceName: fileservice-dev
+cloudtype: aws

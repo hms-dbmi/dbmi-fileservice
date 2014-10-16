@@ -15,3 +15,5 @@ drf-extensions
 jsonfield
 django-taggit
 django-uuidfield
+cfn-pyplates
+mysql-python
