@@ -91,4 +91,5 @@ r5 = requests.post(
 	data={"SAMLResponse":myparser.fields['SAMLResponse']}
 )
 
-print r5.json()
+print r5.cookies["Authorization"]
+#print r5.json()
