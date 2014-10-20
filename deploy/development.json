@@ -51,12 +51,12 @@
       "Type": "AWS::EC2::EIPAssociation",
       "Properties": {
         "InstanceId": {
-          "Ref": "TheInstance"
+          "Ref": "TheComputeLaunch"
         },
         "EIP": "54.164.47.47"
       }
     },
-    "TheInstance": {
+    "TheComputeLaunch": {
       "Type": "AWS::EC2::Instance",
       "Properties": {
         "UserData": {
@@ -103,7 +103,7 @@
                 {
                   "Ref": "AWS::StackName"
                 },
-                " -r TheInstance\n",
+                " -r TheComputeLaunch\n",
                 "curl -k -X POST -H \"Accept: application/json;indent=4\" -H \"Content-Type:application/json\" -u \"",
                 {
                   "Ref": "SecretStashUsername"
@@ -129,7 +129,8 @@
                 {
                   "Ref": "SecretStashURL"
                 },
-                "/secrets/usergroup/$instanceid/\"; done\ncurl -X GET -H \"Authorization: Token `cat /root/secretstash.txt`\" -H 'Accept: application/json;indent=4'  \"https://",
+                "/secrets/usergroup/$instanceid/\"; done\nTOKEN=`cat /root/secretstash.txt`\n",
+                "curl -k -X GET -H \"Authorization: Token $TOKEN\" -H \"Accept: application/json;indent=4\"  \"https://",
                 {
                   "Ref": "SecretStashURL"
                 },
@@ -138,7 +139,8 @@
                 "gem install aws-sdk --no-rdoc --no-ri\n",
                 "gem install right_aws --no-rdoc --no-ri\n",
                 "gem install librarian-chef --no-rdoc --no-ri\n",
-                "git clone https://dbmibot:`cat /root/github.txt`@github.com/hms-dbmi/chef.git --branch=develop /var/chef-repo \n",
+                "GITHUB=`cat /root/github.txt`\n",
+                "git clone https://dbmibot:$GITHUB@github.com/hms-dbmi/chef.git --branch=develop /var/chef-repo \n",
                 "mkdir -p /var/chef\n",
                 "mkdir -p /var/chef-solo\n",
                 "cd /var/chef-repo\n",
@@ -165,7 +167,8 @@
           },
           {
             "Ref": "SSHSecurityGroup"
-          }
+          },
+          "fileservicedev"
         ],
         "InstanceType": "t2.medium"
       },
@@ -178,12 +181,13 @@
                   "Fn::Join": [
                     "",
                     [
-                      "{\n  \"environment\": \"develop\" \n",
+                      "{\n  \"environment\": \"develop\", \n",
                       "\"secretstash\": \"",
                       {
-                        "Ref": "SecretStashUrl"
+                        "Ref": "SecretStashURL"
                       },
-                      "\" \n",
+                      "\", \n",
+                      "\"cloud\": {\"type\":\"aws\"}, \n",
                       "  \"run_list\": [\n    \"role[fileservice]\"\n  ]\n}"
                     ]
                   ]
