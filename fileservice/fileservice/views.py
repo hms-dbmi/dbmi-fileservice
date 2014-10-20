@@ -18,6 +18,7 @@ from django.contrib.auth.decorators import login_required,permission_required
 from django.contrib.admin.sites import site
 from django.template import RequestContext, loader
 from django.contrib.auth import get_user_model
+from django.shortcuts import redirect
 
 import jwt,base64
 
@@ -59,4 +60,4 @@ def callback(request):
     response = HttpResponse(json.dumps(user_info), content_type="application/json")
     response.set_cookie( 'Authorization', token_info["id_token"] )
         
-    return response
+    return redirect('/filemaster/api/')
