@@ -10,6 +10,11 @@ It will spit out a JWT. Save it to a BASH variable.
 $TOKEN=`python cookietest.py`
 ```
 
+Or in a webbrowser go to:  
+```
+https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri=https://fileservice-ci.dbmi.hms.harvard.edu/callback/&connection=hms-it-test
+```
+
 ====
 Create Group
 ====
