@@ -7,7 +7,7 @@ $python cookietest.py
 ```
 It will spit out a JWT. Save it to a BASH variable.  
 ```
-$TOKEN=`python cookietest.py`
+$CBMI1=`python cookietest.py`
 ```
 
 Or in a webbrowser go to:  
@@ -103,6 +103,11 @@ $curl -k -v -X POST --cookie "Authorization=$CBMI1" -H "Content-Type: applicatio
   "filename": "test2.txt",
   "locations": []
 }
+```
+
+Edit a file with a PATCH.  
+```
+curl -v -X PATCH  --cookie "Authorization=$CBMI1" -H "Content-Type: application/json"   -d '{"tags":["test4444"]}' "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/0c19072c-9a6f-4a96-88ec-a9bb4033c4d6/"
 ```
 
 Register a local file location associated with this file.  

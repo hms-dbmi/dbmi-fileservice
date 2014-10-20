@@ -93,5 +93,11 @@ r5 = requests.post(
     verify=False
 )
 
-print r5.cookies["Authorization"]
+r6 = requests.get(
+        r5.headers['location'],
+        headers=headers2,
+        cookies=r5.cookies,
+        allow_redirects=False
+        )
+print r6.cookies['Authorization']
 #print r5.json()

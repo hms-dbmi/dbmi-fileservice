@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.db import models
-from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
+from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 from django.conf import settings
@@ -138,7 +138,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 archivefile.locations.add(fl)
                 url = self.request.DATA['location']
                 message="Local location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
-            elif self.request.DATA['location'].startswith("s3://"):
+            elif self.request.DATA['location'].startswith("S3://"):
                 fl = None
                 try:
                     fl = FileLocation.objects.get(url=self.request.DATA['location'])
@@ -151,7 +151,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     fl = FileLocation(url=self.request.DATA['location'])
                     fl.save()
                     archivefile.locations.add(fl)
-                    message="Local location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
+                    message="S3 location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
+            else:
+                return HttpResponseBadRequest("Currently only 'file://' and 'S3://' accepted at this time.")
+                
                                 
         #get presigned url
         return Response({'message':message})
