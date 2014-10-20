@@ -5,7 +5,8 @@ from HTMLParser import HTMLParser
 username = "cbmi_test1@medlab.harvard.edu"
 password = "%$^xxxxx"
 adfsurl = "http://adfs.medlab.harvard.edu/adfs/services/trust"
-auth0initial = "https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri=http://localhost:8000/callback/&connection=hms-it-test"
+callback = "http://localhost:8000/callback/"
+auth0initial = "https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri="+callback+"&connection=hms-it-test"
 auth0callback = "https://hms-dbmi.auth0.com/login/callback?connection=hms-it-test"
 
 class MyHTMLParser(HTMLParser):
@@ -33,7 +34,7 @@ class MyHTMLParser(HTMLParser):
     def get_fileids(self):
         return self.fileids
 
-r = requests.get(auth0initial,allow_redirects=False)
+r = requests.get(auth0initial,allow_redirects=False,verify=False)
 
 adfs =  r.headers['location']
 auth0cookies = r.cookies
@@ -88,7 +89,8 @@ r5 = requests.post(
 	auth0callback,
 	headers=headers2,
 	cookies=auth0cookies,
-	data={"SAMLResponse":myparser.fields['SAMLResponse']}
+	data={"SAMLResponse":myparser.fields['SAMLResponse']},
+    verify=False
 )
 
 print r5.cookies["Authorization"]
