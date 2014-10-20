@@ -57,7 +57,8 @@ def callback(request):
         print "ERROR %s" % e
         pass
     
-    response = HttpResponse(json.dumps(user_info), content_type="application/json")
+    #response = HttpResponse(json.dumps(user_info), content_type="application/json")
+    response = redirect('/filemaster/api/')
     response.set_cookie( 'Authorization', token_info["id_token"] )
         
-    return redirect('/filemaster/api/')
+    return response
