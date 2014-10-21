@@ -1,13 +1,13 @@
 ====
 Log in
 ====
-alter cookietest.py and fill with your information. Then run it.  
+alter first few lines of hms_saml_login.py and fill with your information. Then run it.  
 ```
-$python cookietest.py
+$python hms_saml_login.py
 ```
 It will spit out a JWT. Save it to a BASH variable.  
 ```
-$CBMI1=`python cookietest.py`
+$CBMI1=`python hms_saml_login.py`
 ```
 
 Or in a webbrowser go to:  
