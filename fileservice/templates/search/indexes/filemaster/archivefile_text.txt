@@ -1,0 +1,7 @@
+{{ object.uuid }}
+{{ object.filename }}
+{{ object.description }}
+{{ object.metadata }}
+{{ object.owner.email }}
+{% for tag in object.tags.all %}{{ tag.name }} {% endfor %}
+{% for location in object.locations.all %}{{ location.url }} {% endfor %}

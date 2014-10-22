@@ -207,6 +207,7 @@ LOCAL_APPS = (
     'bootstrap3',
     'taggit',
     'django_extensions',
+    'haystack'
 )
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps

@@ -73,4 +73,15 @@ S3_ID="x"
 S3_SECRET="x"
 S3_UPLOAD_BUCKET="udnarchive-ci"
 
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://127.0.0.1:9200/',
+        'INDEX_NAME': 'haystack',
+    },
+}
+HAYSTACK_LIMIT_TO_REGISTERED_MODELS = False
 
+# increase the default number of results (from 20)
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 40
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'

@@ -3,6 +3,8 @@ from django.contrib.auth.models import User, Group, Permission
 from rest_framework.authtoken.models import Token
 from drf_compound_fields.fields import ListField,DictField,ListOrItemField
 from rest_framework import relations
+from rest_framework.exceptions import ParseError
+import json,ast
 
 from .models import HealthCheck,ArchiveFile,FileLocation
 
@@ -61,3 +63,27 @@ class ArchiveFileSerializer(serializers.ModelSerializer):
         model = ArchiveFile
         lookup_field = 'uuid'
         fields = ('id','uuid','description','metadata','tags','owner','filename','locations')
+
+class JSONSearchField(serializers.WritableField):
+    
+    def to_native(self, value):
+        con_value = ast.literal_eval(value)
+        return json.dumps(con_value)
+
+class TagSearchField(serializers.WritableField):
+    
+    def to_native(self, value):
+        return value
+
+        
+class SearchSerializer(serializers.Serializer):
+    #text = serializers.CharField()
+    #creationdate = serializers.DateTimeField(source="creationdate")
+    #modifydate = serializers.DateTimeField(source="modifydate")
+    description = serializers.CharField(source="description")
+    filename = serializers.CharField(source="filename")
+    uuid = serializers.CharField(source="uuid")
+    #owner = serializers.CharField(source="owner")
+    tags = TagSearchField(source='tags')
+    #metadata = MetadataSearchSerializer(source='metadata')
+    metadata = JSONSearchField(source='metadata')

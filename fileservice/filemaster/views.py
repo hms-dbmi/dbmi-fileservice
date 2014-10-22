@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required,permission_required
 from django.contrib.admin.sites import site
 from django.template import RequestContext, loader
 
-from rest_framework import status,filters,viewsets
+from rest_framework import status,filters,viewsets,mixins
 from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,13 +31,16 @@ from rest_framework.authtoken.models import Token
 
 from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
 from .authenticate import ExampleAuthentication,Auth0Authentication
-from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer
+from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
 import json,uuid
 from boto.s3.connection import S3Connection
+from haystack.forms import ModelSearchForm
+from haystack.query import EmptySearchQuerySet,SearchQuerySet
+
 
 User = get_user_model()        
 
@@ -301,6 +304,31 @@ class GroupDetail(APIView):
 #         except Exception,e:
 #             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class SearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    authentication_classes = (Auth0Authentication,TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = SearchSerializer
+ 
+ 
+    def get_queryset(self, *args, **kwargs):
+        # This will return a dict of the first known
+        # unit of distance found in the query
+        request = self.request
+        queryset = EmptySearchQuerySet()
+ 
+        if request.GET.get('q'):
+            query = request.GET.get('q')
+            queryset = SearchQuerySet().filter(content=query)
+        
+        finalResult=[]
+        for m in list(queryset):
+            if request.user.has_perm('filemaster.view_archivefile',m.object):
+                finalResult.append(m)
+            else:
+                continue 
+        
+        return finalResult
+    
 @api_view(['GET'])
 @authentication_classes((Auth0Authentication,TokenAuthentication,))
 @permission_classes((IsAuthenticated,))

@@ -1,4 +1,4 @@
-django
+Django >= 1.7
 django-guardian
 django-extensions
 boto
@@ -17,3 +17,6 @@ django-taggit
 django-uuidfield
 cfn-pyplates
 mysql-python
+#django-haystack == 2.3.1
+-e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
+elasticsearch
