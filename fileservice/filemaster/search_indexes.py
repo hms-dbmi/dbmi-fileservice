@@ -14,7 +14,7 @@ class ArchiveFileIndex(indexes.SearchIndex, indexes.Indexable):
     locations = indexes.CharField()
     locations_list = indexes.MultiValueField()
 
-    owner = indexes.CharField(model_attr='owner')
+    owner = indexes.CharField(model_attr='owner__email')
     creation_date = indexes.DateTimeField(model_attr='creationdate')
     modify_date = indexes.DateTimeField(model_attr='modifydate')
 
@@ -22,13 +22,13 @@ class ArchiveFileIndex(indexes.SearchIndex, indexes.Indexable):
         return ArchiveFile
 
     def prepare_tags(self, obj):
-        return ' '.join([tag.name for tag in obj.tags.all()])
+        return ', '.join([tag.name for tag in obj.tags.all()])
 
     def prepare_tag_list(self, obj):
         return [tag.name for tag in obj.tags.all()]
 
     def prepare_locations(self, obj):
-        return ' '.join([location.url for location in obj.locations.all()])
+        return ', '.join([location.url for location in obj.locations.all()])
 
     def prepare_locations_list(self, obj):
         return [location.url for location in obj.locations.all()]

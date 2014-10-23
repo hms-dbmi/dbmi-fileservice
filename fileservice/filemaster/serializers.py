@@ -83,7 +83,7 @@ class SearchSerializer(serializers.Serializer):
     description = serializers.CharField(source="description")
     filename = serializers.CharField(source="filename")
     uuid = serializers.CharField(source="uuid")
-    #owner = serializers.CharField(source="owner")
+    owner = serializers.CharField(source="owner")
     tags = TagSearchField(source='tags')
     #metadata = MetadataSearchSerializer(source='metadata')
     metadata = JSONSearchField(source='metadata')

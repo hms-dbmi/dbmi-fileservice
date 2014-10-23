@@ -39,7 +39,7 @@ from django.contrib.auth import get_user_model
 import json,uuid
 from boto.s3.connection import S3Connection
 from haystack.forms import ModelSearchForm
-from haystack.query import EmptySearchQuerySet,SearchQuerySet
+from haystack.query import EmptySearchQuerySet,SearchQuerySet,SQ
 
 
 User = get_user_model()        
@@ -315,13 +315,33 @@ class SearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         # unit of distance found in the query
         request = self.request
         queryset = EmptySearchQuerySet()
+
+        fieldlist = []
+        if request.GET.get('fields'):
+            rawfields = request.GET.get('fields')
+            fieldlist = rawfields.split(',')        
+        
+        facetlist = []
+        if request.GET.get('facets'):
+            rawfacets = request.GET.get('facets')
+            facetlist = rawfacets.split(',')        
  
         if request.GET.get('q'):
             query = request.GET.get('q')
-            queryset = SearchQuerySet().filter(content=query)
+            sqs = SearchQuerySet()
+            for item in facetlist:
+                sqs = sqs.facet(item)
+            if not fieldlist:            
+                sqs = sqs.filter(content=query)
+            else:
+                for idx, field in enumerate(fieldlist):
+                    if idx==0:
+                        sqs = sqs.filter(SQ(**{field:query}))
+                    else:    
+                        sqs = sqs.filter_or(SQ(**{field:query}))
         
         finalResult=[]
-        for m in list(queryset):
+        for m in list(sqs):
             if request.user.has_perm('filemaster.view_archivefile',m.object):
                 finalResult.append(m)
             else:

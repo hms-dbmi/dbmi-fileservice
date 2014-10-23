@@ -2,6 +2,6 @@
 {{ object.filename }}
 {{ object.description }}
 {{ object.metadata }}
-{{ object.owner.email }}
+{{ object.owner }}
 {% for tag in object.tags.all %}{{ tag.name }} {% endfor %}
 {% for location in object.locations.all %}{{ location.url }} {% endfor %}
