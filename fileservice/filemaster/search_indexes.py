@@ -1,4 +1,4 @@
-import datetime
+import datetime,json,ast
 from haystack import indexes
 from .models import ArchiveFile
 
@@ -20,6 +20,17 @@ class ArchiveFileIndex(indexes.SearchIndex, indexes.Indexable):
 
     def get_model(self):
         return ArchiveFile
+
+    def prepare(self, obj):
+        self.prepared_data = super(ArchiveFileIndex, self).prepare(obj)
+        try:
+            lit = ast.literal_eval(self.prepared_data['metadata'])
+            jsonmd = json.loads(json.dumps(lit))
+            for key in jsonmd.keys():
+                self.prepared_data['md_'+key]=jsonmd[key]
+        except:
+            pass
+        return self.prepared_data
 
     def prepare_tags(self, obj):
         return ', '.join([tag.name for tag in obj.tags.all()])
