@@ -1,0 +1,16 @@
+ImageId: ami-9aaa1cf2
+InstanceType: t2.medium
+KeyPair: udndevelopment
+ChefRole: elasticsearch
+IPAddress: 54.88.107.133
+environment: develop
+InstanceName: elasticsearch-dev
+StackName: elasticsearch-dev
+SecGroups: 
+    - fileservicedev
+cloudtype: aws
+AppServerAvailabilityZones:
+    - us-east-1c
+LoadBalancer: false
+AutoScalingGroupMaxSize: 1
+AutoScalingGroupMinSize: 1

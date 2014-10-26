@@ -1,0 +1,19 @@
+ImageId: ami-9aaa1cf2
+InstanceType: t2.medium
+KeyPair: udndevelopment
+ChefRole: fileservice
+IPAddress: 54.164.47.47
+environment: develop
+InstanceName: fileservice-dev
+StackName: fileservice-dev
+cloudtype: aws
+SecGroups:
+    - fileservicedev
+AppServerAvailabilityZones:
+    # us-east-1b and us-east-1c smell funny, skip those...
+    - us-east-1a
+    - us-east-1c
+    - us-east-1d
+LoadBalancer: false
+AutoScalingGroupMaxSize: 1
+AutoScalingGroupMinSize: 1
