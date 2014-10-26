@@ -7,6 +7,8 @@ environment: develop
 InstanceName: fileservice-dev
 StackName: fileservice-dev
 cloudtype: aws
+SecGroups:
+    - fileservicedev
 AppServerAvailabilityZones:
     # us-east-1b and us-east-1c smell funny, skip those...
     - us-east-1a

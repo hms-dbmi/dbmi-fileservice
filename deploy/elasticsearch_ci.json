@@ -1,0 +1,217 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "File Service Template",
+  "Parameters": {
+    "SecretStashUsername": {
+      "Type": "String",
+      "Description": "A username for Secret Stash"
+    },
+    "SecretStashPassword": {
+      "NoEcho": "true",
+      "Type": "String",
+      "Description": "A password for Secret Stash"
+    },
+    "SecretStashURL": {
+      "Default": "ec2-54-164-123-229.compute-1.amazonaws.com",
+      "Type": "String",
+      "Description": "A url for Secret Stash"
+    },
+    "SecretStashGroups": {
+      "Default": "build",
+      "Type": "String",
+      "Description": "Groups for secretstash"
+    }
+  },
+  "Resources": {
+    "SSHSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": {
+          "ToPort": "22",
+          "IpProtocol": "tcp",
+          "FromPort": "22",
+          "CidrIp": "0.0.0.0/0"
+        },
+        "GroupDescription": "allows inbound SSH from all"
+      }
+    },
+    "HTTPSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": {
+          "ToPort": "443",
+          "IpProtocol": "tcp",
+          "FromPort": "443",
+          "CidrIp": "0.0.0.0/0"
+        },
+        "GroupDescription": "allows inbound HTTPS from all"
+      }
+    },
+    "IPAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "TheComputeLaunch"
+        },
+        "EIP": "54.88.107.133"
+      }
+    },
+    "TheComputeLaunch": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash\n",
+                "touch /var/log/user-data.log\n",
+                "chmod 0640 /var/log/user-data.log\n",
+                "chown root:syslog /var/log/user-data.log\n",
+                "exec > /var/log/user-data.log 2>&1\n",
+                "echo BEGIN\n",
+                "date '+%Y-%m-%d %H:%M:%S'\n",
+                "IFS=','\n",
+                "USERGROUPS=\"",
+                {
+                  "Ref": "SecretStashGroups"
+                },
+                "\"\n",
+                "set -e -x\n",
+                "sudo mkdir /etc/chef\n",
+                "sudo rm -fR /var/lib/apt/lists/*\n",
+                "sudo apt-get update 2> /dev/null\n",
+                "sudo apt-get -y install build-essential 2> /dev/null\n",
+                "sudo apt-get -y install libmysqlclient-dev python-setuptools python-dev 2> /dev/null\n",
+                "sudo apt-get -y install git 2> /dev/null\n",
+                "sudo apt-get -y install curl 2> /dev/null\n",
+                "sudo apt-get -y install language-pack-en 2> /dev/null\n",
+                "sudo apt-get -y install libxml2-dev 2> /dev/null\n",
+                "sudo apt-get -y install libxslt-dev 2> /dev/null\n",
+                "sudo apt-get -y install libpq-dev 2> /dev/null\n",
+                "sudo apt-get -y upgrade 2> /dev/null\n",
+                "sudo wget http://stedolan.github.io/jq/download/linux64/jq\n",
+                "sudo mv jq /usr/bin/jq\n",
+                "sudo chmod +x /usr/bin/jq\n",
+                "instanceid=`curl http://169.254.169.254/latest/meta-data/instance-id`\n",
+                "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+                "cfn-init --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "    -s ",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                " -r TheComputeLaunch\n",
+                "curl -k -X POST -H \"Accept: application/json;indent=4\" -H \"Content-Type:application/json\" -u \"",
+                {
+                  "Ref": "SecretStashUsername"
+                },
+                ":",
+                {
+                  "Ref": "SecretStashPassword"
+                },
+                "\" \"https://",
+                {
+                  "Ref": "SecretStashURL"
+                },
+                "/secrets/api/host/\" -d '{\"name\":\"'\"$instanceid\"'\"}' | jq -r .apikey.key > /root/secretstash.txt\n",
+                "for val in $USERGROUPS; do curl -k -X PUT -H \"Accept: application/json;indent=4\" -H \"Content-Type:application/json\" -u \"",
+                {
+                  "Ref": "SecretStashUsername"
+                },
+                ":",
+                {
+                  "Ref": "SecretStashPassword"
+                },
+                "\" -d '{\"groups\":[\"'\"$val\"'\"],\"action\":\"add\"}' \"https://",
+                {
+                  "Ref": "SecretStashURL"
+                },
+                "/secrets/usergroup/$instanceid/\"; done\nTOKEN=`cat /root/secretstash.txt`\n",
+                "curl -k -X GET -H \"Authorization: Token $TOKEN\" -H \"Accept: application/json;indent=4\"  \"https://",
+                {
+                  "Ref": "SecretStashURL"
+                },
+                "/secrets/api/secret/10/\" | jq -r .content > /root/github.txt \ncurl -L http://www.opscode.com/chef/install.sh | bash -s \n",
+                "export PATH=/opt/chef/embedded/bin:$PATH\n",
+                "/opt/chef/embedded/bin/gem install aws-sdk --no-rdoc --no-ri\n",
+                "/opt/chef/embedded/bin/gem install right_aws --no-rdoc --no-ri\n",
+                "/opt/chef/embedded/bin/gem install librarian-chef --no-rdoc --no-ri\n",
+                "GITHUB=`cat /root/github.txt`\n",
+                "git clone https://dbmibot:$GITHUB@github.com/hms-dbmi/chef.git --branch=develop /var/chef-repo \n",
+                "mkdir -p /var/chef\n",
+                "mkdir -p /var/chef-solo\n",
+                "cd /var/chef-repo\n",
+                "/opt/chef/embedded/bin/librarian-chef update  \n",
+                "/opt/chef/embedded/bin/librarian-chef install \n",
+                "cd /var/chef\n",
+                "/opt/chef/bin/chef-solo -l debug \n",
+                "exit 0\n"
+              ]
+            ]
+          }
+        },
+        "Tags": [
+          {
+            "Value": "elasticsearch-dev",
+            "Key": "Name"
+          }
+        ],
+        "ImageId": "ami-9aaa1cf2",
+        "KeyName": "udndevelopment",
+        "SecurityGroups": [
+          {
+            "Ref": "HTTPSSecurityGroup"
+          },
+          {
+            "Ref": "SSHSecurityGroup"
+          },
+          "fileservicedev"
+        ],
+        "InstanceType": "t2.medium"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Init": {
+          "config": {
+            "files": {
+              "/etc/chef/node.json": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "{\n  \"environment\": \"develop\", \n",
+                      "\"secretstash\": \"",
+                      {
+                        "Ref": "SecretStashURL"
+                      },
+                      "\", \n",
+                      "\"cloud\": {\"type\":\"aws\"}, \n",
+                      "  \"run_list\": [\n    \"role[elasticsearch]\"\n  ]\n}"
+                    ]
+                  ]
+                },
+                "owner": "root",
+                "group": "root",
+                "mode": "000600"
+              },
+              "/etc/chef/solo.rb": {
+                "content": "log_level       :info\nlog_location    STDOUT\nfile_cache_path \"/var/chef-solo\"\ncookbook_path   [\"/var/chef-repo/site-cookbooks\", \"/var/chef-repo/cookbooks\"]\nrole_path       \"/var/chef-repo/roles\"\njson_attribs    \"/etc/chef/node.json\"\n",
+                "owner": "root",
+                "group": "root",
+                "mode": "000644"
+              }
+            },
+            "commands": {},
+            "users": {},
+            "sources": {},
+            "groups": {},
+            "services": {},
+            "packages": {}
+          }
+        }
+      }
+    }
+  }
+}
