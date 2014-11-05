@@ -70,6 +70,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         #if 'tags' in self.request.DATA:
         #    self.object.tags.set(*self.request.DATA['tags']) # type(self.object.tags) == <taggit.managers._TaggableManager>
         removeTags = self.request.QUERY_PARAMS.get('removeTags', None)
+        removePerms = self.request.QUERY_PARAMS.get('removePerms', None)
         tagstash=[]        
         if removeTags and 'tags' in self.request.DATA:
             try:
@@ -82,6 +83,12 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 tagstash.append(t)
             map(obj.tags.add, tagstash)
 
+        if removePerms and 'permissions' in self.request.DATA:
+            try:
+                af = ArchiveFile.objects.get(uuid=obj.uuid)
+                af.killPerms()                                
+            except:
+                pass
         if 'permissions' in self.request.DATA:
             for p in self.request.DATA['permissions']:
                 try:
