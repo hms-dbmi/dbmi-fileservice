@@ -129,11 +129,13 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
-        url = signedUrlUpload(archivefile)
+        urlhash = signedUrlUpload(archivefile)
+        url = urlhash["url"]
         message = "PUT to this url"
+        location = urlhash["location"]
             
         #get presigned url
-        return Response({'url': url,'message':message})
+        return Response({'url': url,'message':message,'location':location})
 
     @detail_route(methods=['post'])
     def register(self, request, uuid=None):
@@ -186,7 +188,10 @@ def signedUrlUpload(archiveFile=None):
     fl = FileLocation(url=url)
     fl.save()
     archiveFile.locations.add(fl)
-    return conn.generate_url(3600*24, 'PUT', settings.S3_UPLOAD_BUCKET, foldername+"/"+archiveFile.filename)
+    return {
+            "url":conn.generate_url(3600*24, 'PUT', settings.S3_UPLOAD_BUCKET, foldername+"/"+archiveFile.filename),
+            "location":"s3://"+settings.S3_UPLOAD_BUCKET+foldername+"/"+archiveFile.filename
+            }
 
 def signedUrlDownload(archiveFile=None):
     conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
