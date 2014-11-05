@@ -1,7 +1,7 @@
 # Examples
 
-## Log in
-alter first few lines of hms_saml_login.py and fill with your information. Then run it.  
+## Log in  
+* HMS SAML via Auth0 -- alter first few lines of hms_saml_login.py and fill with your information. Then run it.  
 ```
 $python hms_saml_login.py
 ```
@@ -15,11 +15,19 @@ Or in a webbrowser go to:
 https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri=https://fileservice-ci.dbmi.hms.harvard.edu/callback/&connection=hms-it-test
 ```
 
-## Create Group
+* Another SAML -- will need a different &connection= string from HMS team (bernick)
+* A plain old U/p -- Not desired, but can be used once added to fileservice database. Username will always be "email"
+* An API token -- Not desired for humans, but can be used by services. Will need to be requested from HMS.  
+
+## Create Permissions and Groups
+
+A "group" represents a dataset. For instance a projectname might be a group, or some specific set of data like "breast cancer samples" or "ebola samples". This is a logical group of data. Almost like a "folder" in a traditional file system. Permissions (read, write, etc) will be applied to those groups.  
 
 Creates group called "udntest" with no users in it. User executing this command needs to hand "add_group" privileges.  
 
-After the group is created, a bunch of subgroups (roles) are created -- ADMINS, DOWNLOADERS, READERS, WRITERS, UPLOADERS. You add users to those groups depending on what roles they should have.  
+After the group is created, a bunch of roles are created -- ADMINS, DOWNLOADERS, READERS, WRITERS, UPLOADERS. You add users to those roles depending on what powers they should have.  
+
+Users are always identified by "email address".  
 
 
 ```
