@@ -59,10 +59,11 @@ class ArchiveFileSerializer(serializers.ModelSerializer):
     metadata = JSONFieldSerializer(required=False)
     owner = UserSerializer(required=False)
     locations = FileLocationSerializer(required=False)
+    permissions = serializers.Field(source='get_permissions_display')
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id','uuid','description','metadata','tags','owner','filename','locations')
+        fields = ('id','uuid','description','metadata','tags','owner','filename','locations','permissions')
 
 class JSONSearchField(serializers.WritableField):
     

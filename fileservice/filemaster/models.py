@@ -17,7 +17,7 @@ from jsonfield import JSONField
 from django.contrib.auth.models import User,Group
 
 
-from guardian.shortcuts import assign_perm,remove_perm
+from guardian.shortcuts import assign_perm,remove_perm,get_groups_with_perms
 from rest_framework.authtoken.models import Token
 import random,string
 from django.conf import settings
@@ -55,14 +55,6 @@ class ArchiveFile(models.Model):
     
     tags = TaggableManager()
 
-    def save(self, *args, **kwargs):
-        if self.pk is not None:
-            super(ArchiveFile,self).save(*args, **kwargs)
-            self.setPerms()
-        else:
-            #extra stuff like permissions
-            super(ArchiveFile,self).save(*args, **kwargs)
-            self.setPerms()
 
     def setDefaultPerms(self,group,types):
         try:
@@ -86,15 +78,26 @@ class ArchiveFile(models.Model):
             print "ERROR %s" % e
             return         
             
-    def setPerms(self):
-        if self.metadata and self.metadata["permissions"]:
-            for g in self.metadata["permissions"]:
-                for types in GROUPTYPES:
-                    self.setDefaultPerms(g,types)
+    def setPerms(self,permissions):
+            for types in GROUPTYPES:
+                self.setDefaultPerms(permissions,types)
 
 
     def get_tags_display(self):
         return self.tags.values_list('name', flat=True)
+
+    def get_permissions_display(self):
+        grouplist=[]
+        for g in  get_groups_with_perms(self):
+            try:
+                begin = g.name.find("__")
+                groupname = g.name[0:begin]
+                if groupname not in grouplist:
+                    grouplist.append(groupname)
+            except:
+                print "Error with %s" % g.name
+        return grouplist
+
 
     def __unicode__(self):
         return "%s" % (self.uuid)

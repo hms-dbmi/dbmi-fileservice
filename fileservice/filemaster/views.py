@@ -81,6 +81,15 @@ class ArchiveFileList(viewsets.ModelViewSet):
             for t in self.request.DATA['tags']:
                 tagstash.append(t)
             map(obj.tags.add, tagstash)
+
+        if 'permissions' in self.request.DATA:
+            for p in self.request.DATA['permissions']:
+                try:
+                    af = ArchiveFile.objects.get(uuid=obj.uuid)
+                    af.setPerms(p)                
+                except Exception,e:
+                    print "ERROR %s " % e
+    
         return super(ArchiveFileList, self).post_save(obj)        
 
     @detail_route(methods=['get'])
