@@ -91,17 +91,18 @@ Now put a file in.  Make sure you fill out "metadata:permissions" and "filename"
 ```
 $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
  -H "Content-Type: application/json" \
- -d '{"metadata":{"permissions":["udntest"]},"filename":"test2.txt","tags":["tag1","tag2"]}' \
+ -d '{"permissions":["udntest"],"metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}' \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/"
 
 {
   "id": 7,
   "uuid": "0c19072c-9a6f-4a96-88ec-a9bb4033c4d6",
   "description": null,
+  "permissions": ["udntest"],
   "metadata": {
-    "permissions": [
-      "udntest"
-    ]
+    "coverage": "30",
+    "patientid": "1234-123-123-123",
+    "otherinfo": "info"
   },
   "tags": [
     "tag1",
