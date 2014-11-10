@@ -21,7 +21,7 @@ https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&c
 
 ## Create Permissions and Groups
 
-A "group" represents a dataset. For instance a projectname might be a group, or some specific set of data like "breast cancer samples" or "ebola samples". This is a logical group of data. Almost like a "folder" in a traditional file system. Permissions (read, write, etc) will be applied to those groups.  
+A "group" represents a dataset. For instance a projectname might be a group, or some specific set of data like "breast cancer samples", "Pan-Cancer Study", or "Ebola samples". This is a logical group of data. Almost like a "folder" in a traditional file system. Permissions (read, write, etc) will be applied to those groups. Files can belong to multiple groups.  
 
 Creates group called "udntest" with no users in it. User executing this command needs to hand "add_group" privileges.  
 
