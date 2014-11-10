@@ -94,6 +94,7 @@ $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
  -d '{"users":[{"email":"cbmi_test2@medlab.harvard.edu"}]}' \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/groups/2/"
 ```
+## File management  
 
 Now put a file in.  Make sure you fill out "filename" and "permissions".  There are other fields you can fill out, such as Location. Feel free to add tags and as much metadata (in JSON format) as you want.  
 ```
