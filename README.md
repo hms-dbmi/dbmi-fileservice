@@ -140,7 +140,7 @@ $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/0c19072c-9a6f-4a96-88ec-a9bb4033c4d6/register/"
 ```
 
-## Upload a local file to S3.  
+## Upload a local file to S3. This command also registers the file location to the FileService.  
 ```
 $curl -k -v -X GET --cookie "Authorization=$CBMI1" \
  -H "Content-Type: application/json" \
@@ -151,7 +151,7 @@ $curl -k -v -X GET --cookie "Authorization=$CBMI1" \
 $curl -v -X PUT --upload-file "~/location/of/localfile.txt" \
 "https://udnarchive-ci.s3.amazonaws.com/55a529e9-2677-4feb-bc71-171d49750798/test2.txt?Signature=al%2BeX%2BV04HeyIJTXPF6xQM6Ugy8%3D&Expires=1413916977&AWSAccessKeyId=AKIAJB22JW7JSGJXYYZA"
 ```
-And then register that s3 file location.  
+You can register a file location manually if you want.  
 ```
 $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
  -H "Content-Type: application/json" \
