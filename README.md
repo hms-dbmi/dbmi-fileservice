@@ -23,9 +23,9 @@ https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&c
 
 A "group" represents a dataset. For instance a projectname might be a group, or some specific set of data like "breast cancer samples", "Pan-Cancer Study", or "Ebola samples". This is a logical group of data. Almost like a "folder" in a traditional file system. Permissions (read, write, etc) will be applied to those groups. Files can belong to multiple groups.  
 
-Creates group called "udntest" with no users in it. User executing this command needs to hand "add_group" privileges.  
+Creates group called "udntest" with no users in it. The Power User executing this command needs to have "add_group" privileges.
 
-After the group is created, a bunch of roles are created -- ADMINS, DOWNLOADERS, READERS, WRITERS, UPLOADERS. You add users to those roles depending on what powers they should have.  
+After the group is created, a bunch of roles are created -- ADMINS, DOWNLOADERS, READERS, WRITERS, UPLOADERS. You add users to those roles depending on what powers they should have. The User who created this group automatically has rights in all of the roles.  
 
 Users are always identified by "email address".  
 
