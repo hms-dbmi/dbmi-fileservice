@@ -64,3 +64,28 @@ INTERNAL_IPS = ('127.0.0.1',)
 ########## END TOOLBAR CONFIGURATION
 ENCRYPTED_FIELDS_KEYDIR = '/opt/kz'
 
+##AUTH0
+AUTH0_CLIENT_ID="xxxx"
+AUTH0_CLIENT_SECRET="xxxx-xxxx" 
+AUTH0_DOMAIN="xxxx.auth0.com"
+AUTH0_CALLBACK_URL="http://localhost:8000/callback/"
+S3_ID="xxxx"
+S3_SECRET="xxxx"
+S3_UPLOAD_BUCKET="xxxx-ci"
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://127.0.0.1:9200/',
+        'INDEX_NAME': 'haystack',
+    },
+}
+
+HAYSTACK_LIMIT_TO_REGISTERED_MODELS = False
+
+# increase the default number of results (from 20)
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 40
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+#HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
+
+

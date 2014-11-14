@@ -6,8 +6,10 @@ username = "cbmi_test1@medlab.harvard.edu"
 password = "%$^xxxxx"
 adfsurl = "http://adfs.medlab.harvard.edu/adfs/services/trust"
 callback = "http://localhost:8000/callback/"
-auth0initial = "https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri="+callback+"&connection=hms-it-test"
-auth0callback = "https://hms-dbmi.auth0.com/login/callback?connection=hms-it-test"
+connectionstring = "hms-it-test"
+auth0client = "oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb"
+auth0initial = "https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id="+auth0client+"&redirect_uri="+callback+"&connection=%s" % connectionstring
+auth0callback = "https://hms-dbmi.auth0.com/login/callback?connection=%s" % connectionstring
 
 class MyHTMLParser(HTMLParser):
     def __init__(self, fh):
