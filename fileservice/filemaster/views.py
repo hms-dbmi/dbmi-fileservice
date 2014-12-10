@@ -77,7 +77,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()                
             except Exception,e:
-                print "ERROR %s " % e
+                print "ERROR tags: %s " % e
         if 'tags' in self.request.DATA:        
             for t in self.request.DATA['tags']:
                 tagstash.append(t)
@@ -93,10 +93,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
             for p in self.request.DATA['permissions']:
                 try:
                     af = ArchiveFile.objects.get(uuid=obj.uuid)
-                    af.setPerms(p)                
+                    af.setPerms(p)
                 except Exception,e:
-                    print "ERROR %s " % e
-    
+                    print "ERROR permissions: %s " % e
         return super(ArchiveFileList, self).post_save(obj)        
 
     @detail_route(methods=['get'])
@@ -129,7 +128,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
-        urlhash = signedUrlUpload(archivefile)
+        bucket = self.request.QUERY_PARAMS.get('bucket', None)
+        
+        urlhash = signedUrlUpload(archivefile,bucket=bucket)
         url = urlhash["url"]
         message = "PUT to this url"
         location = urlhash["location"]
@@ -181,16 +182,19 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message':message})
 
 
-def signedUrlUpload(archiveFile=None):
+def signedUrlUpload(archiveFile=None,bucket=None):
     conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
     foldername = str(uuid.uuid4())
-    url = "S3://%s/%s" % (settings.S3_UPLOAD_BUCKET,foldername+"/"+archiveFile.filename)
+    if not bucket:
+        bucket=settings.S3_UPLOAD_BUCKET
+
+    url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
     fl = FileLocation(url=url)
     fl.save()
     archiveFile.locations.add(fl)
     return {
-            "url":conn.generate_url(3600*24, 'PUT', settings.S3_UPLOAD_BUCKET, foldername+"/"+archiveFile.filename),
-            "location":"s3://"+settings.S3_UPLOAD_BUCKET+foldername+"/"+archiveFile.filename
+            "url":conn.generate_url(3600*24, 'PUT', bucket, foldername+"/"+archiveFile.filename),
+            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename
             }
 
 def signedUrlDownload(archiveFile=None):

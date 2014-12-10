@@ -73,7 +73,7 @@ class ArchiveFile(models.Model):
             elif types=="DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
         except Exception,e:
-            print "ERROR %s" % e
+            print "ERROR setperms %s %s %s" % (e,group,types)
             return         
 
     def removeDefaultPerms(self,group,types):
@@ -138,13 +138,6 @@ class HealthCheck(models.Model):
     message = models.CharField(max_length=255)
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    """
-    A custom user class that basically mirrors Django's `AbstractUser` class
-    and doesn't force `first_name` or `last_name` with sensibilities for
-    international names.
-
-    http://www.w3.org/International/questions/qa-personal-names
-    """
     username = models.CharField(_('username'), max_length=30, unique=True,
         help_text=_('Required. 30 characters or fewer. Letters, numbers and '
                     '@/./+/-/_ characters'),
