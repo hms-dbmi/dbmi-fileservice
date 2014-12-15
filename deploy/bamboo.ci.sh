@@ -44,9 +44,12 @@ pip install -r ${BAMBOODIR}/requirements.txt
 pip install --upgrade drf-compound-fields
 cd ${BAMBOODIR}/fileservice
 python27 manage.py test filemaster --settings fileservice.settings.local
+TESTCODE=$?
 cd ${BAMBOODIR}
 zip -r fileservice.zip .
 
 AWS_ACCESS_KEY_ID=${ACCESS_KEY} AWS_SECRET_ACCESS_KEY=${SECRET_KEY} aws s3 cp ${BAMBOODIR}/${ORIGARTIFACT} s3://cbmi_artifacts/${KEYNAME}/${DEVENV}/latest/$ARTIFACT
 
 AWS_ACCESS_KEY_ID=${ACCESS_KEY} AWS_SECRET_ACCESS_KEY=${SECRET_KEY} aws s3 cp ${BAMBOODIR}/${ORIGARTIFACT} s3://cbmi_artifacts/${KEYNAME}/${DEVENV}/${BAMBOOBUILD}/$ARTIFACT
+
+return $TESTCODE
