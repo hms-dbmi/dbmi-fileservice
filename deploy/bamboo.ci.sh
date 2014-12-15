@@ -13,7 +13,7 @@ install() {
  yum install -y python-setuptools
  pip install --upgrade awscli
  pip install --upgrade virtualenv
- yum install -y mysql-client
+ yum install -y mysql-devel
  rpm --import https://packages.elasticsearch.org/GPG-KEY-elasticsearch
  cat <<< '
 [elasticsearch-1.4]
@@ -42,7 +42,7 @@ cd ~/python
 cd ~
 pip install -r ${BAMBOODIR}/requirements.txt
 cd ${BAMBOODIR}/fileservice
-./manage.py test filemaster --settings fileservice.settings.local
+python27 manage.py test filemaster --settings fileservice.settings.local
 cd ${BAMBOODIR}
 zip -r fileservice.zip .
 
