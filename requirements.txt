@@ -4,8 +4,6 @@ django-extensions
 boto
 django-social-auth
 django-bootstrap3
-djangorestframework
-drf-compound-fields
 markdown
 django-filter
 django-debug-toolbar
@@ -22,4 +20,5 @@ requests
 -e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
 elasticsearch
 celery_haystack
+djangorestframework
 drf-compound-fields
