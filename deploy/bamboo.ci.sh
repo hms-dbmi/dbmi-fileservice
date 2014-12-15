@@ -5,7 +5,7 @@ install() {
  yum -y update
  yum install -y postgresql-devel
  yum install -y wget
- yum install -y python-devel
+ yum install -y python-devel python27 python27-devel
  yum install -y libxml2-devel
  yum install -y libxslt-devel
  yum install -y python-pip
@@ -26,8 +26,13 @@ enabled=1' > /etc/yum.repos.d/elasticsearch.repo
  chkconfig --add elasticsearch
  export JAVA_HOME=/usr/lib/jvm/jre-1.7.0
  /etc/init.d/elasticsearch restart
+
  cd ~
- virtualenv python
+ wget https://bootstrap.pypa.io/ez_setup.py -O - | python27
+ /usr/bin/easy_install-2.7 pip
+ /usr/bin/pip2.7 install --upgrade awscli
+ /usr/bin/pip2.7 install --upgrade virtualenv
+ /usr/bin/virtualenv-2.7 python
 }
 
 install >/tmp/startup.log 2>&1
