@@ -34,7 +34,7 @@ TEST_INDEX = {
 class ArchiveFileTest(TestCase):
     fileuuid=None
     aws_key="AKIAJTRKJN7J2V3FBK5Q"
-    aws_secret="cXRrWtINM%2B4y%2FWoSYqEPkfpl2MqO0cg45bcB43lH"
+    aws_secret="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"
 
     def setUp(self):
         haystack.connections.reload('default')
@@ -122,7 +122,7 @@ class ArchiveFileTest(TestCase):
         res = c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"filesize":"26","coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}',content_type='application/json')
         j = json.loads(res.content)["uuid"]
         
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
         res = c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]
@@ -132,12 +132,12 @@ class ArchiveFileTest(TestCase):
         #get link and upload file
         
         #then download
-        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
         res = c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
 
         #then destroy
-        cleanup_bucket(self.aws_key, urllib.unquote(self.aws_secret).decode('utf8'))
+        cleanup_bucket(self.aws_key, self.aws_secret)
 
     def test_f_denyuser(self):
         t = get_token('regularuser@thebeatles.com')
@@ -148,7 +148,7 @@ class ArchiveFileTest(TestCase):
         self.assertEqual(res.status_code, 201)
         j = json.loads(res.content)["uuid"]
         
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
         res = c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]
@@ -156,12 +156,10 @@ class ArchiveFileTest(TestCase):
         t = get_token('denyuser@thebeatles.com')
 
         c = Client()
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
         res = c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 403)
-        cleanup_bucket(self.aws_key, urllib.unquote(self.aws_secret).decode('utf8'))
-
-
+        cleanup_bucket(self.aws_key, self.aws_secret)
     
     def tearDown(self):
         call_command('clear_index', interactive=False, verbosity=0)
