@@ -12,6 +12,7 @@ install() {
  yum install -y zip
  yum install -y python-setuptools
  pip install --upgrade awscli
+ pip install --upgrade virtualenv
  yum install -y mysql-client
  rpm --import https://packages.elasticsearch.org/GPG-KEY-elasticsearch
  cat <<< '
@@ -25,10 +26,14 @@ enabled=1' > /etc/yum.repos.d/elasticsearch.repo
  chkconfig --add elasticsearch
  export JAVA_HOME=/usr/lib/jvm/jre-1.7.0
  /etc/init.d/elasticsearch restart
+ cd ~
+ virtualenv python
 }
 
 install >/tmp/startup.log 2>&1
 
+cd ~/python
+. bin/activate
 cd ~
 pip install -r ${BAMBOODIR}/requirements.txt
 cd ${BAMBOODIR}/fileservice
