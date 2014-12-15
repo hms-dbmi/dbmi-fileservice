@@ -129,8 +129,11 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseForbidden()
         
         bucket = self.request.QUERY_PARAMS.get('bucket', None)
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         
-        urlhash = signedUrlUpload(archivefile,bucket=bucket)
+        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret)
+
         url = urlhash["url"]
         message = "PUT to this url"
         location = urlhash["location"]
@@ -182,8 +185,14 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message':message})
 
 
-def signedUrlUpload(archiveFile=None,bucket=None):
-    conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
+def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
+    if not aws_key:
+        aws_key=settings.S3_ID
+    if not aws_secret:
+        aws_secret=settings.S3_SECRET
+
+    
+    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     foldername = str(uuid.uuid4())
     if not bucket:
         bucket=settings.S3_UPLOAD_BUCKET
@@ -193,12 +202,17 @@ def signedUrlUpload(archiveFile=None,bucket=None):
     fl.save()
     archiveFile.locations.add(fl)
     return {
-            "url":conn.generate_url(3600*24, 'PUT', bucket, foldername+"/"+archiveFile.filename),
+            "url":conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),
             "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename
             }
 
-def signedUrlDownload(archiveFile=None):
-    conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
+def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
+    if not aws_key:
+        aws_key=settings.S3_ID
+    if not aws_secret:
+        aws_secret=settings.S3_SECRET
+
+    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     url = archiveFile.locations.all()[0].url
     bucket = ""
     key = ""

@@ -7,8 +7,9 @@ from django.test import Client
 from django.test.utils import override_settings
 import haystack 
 from django.core.management import call_command
-import json,uuid
+import json,uuid,requests,urllib
 from guardian.shortcuts import get_objects_for_user
+from boto.s3.connection import S3Connection
 
 
 User = get_user_model()        
@@ -27,9 +28,14 @@ TEST_INDEX = {
     },
 }
 
+
+
 @override_settings(HAYSTACK_CONNECTIONS=TEST_INDEX)
 class ArchiveFileTest(TestCase):
     fileuuid=None
+    aws_key="AKIAJTRKJN7J2V3FBK5Q"
+    aws_secret="cXRrWtINM%2B4y%2FWoSYqEPkfpl2MqO0cg45bcB43lH"
+
     def setUp(self):
         haystack.connections.reload('default')
         User = get_user_model()
@@ -39,6 +45,17 @@ class ArchiveFileTest(TestCase):
         denyuser = User.objects.create_user('denyuser', 'denyuser@thebeatles.com', 'password')
         add_group_permission = Permission.objects.get(codename='add_group')
         poweruser.user_permissions.add(add_group_permission)
+
+        r = add_user_group(success=True)
+        t = get_token('poweruser@thebeatles.com')
+
+        #add regular user to groups
+        c = Client()
+        c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
+        for g in groups_for_regular:
+            gr = Group.objects.get(name=g)
+            res = c.put('/filemaster/groups/%s/' % gr.id, data='{"users":[{"email":"regularuser@thebeatles.com"}]}',content_type='application/json')
+            self.assertEqual(res.status_code, 200)
                         
 
     def test_a_user_tokens(self):
@@ -56,18 +73,6 @@ class ArchiveFileTest(TestCase):
         self.assertEqual(response.status_code, 403)
         
     def test_d_add_user_to_group_and_file(self):
-        r = add_user_group(success=True)
-        t = get_token('poweruser@thebeatles.com')
-
-        #add regular user to groups
-        c = Client()
-        c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
-        for g in groups_for_regular:
-            gr = Group.objects.get(name=g)
-            res = c.put('/filemaster/groups/%s/' % gr.id, data='{"users":[{"email":"regularuser@thebeatles.com"}]}',content_type='application/json')
-            self.assertEqual(res.status_code, 200)
-
-        r = add_user_group(success=True)
         t = get_token('regularuser@thebeatles.com')
 
         c = Client()
@@ -110,27 +115,66 @@ class ArchiveFileTest(TestCase):
         self.assertContains(res,"test4444",status_code=200)
 
     def test_e_add_user_to_group_and_file_and_s3(self):
-        r = add_user_group(success=True)
         t = get_token('poweruser@thebeatles.com')
 
         c = Client()
         c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
-        res = c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}',content_type='application/json')
+        res = c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"filesize":"26","coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}',content_type='application/json')
+        j = json.loads(res.content)["uuid"]
+        
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        res = c.get(url,content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        url = json.loads(res.content)["url"]
+        
+        res = requests.put(url,data=open('test2.txt'))
+        self.assertEqual(res.status_code, 200)
+        #get link and upload file
+        
+        #then download
+        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        res = c.get(url,content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+
+        #then destroy
+        cleanup_bucket(self.aws_key, urllib.unquote(self.aws_secret).decode('utf8'))
+
+    def test_f_denyuser(self):
+        t = get_token('regularuser@thebeatles.com')
+
+        c = Client()
+        c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
+        res = c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"filesize":"26","coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}',content_type='application/json')
         self.assertEqual(res.status_code, 201)
         j = json.loads(res.content)["uuid"]
-        self.assertTrue(uuid.UUID(j).hex)
+        
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        res = c.get(url,content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        url = json.loads(res.content)["url"]
 
-        res = c.get('/filemaster/api/file/%s/upload/?bucket=testbucket' % j,content_type='application/json')
-        print res
-        #get link and upload file
-        #then download
-        #then destroy
-                        
+        t = get_token('denyuser@thebeatles.com')
+
+        c = Client()
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,self.aws_secret)
+        res = c.get(url,content_type='application/json')
+        self.assertEqual(res.status_code, 403)
+        cleanup_bucket(self.aws_key, urllib.unquote(self.aws_secret).decode('utf8'))
+
+
     
     def tearDown(self):
         call_command('clear_index', interactive=False, verbosity=0)
-        #s3 cleanup
 
+def cleanup_bucket(aws_key,aws_secret):
+            #then destroy
+        import boto
+        conn = boto.connect_s3(aws_key,aws_secret)
+        full_bucket = conn.get_bucket('cbmi-fileservice-test')
+        for key in full_bucket.list():
+            key.delete()                        
+
+            
 def get_token(email):
     u = User.objects.get(email=email)
     return Token.objects.get(user=u)
