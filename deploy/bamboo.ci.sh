@@ -29,9 +29,9 @@ enabled=1' > /etc/yum.repos.d/elasticsearch.repo
 
 install >/tmp/startup.log 2>&1
 
-cd ${BAMBOODIR}
-pip install -r requirements.txt
-cd fileservice
+cd ~
+pip install -r ${BAMBOODIR}/requirements.txt
+cd ${BAMBOODIR}/fileservice
 ./manage.py test filemaster --settings fileservice.settings.local
 cd ${BAMBOODIR}
 zip -r fileservice.zip .
