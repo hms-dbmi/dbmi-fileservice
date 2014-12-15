@@ -41,6 +41,7 @@ cd ~/python
 . bin/activate
 cd ~
 pip install -r ${BAMBOODIR}/requirements.txt
+pip install --upgrade drf-compound-fields
 cd ${BAMBOODIR}/fileservice
 python27 manage.py test filemaster --settings fileservice.settings.local
 cd ${BAMBOODIR}
