@@ -15,13 +15,14 @@ sudo  pip install --upgrade virtualenv
 sudo  yum install -y mysql-devel
 sudo  rpm --import https://packages.elasticsearch.org/GPG-KEY-elasticsearch
 
-sudo  cat <<< '
+sudo bash -c 'cat << EOF > /etc/yum.repos.d/elasticsearch.repo
 [elasticsearch-1.4]
 name=Elasticsearch repository for 1.4.x packages
 baseurl=http://packages.elasticsearch.org/elasticsearch/1.4/centos
 gpgcheck=1
 gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
-enabled=1' > /etc/yum.repos.d/elasticsearch.repo
+enabled=1
+EOF'
 
 sudo  yum install -y elasticsearch
 sudo  chkconfig --add elasticsearch
