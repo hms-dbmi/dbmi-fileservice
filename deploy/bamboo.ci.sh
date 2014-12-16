@@ -1,38 +1,36 @@
 #!/bin/bash
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-install() {
- yum -y update
- yum install -y postgresql-devel
- yum install -y wget
- yum install -y python-devel python27 python27-devel
- yum install -y libxml2-devel
- yum install -y libxslt-devel
- yum install -y python-pip
- yum install -y zip
- yum install -y python-setuptools
- pip install --upgrade awscli
- pip install --upgrade virtualenv
- yum install -y mysql-devel
- rpm --import https://packages.elasticsearch.org/GPG-KEY-elasticsearch
- cat <<< '
+sudo  yum -y update
+sudo  yum install -y postgresql-devel
+sudo  yum install -y wget
+sudo  yum install -y python-devel python27 python27-devel
+sudo  yum install -y libxml2-devel
+sudo  yum install -y libxslt-devel
+sudo  yum install -y python-pip
+sudo  yum install -y zip
+sudo  yum install -y python-setuptools
+sudo  pip install --upgrade awscli
+sudo  pip install --upgrade virtualenv
+sudo  yum install -y mysql-devel
+sudo  rpm --import https://packages.elasticsearch.org/GPG-KEY-elasticsearch
+
+sudo  cat <<< '
 [elasticsearch-1.4]
 name=Elasticsearch repository for 1.4.x packages
 baseurl=http://packages.elasticsearch.org/elasticsearch/1.4/centos
 gpgcheck=1
 gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1' > /etc/yum.repos.d/elasticsearch.repo
- yum install -y elasticsearch
- chkconfig --add elasticsearch
- export JAVA_HOME=/usr/lib/jvm/jre-1.7.0
- /etc/init.d/elasticsearch restart
- wget https://bootstrap.pypa.io/ez_setup.py -O - | python27
- /usr/bin/easy_install-2.7 pip
- /usr/bin/pip2.7 install --upgrade awscli
- /usr/bin/pip2.7 install --upgrade virtualenv
-}
 
-sudo install >/tmp/startup.log 2>&1
+sudo  yum install -y elasticsearch
+sudo  chkconfig --add elasticsearch
+JAVA_HOME=/usr/lib/jvm/jre-1.7.0 /etc/init.d/elasticsearch restart
+cd ~
+wget https://bootstrap.pypa.io/ez_setup.py -O - |sudo python27
+sudo  /usr/bin/easy_install-2.7 pip
+sudo  /usr/bin/pip2.7 install --upgrade awscli
+sudo  /usr/bin/pip2.7 install --upgrade virtualenv
 
 cd ~
 /usr/bin/virtualenv-2.7 python
