@@ -23,11 +23,15 @@ class Auth0Authentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         auth = None
         user = None
-        User = get_user_model()        
-        if request.COOKIES.has_key( 'Authorization' ):
+        User = get_user_model()
+        if request.META.get('HTTP_AUTHORIZATION', '') and request.META.get('HTTP_AUTHORIZATION', '').starts_with('JWT '):
+            authstring = request.META.get('HTTP_AUTHORIZATION', '')
+            auth = authstring[authstring.find('JWT '):len(authstring)-1]
+        elif request.COOKIES.has_key( 'Authorization' ):
             auth = request.COOKIES[ 'Authorization' ]
         else:
-            return None        
+            return None
+                
         try:
             payload = jwt.decode(
                                  auth,
@@ -48,4 +52,6 @@ class Auth0Authentication(authentication.BaseAuthentication):
         except Exception,e:
             print "error %s" % e
 
-        return (user, None)    
+        return (user, None)   
+    
+ 

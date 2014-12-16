@@ -5,6 +5,7 @@ from cliff.app import App
 from cliff.commandmanager import CommandManager
 
 from .utils import parseConfig
+from .auth import User
 
 
 class FileService(App):
@@ -49,7 +50,7 @@ class FileService(App):
             self.log.info("Need a valid conf file")
             sys.exit(1)
             
-        #self.user = User(self.configoptions)
+        self.user = User(self.configoptions)
         
         if not self.user.auth():
             self.log.info("unable to authenticate user %s" % self.configoptions["username"])
