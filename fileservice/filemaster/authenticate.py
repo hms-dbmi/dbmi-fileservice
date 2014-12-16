@@ -24,9 +24,13 @@ class Auth0Authentication(authentication.BaseAuthentication):
         auth = None
         user = None
         User = get_user_model()
-        if request.META.get('HTTP_AUTHORIZATION', '') and request.META.get('HTTP_AUTHORIZATION', '').starts_with('JWT '):
-            authstring = request.META.get('HTTP_AUTHORIZATION', '')
-            auth = authstring[authstring.find('JWT '):len(authstring)-1]
+
+        if 'HTTP_AUTHORIZATION' in request.META: 
+            authstring = request.META['HTTP_AUTHORIZATION']
+            if authstring.startswith('JWT '):
+                auth = authstring[authstring.find('JWT '):len(authstring)-1]
+            else: 
+                return None
         elif request.COOKIES.has_key( 'Authorization' ):
             auth = request.COOKIES[ 'Authorization' ]
         else:
