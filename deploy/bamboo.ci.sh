@@ -26,7 +26,7 @@ EOF'
 
 sudo  yum install -y elasticsearch
 sudo  chkconfig --add elasticsearch
-JAVA_HOME=/usr/lib/jvm/jre-1.7.0 /etc/init.d/elasticsearch restart
+JAVA_HOME=/usr/lib/jvm/jre-1.7.0 sudo /etc/init.d/elasticsearch restart
 cd ~
 wget https://bootstrap.pypa.io/ez_setup.py -O - |sudo python27
 sudo  /usr/bin/easy_install-2.7 pip
