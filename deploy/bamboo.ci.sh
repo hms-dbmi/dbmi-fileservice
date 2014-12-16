@@ -26,16 +26,16 @@ enabled=1' > /etc/yum.repos.d/elasticsearch.repo
  chkconfig --add elasticsearch
  export JAVA_HOME=/usr/lib/jvm/jre-1.7.0
  /etc/init.d/elasticsearch restart
-
- cd ~
- wget https://bootstrap.pypa.io/ez_setup.py -O - | python27
- /usr/bin/easy_install-2.7 pip
- /usr/bin/pip2.7 install --upgrade awscli
- /usr/bin/pip2.7 install --upgrade virtualenv
- /usr/bin/virtualenv-2.7 python
 }
 
 install >/tmp/startup.log 2>&1
+
+cd ~
+wget https://bootstrap.pypa.io/ez_setup.py -O - | python27
+/usr/bin/easy_install-2.7 pip
+/usr/bin/pip2.7 install --upgrade awscli
+/usr/bin/pip2.7 install --upgrade virtualenv
+/usr/bin/virtualenv-2.7 python
 
 cd ~/python
 . bin/activate
