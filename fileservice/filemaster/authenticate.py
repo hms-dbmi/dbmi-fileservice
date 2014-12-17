@@ -28,7 +28,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
         if 'HTTP_AUTHORIZATION' in request.META: 
             authstring = request.META['HTTP_AUTHORIZATION']
             if authstring.startswith('JWT '):
-                auth = authstring[authstring.find('JWT '):len(authstring)-1]
+                auth = authstring[4:]
             else: 
                 return None
         elif request.COOKIES.has_key( 'Authorization' ):
