@@ -51,7 +51,7 @@ setup(
             'fileservice = fileservice.main:main'
         ],
         'fileservice.application': [
-            #'uploadfile = genomebridge.files:UploadFile',
+            'list = fileservice.files:ListFiles',
             #'attributes = genomebridge.dataset:Attributes'
         ],
     },

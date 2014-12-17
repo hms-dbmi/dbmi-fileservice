@@ -40,7 +40,7 @@ class User:
         password = self.configoptions['password']
         adfsurl = self.configoptions['adfsurl'] #"http://adfs.medlab.harvard.edu/adfs/services/trust"
         callback = self.configoptions['appcallback'] #"https://fileservice-ci.dbmi.hms.harvard.edu/callback/"
-        auth0initial = self.configooptions['auth0initial'] #"https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri="+callback+"&connection=hms-it-test"
+        auth0initial = self.configoptions['auth0initial'] #"https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri="+callback+"&connection=hms-it-test"
         auth0callback = self.configoptions['auth0callback'] #"https://hms-dbmi.auth0.com/login/callback?connection=hms-it-test"
         
         #call auth0 and get forwarding address and data
@@ -109,7 +109,7 @@ class User:
                 allow_redirects=False
                 )
         
-        return "JWT %s" % auth0_jwt.cookies['Authorization']
+        return "JWT %s" % auth0_jwt.cookies['Authorization'].rstrip()
 
         
 class MyHTMLParser(HTMLParser):
