@@ -160,6 +160,37 @@ class ArchiveFileTest(TestCase):
         res = c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 403)
         cleanup_bucket(self.aws_key, self.aws_secret)
+
+    def test_g_listfile(self):
+        t = get_token('regularuser@thebeatles.com')
+
+        c = Client()
+        c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
+        res = c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"filesize":"26","coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}',content_type='application/json')
+        self.assertEqual(res.status_code, 201)
+
+        url = '/filemaster/api/file/' % ()
+        res = c.get(url,{"filename":"test2.txt"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res,"udntest",status_code=200)
+
+        #test filter
+        url = '/filemaster/api/file/' % ()
+        res = c.get(url,{"min_creationdate":"2000-05-07"},content_type='application/json')
+        self.assertContains(res,"patientid",status_code=200)
+        self.assertEqual(res.status_code, 200)
+
+        #test filter with no response
+        url = '/filemaster/api/file/' % ()
+        res = c.get(url,{"max_creationdate":"2000-05-07"},content_type='application/json')
+        self.assertEqual(res.content,"[]")
+
+        
+        url = '/filemaster/api/file/' % ()
+        res = c.get(url,{"filename":"asdfasdfdsafdsafas.txt"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.content,"[]")
+
     
     def tearDown(self):
         call_command('clear_index', interactive=False, verbosity=0)

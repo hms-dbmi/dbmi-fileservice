@@ -51,7 +51,9 @@ setup(
             'fileservice = fileservice.main:main'
         ],
         'fileservice.application': [
+            'search = fileservice.files:SearchFiles',
             'list = fileservice.files:ListFiles',
+
             #'attributes = genomebridge.dataset:Attributes'
         ],
     },

@@ -33,6 +33,7 @@ from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
 from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
+from .filters import ArchiveFileFilter
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
@@ -58,8 +59,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
     lookup_field = 'uuid'    
     authentication_classes = (Auth0Authentication,TokenAuthentication,)
     permission_classes = (IsAuthenticated,DjangoObjectPermissionsChange,)
+    filter_class = ArchiveFileFilter
     filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
-    filter_fields = ('uuid',)
+    #filter_fields = ('uuid',)
 
     def pre_save(self, obj):
         u = User.objects.get(email=self.request.user.email)
