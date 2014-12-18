@@ -72,7 +72,6 @@ class JSONSearchField(serializers.WritableField):
         return json.dumps(con_value)
 
 class TagSearchField(serializers.WritableField):
-    
     def to_native(self, value):
         return value
 

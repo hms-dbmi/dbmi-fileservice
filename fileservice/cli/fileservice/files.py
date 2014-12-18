@@ -37,7 +37,6 @@ class SearchFiles(Command):
                          params=data,
                          headers=headers)
         self.log.debug("Search URL -- "+r.url)
-        json.dumps(r.json(), indent=1)
         self.app.stdout.write("%s" % json.dumps(r.json(),indent=4))
 
 class ListFiles(Command):

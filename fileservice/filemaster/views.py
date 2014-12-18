@@ -38,9 +38,12 @@ from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
 import json,uuid
+
 from boto.s3.connection import S3Connection
+
 from haystack.forms import ModelSearchForm
 from haystack.query import EmptySearchQuerySet,SearchQuerySet,SQ
+from haystack.inputs import AutoQuery, Exact, Clean
 
 
 User = get_user_model()        
@@ -373,13 +376,13 @@ class SearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             for item in facetlist:
                 sqs = sqs.facet(item)
             if not fieldlist:            
-                sqs = sqs.filter(content=query)
+                sqs = sqs.filter(content=AutoQuery(query))
             else:
                 for idx, field in enumerate(fieldlist):
                     if idx==0:
-                        sqs = sqs.filter(SQ(**{field:query}))
+                        sqs = sqs.filter(SQ(**{field+"__icontains":query}))
                     else:    
-                        sqs = sqs.filter_or(SQ(**{field:query}))
+                        sqs = sqs.filter_or(SQ(**{field+"__icontains":query}))
         
         finalResult=[]
         for m in list(sqs):
