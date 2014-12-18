@@ -3,7 +3,7 @@ import logging,json, os,jsonschema,importlib,uuid,requests
 from cliff.command import Command
 
 class SearchFiles(Command):
-    "Search by keywords, tags and fields -- fileservice -v list --fields 'description' --keyword testfile"
+    "Search by keywords, tags and fields: fileservice search --fields 'description' --keyword testfile"
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
@@ -36,11 +36,12 @@ class SearchFiles(Command):
         r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],"filemaster/api/search/"),
                          params=data,
                          headers=headers)
+        self.log.debug("Search URL -- "+r.url)
         json.dumps(r.json(), indent=1)
         self.app.stdout.write("%s" % json.dumps(r.json(),indent=4))
 
 class ListFiles(Command):
-    "List and filter by structured data"
+    "List and filter by structured data: fileservice list --fields '{\"field\":\"value\"}'"
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
@@ -61,7 +62,6 @@ class ListFiles(Command):
         data={}
         if fields:
             data=json.loads(fields)
-        print data
         r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],"filemaster/api/file/"),
                          params=data,
                          headers=headers)
