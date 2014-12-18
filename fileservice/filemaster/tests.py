@@ -205,6 +205,11 @@ class ArchiveFileTest(TestCase):
         self.assertContains(res,"test2.txt",status_code=200)
 
         url = '/filemaster/api/search/' % ()
+        res = c.get(url,{"q":"this","fields":"description"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res,"test2.txt",status_code=200)
+
+        url = '/filemaster/api/search/' % ()
         res = c.get(url,{"q":"test2"},content_type='application/json')
         self.assertEqual(res.status_code, 200)
         self.assertContains(res,"test2.txt",status_code=200)
