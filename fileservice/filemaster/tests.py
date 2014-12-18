@@ -191,6 +191,35 @@ class ArchiveFileTest(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.content,"[]")
 
+    def test_h_searchfile(self):
+        t = get_token('regularuser@thebeatles.com')
+
+        c = Client()
+        c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
+        res = c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"filesize":"26","coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}',content_type='application/json')
+        self.assertEqual(res.status_code, 201)
+
+        url = '/filemaster/api/search/' % ()
+        res = c.get(url,{"q":"test2","fields":"filename"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res,"test2.txt",status_code=200)
+
+        url = '/filemaster/api/search/' % ()
+        res = c.get(url,{"q":"test2"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res,"test2.txt",status_code=200)
+
+        url = '/filemaster/api/search/' % ()
+        res = c.get(url,{"q":"test2","fields":"uuid"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.content,"[]")
+
+        url = '/filemaster/api/search/' % ()
+        res = c.get(url,{"q":"testasdfasdfasdfa","fields":"filename"},content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.content,"[]")
+
+
     
     def tearDown(self):
         call_command('clear_index', interactive=False, verbosity=0)
