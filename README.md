@@ -1,3 +1,6 @@
+This is about the API. If you want the CLI, go to fileservice/cli  
+
+
 # Examples
 
 ## Log in  
