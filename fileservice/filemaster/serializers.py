@@ -63,7 +63,7 @@ class ArchiveFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id','uuid','description','metadata','tags','owner','filename','locations','permissions')
+        fields = ('id','uuid','description','metadata','tags','owner','filename','locations','permissions','creationdate','modifydate')
 
 class JSONSearchField(serializers.WritableField):
     
@@ -72,7 +72,6 @@ class JSONSearchField(serializers.WritableField):
         return json.dumps(con_value)
 
 class TagSearchField(serializers.WritableField):
-    
     def to_native(self, value):
         return value
 

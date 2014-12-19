@@ -5,8 +5,8 @@ from .models import ArchiveFile
 
 class ArchiveFileIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
-    description = indexes.CharField(model_attr='description')
-    filename = indexes.CharField(model_attr='filename')
+    description = indexes.EdgeNgramField(model_attr='description')
+    filename = indexes.EdgeNgramField(model_attr='filename')
     uuid = indexes.CharField(model_attr='uuid')
     metadata = indexes.CharField(model_attr='metadata')
     tags = indexes.CharField()
@@ -28,12 +28,12 @@ class ArchiveFileIndex(indexes.SearchIndex, indexes.Indexable):
             jsonmd = json.loads(json.dumps(lit))
             for key in jsonmd.keys():
                 self.prepared_data['md_'+key]=jsonmd[key]
-        except:
-            pass
+        except Exception,e:
+            print "Prepare Index error %s" % e
         return self.prepared_data
 
     def prepare_tags(self, obj):
-        return ', '.join([tag.name for tag in obj.tags.all()])
+        return ','.join([tag.name for tag in obj.tags.all()])
 
     def prepare_tag_list(self, obj):
         return [tag.name for tag in obj.tags.all()]

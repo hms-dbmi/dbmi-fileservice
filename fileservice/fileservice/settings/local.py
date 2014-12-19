@@ -65,13 +65,13 @@ INTERNAL_IPS = ('127.0.0.1',)
 ENCRYPTED_FIELDS_KEYDIR = '/opt/kz'
 
 ##AUTH0
-AUTH0_CLIENT_ID="xxxx"
-AUTH0_CLIENT_SECRET="xxxx-xxxx" 
-AUTH0_DOMAIN="xxxx.auth0.com"
-AUTH0_CALLBACK_URL="http://localhost:8000/callback/"
-S3_ID="xxxx"
-S3_SECRET="xxxx"
-S3_UPLOAD_BUCKET="xxxx-ci"
+AUTH0_CLIENT_ID="xxx"
+AUTH0_CLIENT_SECRET="xxxx" 
+AUTH0_DOMAIN="xxx"
+AUTH0_CALLBACK_URL="xxx"
+S3_ID="xxx"
+S3_SECRET="xxx"
+S3_UPLOAD_BUCKET="udnarchive-ci"
 
 HAYSTACK_CONNECTIONS = {
     'default': {

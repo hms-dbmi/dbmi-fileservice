@@ -33,13 +33,17 @@ from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
 from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
+from .filters import ArchiveFileFilter
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm
 from django.contrib.auth import get_user_model
 import json,uuid
+
 from boto.s3.connection import S3Connection
+
 from haystack.forms import ModelSearchForm
 from haystack.query import EmptySearchQuerySet,SearchQuerySet,SQ
+from haystack.inputs import AutoQuery, Exact, Clean
 
 
 User = get_user_model()        
@@ -58,8 +62,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
     lookup_field = 'uuid'    
     authentication_classes = (Auth0Authentication,TokenAuthentication,)
     permission_classes = (IsAuthenticated,DjangoObjectPermissionsChange,)
+    filter_class = ArchiveFileFilter
     filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
-    filter_fields = ('uuid',)
+    #filter_fields = ('uuid',)
 
     def pre_save(self, obj):
         u = User.objects.get(email=self.request.user.email)
@@ -77,7 +82,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()                
             except Exception,e:
-                print "ERROR %s " % e
+                print "ERROR tags: %s " % e
         if 'tags' in self.request.DATA:        
             for t in self.request.DATA['tags']:
                 tagstash.append(t)
@@ -93,10 +98,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
             for p in self.request.DATA['permissions']:
                 try:
                     af = ArchiveFile.objects.get(uuid=obj.uuid)
-                    af.setPerms(p)                
+                    af.setPerms(p)
                 except Exception,e:
-                    print "ERROR %s " % e
-    
+                    print "ERROR permissions: %s " % e
         return super(ArchiveFileList, self).post_save(obj)        
 
     @detail_route(methods=['get'])
@@ -129,7 +133,12 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
-        urlhash = signedUrlUpload(archivefile)
+        bucket = self.request.QUERY_PARAMS.get('bucket', None)
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        
+        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret)
+
         url = urlhash["url"]
         message = "PUT to this url"
         location = urlhash["location"]
@@ -181,20 +190,34 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message':message})
 
 
-def signedUrlUpload(archiveFile=None):
-    conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
+def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
+    if not aws_key:
+        aws_key=settings.S3_ID
+    if not aws_secret:
+        aws_secret=settings.S3_SECRET
+
+    
+    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     foldername = str(uuid.uuid4())
-    url = "S3://%s/%s" % (settings.S3_UPLOAD_BUCKET,foldername+"/"+archiveFile.filename)
+    if not bucket:
+        bucket=settings.S3_UPLOAD_BUCKET
+
+    url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
     fl = FileLocation(url=url)
     fl.save()
     archiveFile.locations.add(fl)
     return {
-            "url":conn.generate_url(3600*24, 'PUT', settings.S3_UPLOAD_BUCKET, foldername+"/"+archiveFile.filename),
-            "location":"s3://"+settings.S3_UPLOAD_BUCKET+foldername+"/"+archiveFile.filename
+            "url":conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),
+            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename
             }
 
-def signedUrlDownload(archiveFile=None):
-    conn = S3Connection(settings.S3_ID, settings.S3_SECRET, is_secure=True)
+def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
+    if not aws_key:
+        aws_key=settings.S3_ID
+    if not aws_secret:
+        aws_secret=settings.S3_SECRET
+
+    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     url = archiveFile.locations.all()[0].url
     bucket = ""
     key = ""
@@ -353,13 +376,13 @@ class SearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             for item in facetlist:
                 sqs = sqs.facet(item)
             if not fieldlist:            
-                sqs = sqs.filter(content=query)
+                sqs = sqs.filter(content=AutoQuery(query))
             else:
                 for idx, field in enumerate(fieldlist):
                     if idx==0:
-                        sqs = sqs.filter(SQ(**{field:query}))
+                        sqs = sqs.filter(SQ(**{field+"__icontains":query}))
                     else:    
-                        sqs = sqs.filter_or(SQ(**{field:query}))
+                        sqs = sqs.filter_or(SQ(**{field+"__icontains":query}))
         
         finalResult=[]
         for m in list(sqs):
