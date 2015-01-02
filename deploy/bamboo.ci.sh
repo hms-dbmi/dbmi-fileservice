@@ -42,7 +42,7 @@ cd ~
 pip install -r ${BAMBOODIR}/requirements.txt
 pip install --upgrade drf-compound-fields
 cd ${BAMBOODIR}/fileservice
-python27 manage.py test filemaster --settings fileservice.settings.local
+TEST_AWS_KEY=${TEST_AWS_KEY} TEST_AWS_SECRET=${TEST_AWS_SECRET} python27 manage.py test filemaster --settings fileservice.settings.local
 TESTCODE=$?
 echo $TESTCODE
 cd ${BAMBOODIR}
