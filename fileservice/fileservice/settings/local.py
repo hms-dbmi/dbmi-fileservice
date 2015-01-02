@@ -87,7 +87,3 @@ HAYSTACK_LIMIT_TO_REGISTERED_MODELS = False
 HAYSTACK_SEARCH_RESULTS_PER_PAGE = 40
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 #HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
-
-TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'default_value')
-TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'default_value')
-

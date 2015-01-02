@@ -86,3 +86,11 @@ HAYSTACK_LIMIT_TO_REGISTERED_MODELS = False
 HAYSTACK_SEARCH_RESULTS_PER_PAGE = 40
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 #HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
+
+BUCKETS = {
+           S3_UPLOAD_BUCKET:{
+                             "type":"s3",
+                             "AWS_KEY_ID":"AAAAAXXX",
+                             "AWS_SECRET":"AAAAAXXX"
+                             } 
+           }

@@ -133,7 +133,11 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
-        bucket = self.request.QUERY_PARAMS.get('bucket', None)
+        bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
+        bucketobj = Bucket.objects.get(name=bucket)
+        if not request.user.has_perm('filemaster.write_bucket',bucketobj):
+            return HttpResponseForbidden()
+        
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         
@@ -191,16 +195,17 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
 
 def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
+    if not bucket:
+        bucket=settings.S3_UPLOAD_BUCKET
+
     if not aws_key:
-        aws_key=settings.S3_ID
+        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
     if not aws_secret:
-        aws_secret=settings.S3_SECRET
+        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
 
     
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
     foldername = str(uuid.uuid4())
-    if not bucket:
-        bucket=settings.S3_UPLOAD_BUCKET
 
     url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
     fl = FileLocation(url=url)
