@@ -98,8 +98,6 @@ $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/groups/2/"
 ```
 
-```
-
 If a group needs Upload access to a specific bucket. Ususally to the __UPLOADER group.
 
 ```
