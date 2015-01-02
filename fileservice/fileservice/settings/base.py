@@ -3,6 +3,7 @@
 
 from os.path import abspath, basename, dirname, join, normpath
 from sys import path
+import os
 
 
 ########## PATH CONFIGURATION
@@ -299,3 +300,5 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'filemaster.CustomUser'
+TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'AKIAxxxxx')
+TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')

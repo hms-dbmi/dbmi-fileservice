@@ -1,5 +1,5 @@
 from django.test import TestCase
-from filemaster.models import ArchiveFile
+from filemaster.models import ArchiveFile,Bucket
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User, Group, Permission
 from rest_framework.authtoken.models import Token
@@ -10,6 +10,8 @@ from django.core.management import call_command
 import json,uuid,requests,urllib
 from guardian.shortcuts import get_objects_for_user
 from boto.s3.connection import S3Connection
+from django.conf import settings
+
 
 
 User = get_user_model()        
@@ -32,8 +34,8 @@ TEST_INDEX = {
 @override_settings(HAYSTACK_CONNECTIONS=TEST_INDEX)
 class ArchiveFileTest(TestCase):
     fileuuid=None
-    aws_key="AKIAJTRKJN7J2V3FBK5Q"
-    aws_secret="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"
+    aws_key=settings.TEST_AWS_KEY
+    aws_secret=settings.TEST_AWS_SECRET
     c = Client()
 
     def setUp(self):
@@ -45,6 +47,8 @@ class ArchiveFileTest(TestCase):
         regularuser = User.objects.create_user('regularuser', 'regularuser@thebeatles.com', 'password')
         denyuser = User.objects.create_user('denyuser', 'denyuser@thebeatles.com', 'password')
         add_group_permission = Permission.objects.get(codename='add_group')
+        bucket=Bucket(name="cbmi-fileservice-test")
+        bucket.save()
         poweruser.user_permissions.add(add_group_permission)
 
         r = add_user_group(success=True)
@@ -207,6 +211,7 @@ class ArchiveFileTest(TestCase):
         res = self.c.get(url,{"q":"descr","fields":"description"},content_type='application/json')
         self.assertEqual(res.status_code, 200)
         self.assertContains(res,"test2.txt",status_code=200)
+        self.assertContains(res,"tag6",status_code=200)
 
         url = '/filemaster/api/search/' % ()
         res = self.c.get(url,{"q":"test2"},content_type='application/json')

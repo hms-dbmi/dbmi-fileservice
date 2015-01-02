@@ -53,7 +53,7 @@ fileservice search --keyword 'tag1' --fields 'tags'
 ```
 "fields" is a comma separated list of fields to restrict search to. "keyword" is the text string to used to search.  
 
-## Upload a file
+## Write a file (metadta)
 Prepare a file with your metadata.  
 
 ```
@@ -73,7 +73,7 @@ fileservice -v write --jsonFile test.json
 ```
 Output is a list of UUIDs. Please use these UUIDs to address the file in the future. Or put them in a database. But keep them!  
 
-## Read a file
+## Read a file (metadata)
 ```
 fileservice -v view --fileID=f149cf5d-722e-4a3f-9767-89b856458ddb
 {

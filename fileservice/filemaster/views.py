@@ -29,13 +29,13 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
 
-from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
+from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation,Bucket
 from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from .filters import ArchiveFileFilter
 from rest_framework_extensions.mixins import DetailSerializerMixin
-from guardian.shortcuts import assign_perm
+from guardian.shortcuts import assign_perm,get_objects_for_group
 from django.contrib.auth import get_user_model
 import json,uuid
 
@@ -235,7 +235,7 @@ def serializeGroup(user,group=None):
         if user.has_perm('auth.view_group', group):
             for u in group.user_set.all():
                 userstructure.append({"email":u.email})
-            groupstructure={"name":group.name,"id":group.id,"users":group.user_set.all()}
+            groupstructure={"name":group.name,"id":group.id,"users":group.user_set.all(),"buckets":get_objects_for_group(group, 'filemaster.write_bucket')}
     else:
         groupstructure=[]
         for group in Group.objects.all():
@@ -243,7 +243,7 @@ def serializeGroup(user,group=None):
             if user.has_perm('auth.view_group', group):
                 for u in group.user_set.all():
                     userstructure.append({"email":u.email})
-                groupstructure.append({"name":group.name,"id":group.id,"users":group.user_set.all()})
+                groupstructure.append({"name":group.name,"id":group.id,"users":group.user_set.all(),"buckets":get_objects_for_group(group, 'filemaster.write_bucket')})
     return groupstructure
 
 
@@ -313,12 +313,26 @@ class GroupDetail(APIView):
         if not request.user.has_perm('auth.change_group', group):
             return HttpResponseForbidden()        
 
-        for u in self.request.DATA['users']:
-            try:
-                user = User.objects.get(email=u["email"])
-                user.groups.add(group)
-            except Exception,e:
-                print "ERROR: %s" % e
+        try:
+            for u in self.request.DATA['users']:
+                try:
+                    user = User.objects.get(email=u["email"])
+                    user.groups.add(group)
+                except Exception,e:
+                    print "ERROR: %s" % e
+        except:
+            pass
+
+        try:
+            for u in self.request.DATA['buckets']:
+                try:
+                    bucket = Bucket.objects.get(name=u["name"])
+                    assign_perm('filemaster.write_bucket', group, bucket)
+                except Exception,e:
+                    print "ERROR: %s" % e
+        except:
+            pass
+
 
         groupstructure = serializeGroup(request.user,group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)

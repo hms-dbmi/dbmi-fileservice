@@ -40,6 +40,17 @@ class FileLocation(models.Model):
 
     def __unicode__(self):
         return "%s" % (self.id)
+
+class Bucket(models.Model):
+    name = models.CharField(max_length=255,blank=False,null=False,unique=True)
+
+    def __unicode__(self):
+        return "%s" % (self.name)
+    
+    class Meta:
+        permissions = (
+            ('write_bucket', 'Write to bucket'),
+        )    
  
  
 class ArchiveFile(models.Model):
