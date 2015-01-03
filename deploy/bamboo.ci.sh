@@ -34,11 +34,10 @@ sudo  /usr/bin/pip2.7 install --upgrade awscli
 sudo  /usr/bin/pip2.7 install --upgrade virtualenv
 
 cd ~
-/usr/bin/virtualenv-2.7 python
+virtualenv -p /usr/bin/python2.7 python
 
 cd ~/python
 . bin/activate
-cd ~
 pip install -r ${BAMBOODIR}/requirements.txt
 pip install --upgrade drf-compound-fields
 cd ${BAMBOODIR}/fileservice

@@ -312,14 +312,10 @@ class GroupDetail(APIView):
         groupstructure = serializeGroup(request.user,group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
-
-    def put(self, request, pk, format=None):
-        group = self.get_object(pk)
-        if not request.user.has_perm('auth.change_group', group):
-            return HttpResponseForbidden()        
-
+    
+    def getUsers(self,request,group):
         try:
-            for u in self.request.DATA['users']:
+            for u in request.DATA['users']:
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
@@ -327,9 +323,10 @@ class GroupDetail(APIView):
                     print "ERROR: %s" % e
         except:
             pass
-
+    
+    def getBuckets(self,request,group):
         try:
-            for u in self.request.DATA['buckets']:
+            for u in request.DATA['buckets']:
                 try:
                     bucket = Bucket.objects.get(name=u["name"])
                     assign_perm('filemaster.write_bucket', group, bucket)
@@ -338,6 +335,13 @@ class GroupDetail(APIView):
         except:
             pass
 
+    def put(self, request, pk, format=None):
+        group = self.get_object(pk)
+        if not request.user.has_perm('auth.change_group', group):
+            return HttpResponseForbidden()
+        
+        self.getUsers(self.request,group)
+        self.getBuckets(self.request,group)        
 
         groupstructure = serializeGroup(request.user,group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
