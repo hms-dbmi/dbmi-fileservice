@@ -9,7 +9,6 @@ django-filter
 django-debug-toolbar
 django-encrypted-fields
 PyJWT
-drf-extensions
 jsonfield
 django-taggit
 django-uuidfield
@@ -20,5 +19,6 @@ requests
 -e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
 elasticsearch
 celery_haystack
-djangorestframework
+djangorestframework == 2.4.4
+drf-extensions
 drf-compound-fields
