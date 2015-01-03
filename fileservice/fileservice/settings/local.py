@@ -71,7 +71,7 @@ AUTH0_DOMAIN="xxx"
 AUTH0_CALLBACK_URL="xxx"
 S3_ID="xxx"
 S3_SECRET="xxx"
-S3_UPLOAD_BUCKET="udnarchive-ci"
+S3_UPLOAD_BUCKET="cbmi-fileservice-test"
 
 HAYSTACK_CONNECTIONS = {
     'default': {
@@ -87,3 +87,11 @@ HAYSTACK_LIMIT_TO_REGISTERED_MODELS = False
 HAYSTACK_SEARCH_RESULTS_PER_PAGE = 40
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 #HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
+
+BUCKETS = {
+           S3_UPLOAD_BUCKET:{
+                             "type":"s3",
+                             "AWS_KEY_ID":"AAAAAXXX",
+                             "AWS_SECRET":"AAAAAXXX"
+                             } 
+           }
