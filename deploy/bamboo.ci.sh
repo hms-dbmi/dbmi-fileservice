@@ -4,7 +4,7 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 sudo  yum -y update
 sudo  yum install -y postgresql-devel
 sudo  yum install -y wget
-sudo  yum install -y python-devel python27 python27-devel
+sudo  yum install -y python-devel python27 python27-devel libyaml-devel
 sudo  yum install -y libxml2-devel
 sudo  yum install -y libxslt-devel
 sudo  yum install -y python-pip
@@ -34,15 +34,13 @@ sudo  /usr/bin/pip2.7 install --upgrade awscli
 sudo  /usr/bin/pip2.7 install --upgrade virtualenv
 
 cd ~
-/usr/bin/virtualenv-2.7 python
+virtualenv -p /usr/bin/python2.7 python
 
 cd ~/python
 . bin/activate
-cd ~
 pip install -r ${BAMBOODIR}/requirements.txt
-pip install --upgrade drf-compound-fields
 cd ${BAMBOODIR}/fileservice
-python27 manage.py test filemaster --settings fileservice.settings.local
+TEST_AWS_KEY=${TEST_AWS_KEY} TEST_AWS_SECRET=${TEST_AWS_SECRET}  ./manage.py test filemaster --settings fileservice.settings.local
 TESTCODE=$?
 echo $TESTCODE
 cd ${BAMBOODIR}

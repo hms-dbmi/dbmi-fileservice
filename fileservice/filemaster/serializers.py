@@ -34,14 +34,21 @@ class UserModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
 
+class BucketSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
+
+    class Meta:
+        fields = ('name',)
+
         
 class SpecialGroupSerializer(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
     users = UserSerializer(required=False)
+    buckets = BucketSerializer(required=False)
 
     class Meta:
-        fields = ('id','name','users')    
+        fields = ('id','name','users','buckets',)    
        
 class HealthCheckSerializer(serializers.ModelSerializer):
     message = serializers.CharField()    

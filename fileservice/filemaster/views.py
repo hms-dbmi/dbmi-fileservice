@@ -29,13 +29,13 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
 
-from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation
+from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation,Bucket
 from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
 from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
 from .filters import ArchiveFileFilter
 from rest_framework_extensions.mixins import DetailSerializerMixin
-from guardian.shortcuts import assign_perm
+from guardian.shortcuts import assign_perm,get_objects_for_group
 from django.contrib.auth import get_user_model
 import json,uuid
 
@@ -133,7 +133,11 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
-        bucket = self.request.QUERY_PARAMS.get('bucket', None)
+        bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
+        bucketobj = Bucket.objects.get(name=bucket)
+        if not request.user.has_perm('filemaster.write_bucket',bucketobj):
+            return HttpResponseForbidden()
+        
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         
@@ -191,16 +195,17 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
 
 def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
+    if not bucket:
+        bucket=settings.S3_UPLOAD_BUCKET
+
     if not aws_key:
-        aws_key=settings.S3_ID
+        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
     if not aws_secret:
-        aws_secret=settings.S3_SECRET
+        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
 
     
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
     foldername = str(uuid.uuid4())
-    if not bucket:
-        bucket=settings.S3_UPLOAD_BUCKET
 
     url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
     fl = FileLocation(url=url)
@@ -235,7 +240,7 @@ def serializeGroup(user,group=None):
         if user.has_perm('auth.view_group', group):
             for u in group.user_set.all():
                 userstructure.append({"email":u.email})
-            groupstructure={"name":group.name,"id":group.id,"users":group.user_set.all()}
+            groupstructure={"name":group.name,"id":group.id,"users":group.user_set.all(),"buckets":get_objects_for_group(group, 'filemaster.write_bucket')}
     else:
         groupstructure=[]
         for group in Group.objects.all():
@@ -243,7 +248,7 @@ def serializeGroup(user,group=None):
             if user.has_perm('auth.view_group', group):
                 for u in group.user_set.all():
                     userstructure.append({"email":u.email})
-                groupstructure.append({"name":group.name,"id":group.id,"users":group.user_set.all()})
+                groupstructure.append({"name":group.name,"id":group.id,"users":group.user_set.all(),"buckets":get_objects_for_group(group, 'filemaster.write_bucket')})
     return groupstructure
 
 
@@ -307,18 +312,36 @@ class GroupDetail(APIView):
         groupstructure = serializeGroup(request.user,group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
+    
+    def getUsers(self,request,group):
+        try:
+            for u in request.DATA['users']:
+                try:
+                    user = User.objects.get(email=u["email"])
+                    user.groups.add(group)
+                except Exception,e:
+                    print "ERROR: %s" % e
+        except:
+            pass
+    
+    def getBuckets(self,request,group):
+        try:
+            for u in request.DATA['buckets']:
+                try:
+                    bucket = Bucket.objects.get(name=u["name"])
+                    assign_perm('filemaster.write_bucket', group, bucket)
+                except Exception,e:
+                    print "ERROR: %s" % e
+        except:
+            pass
 
     def put(self, request, pk, format=None):
         group = self.get_object(pk)
         if not request.user.has_perm('auth.change_group', group):
-            return HttpResponseForbidden()        
-
-        for u in self.request.DATA['users']:
-            try:
-                user = User.objects.get(email=u["email"])
-                user.groups.add(group)
-            except Exception,e:
-                print "ERROR: %s" % e
+            return HttpResponseForbidden()
+        
+        self.getUsers(self.request,group)
+        self.getBuckets(self.request,group)        
 
         groupstructure = serializeGroup(request.user,group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)

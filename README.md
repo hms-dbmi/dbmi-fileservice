@@ -1,3 +1,5 @@
+# FileService is an API that handles permissions, authentication, upload/download sigining to clouds, metadata handling, searching and archiving of files.  
+
 This is about the API. If you want the CLI, go to fileservice/cli  
 
 
@@ -89,7 +91,7 @@ $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
 
 ```
 
-Alters group called "udntest" and puts users in it. The user's email must exist in the system.      
+Alters group called "udntest__DOWNLOADERS" and puts users in it. The user's email must exist in the system.      
 
 ```
 $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
@@ -97,6 +99,17 @@ $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
  -d '{"users":[{"email":"cbmi_test2@medlab.harvard.edu"}]}' \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/groups/2/"
 ```
+
+If a group needs Upload access to a specific bucket. Ususally to the __UPLOADER group.
+
+```
+$curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
+ -H "Content-Type: application/json" \
+ -d '{"buckets":[{"name":"cbmi-fileservice-test"}]}' \
+ "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/groups/5/"
+```
+
+
 ## File management  
 
 Now put a file in.  Make sure you fill out "filename" and "permissions".  There are other fields you can fill out, such as Location. Feel free to add tags and as much metadata (in JSON format) as you want.  

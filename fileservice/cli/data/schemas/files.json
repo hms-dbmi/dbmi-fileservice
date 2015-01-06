@@ -1,0 +1,12 @@
+{
+	  "type" : "object",
+	  "properties": {
+	    "descrption":	{ "type": "string" },
+	    "filename":		{ "type": "string" },
+	    "permissions":	{ 	"type": "array" },
+	    "metadata": {"type":"object",
+	    			"properties":{}},
+	    "tags": {"type":"array"}
+		},
+	  "required": ["description","filename","permissions" ]
+}
