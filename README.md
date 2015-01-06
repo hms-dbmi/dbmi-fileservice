@@ -1,3 +1,5 @@
+# FileService is an API that handles permissions, authentication, upload/download sigining to clouds, metadata handling, searching and archiving of files.  
+
 This is about the API. If you want the CLI, go to fileservice/cli  
 
 
