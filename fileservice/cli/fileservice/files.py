@@ -194,9 +194,9 @@ class UploadFile(Command):
                                             data={"bucket":bucket}
                                             )
         if r.status_code>=200 and r.status_code<300:
-            print r.json()
+            self.app.stdout.write("%s" % json.dumps(r.json(),indent=4))
         else:
-            print r.status_code
+            self.app.stdout.write("%s" % r)
     
 
 class DownloadFile(Command):
