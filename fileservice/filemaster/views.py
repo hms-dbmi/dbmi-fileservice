@@ -136,6 +136,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
+        cloud = self.request.QUERY_PARAMS.get('cloud', "aws")
         bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
         bucketobj = Bucket.objects.get(name=bucket)
         if not request.user.has_perm('filemaster.write_bucket',bucketobj):
@@ -144,7 +145,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         
-        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret)
+        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,cloud=cloud)
 
         url = urlhash["url"]
         message = "PUT to this url"
@@ -178,6 +179,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             elif self.request.DATA['location'].startswith("S3://"):
                 fl = None
                 try:
+                    #if file already exists, see if user has upload rights
                     fl = FileLocation.objects.get(url=self.request.DATA['location'])
                     for af in ArchiveFile.objects.filter(locations__id=fl.pk):
                         if not request.user.has_perm('filemaster.upload_archivefile',af):
@@ -185,6 +187,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     archivefile.locations.add(fl)
                     message = "S3 location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
                 except:
+                    #if file doesn't exist, register it.
                     fl = FileLocation(url=self.request.DATA['location'])
                     fl.save()
                     archivefile.locations.add(fl)
@@ -197,10 +200,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message':message})
 
 
-def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
-    if not bucket:
-        bucket=settings.S3_UPLOAD_BUCKET
-
+def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
     if not aws_key:
         aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
     if not aws_secret:
@@ -208,14 +208,30 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
 
     
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
-    foldername = str(uuid.uuid4())
 
     url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
+    #register file
     fl = FileLocation(url=url)
     fl.save()
     archiveFile.locations.add(fl)
+    return conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False)
+
+def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cloud="aws"):
+    if not bucket:
+        bucket=settings.S3_UPLOAD_BUCKET
+    
+    url = None
+    foldername = str(uuid.uuid4())
+    
+    try:
+        if cloud=="aws":
+            url = awsSignedURLUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
+    except Exception,exc:
+        print "Error: %s" % exc
+        return {}
+
     return {
-            "url":conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),
+            "url":url,
             "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename
             }
 
