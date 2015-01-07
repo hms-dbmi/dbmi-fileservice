@@ -115,7 +115,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.download_archivefile',archivefile):
             return HttpResponseForbidden()
         #get presigned url
-        url = signedUrlDownload(archivefile)
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        
+        url = signedUrlDownload(archivefile,aws_key=aws_key,aws_secret=aws_secret)
         return Response({'url': url})
 
     @detail_route(methods=['get'])
@@ -217,18 +220,19 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
             }
 
 def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
-    if not aws_key:
-        aws_key=settings.S3_ID
-    if not aws_secret:
-        aws_secret=settings.S3_SECRET
-
-    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     url = archiveFile.locations.all()[0].url
     bucket = ""
     key = ""
     _, path = url.split(":", 1)
     path = path.lstrip("/")
     bucket, path = path.split("/", 1)
+
+    if not aws_key:
+        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+    if not aws_secret:
+        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+
+    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     
     return conn.generate_url(3600*24, 'GET', bucket, path)
 
