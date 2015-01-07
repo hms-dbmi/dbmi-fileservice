@@ -56,7 +56,8 @@ setup(
             'view = fileservice.files:ReadFile',
             'write = fileservice.files:WriteFile',
             #'download = fileservice.files:DownloadFile',
-            #'upload = fileservice.files:UploadFile',
+            'upload = fileservice.files:UploadFile',
+            #'register = fileservice.files:RegisterFile',
 
             #'attributes = genomebridge.dataset:Attributes'
         ],
