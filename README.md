@@ -100,7 +100,10 @@ $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/groups/2/"
 ```
 
-If a group needs Upload access to a specific bucket. Ususally to the __UPLOADER group.
+If a group needs Upload access to a specific bucket. Ususally to the __UPLOADER group. You can do this through the /admin interface, too.  
+
+Why do I need to do this if a user is a member of an "Upload" group? We want file uploaders to be able to specify different buckets for different needs, as FileService serves many buckets. For security reasons, Upload groups need access to specific buckets or else they could write to ALL buckets.  
+
 
 ```
 $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
