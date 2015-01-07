@@ -77,7 +77,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         removeTags = self.request.QUERY_PARAMS.get('removeTags', None)
         removePerms = self.request.QUERY_PARAMS.get('removePerms', None)
         tagstash=[]        
-        if removeTags and 'tags' in self.request.DATA:
+        if removeTags:
             try:
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()                
@@ -88,7 +88,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 tagstash.append(t)
             map(obj.tags.add, tagstash)
 
-        if removePerms and 'permissions' in self.request.DATA:
+        if removePerms:
             try:
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.killPerms()                                
