@@ -35,14 +35,14 @@ def parseConfig(configfile):
             for f in tokenfields:
                 configoptions[f] = config.get("fileservice", f)
         except Exception,e:
-            log.info("Error in conf file: %s" % e)
+            log.info("Error in conf file token auth: %s" % e)
             return None
     elif configoptions["authtype"]=="hmssaml":
         try:
             for f in auth0hmsfields:
                 configoptions[f] = config.get("fileservice", f)
         except Exception,e:
-            log.info("Error in conf file: %s" % e)
+            log.info("Error in conf file hmssaml auth: %s" % e)
             return None
 
     

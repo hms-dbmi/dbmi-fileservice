@@ -92,7 +92,7 @@ class ReadFile(Command):
         headers={"Authorization":self.app.user.ssotoken}
         
         fileID=parsed_args.fileID
-        r = requests.get("%s/%s/%s/" % (self.app.configoptions["fileserviceurl"],"filemaster/api/file/",fileID),
+        r = requests.get("%s/%s/%s/" % (self.app.configoptions["fileserviceurl"],"filemaster/api/file",fileID),
                          headers=headers)
         if r.status_code==200:
             self.app.stdout.write("%s" % json.dumps(r.json(),indent=4))
@@ -128,7 +128,7 @@ class WriteFile(Command):
         #for each entry, addand spit out line
         for j in jsonfile:
             r = requests.post("%s/%s/" % (self.app.configoptions["fileserviceurl"],
-                                             "filemaster/api/file/"),
+                                             "filemaster/api/file"),
                                              headers=headers,
                                              data=json.dumps(j)
                                              )
@@ -154,3 +154,60 @@ class WriteFile(Command):
                 self.log.error("Metadata is not valid for type FILE")
                 raise
                 return False
+
+class UploadFile(Command):
+    "Upload a file"
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(UploadFile, self).get_parser(prog_name)
+
+        parser.add_argument('--fileID',
+                            help="File UUID",
+                            required=True)
+
+        parser.add_argument('--localFile',
+                            help="The local location of the file -- eg /home/user/test.bam",
+                            required=True)
+
+        parser.add_argument('--bucket',
+                            help="The bucket where the file should go",
+                            required=False)
+
+
+        return parser
+    
+    def take_action(self, parsed_args):
+        self.log.debug(parsed_args)
+        self.log.debug("Logged in -- "+self.app.user.ssotoken)
+        headers={"Authorization":self.app.user.ssotoken,"Content-Type": "application/json"}
+        bucket=None
+        
+        try:
+            bucket = parsed_args.bucket
+        except:
+            bucket = self.app.configoptions["bucket"]
+        
+        r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
+                                            "filemaster/api/file/%s/upload/" % (parsed_args.fileID)),
+                                            headers=headers,
+                                            data={"bucket":bucket}
+                                            )
+        if r.status_code>=200 and r.status_code<300:
+            print r.json()
+        else:
+            print r.status_code
+    
+
+class DownloadFile(Command):
+    "Download a file"
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(DownloadFile, self).get_parser(prog_name)
+
+        parser.add_argument('--fileID',
+                            help="File UUID",
+                            required=True)
+
+        return parser
