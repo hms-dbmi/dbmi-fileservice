@@ -91,7 +91,7 @@ class User:
             data=payload,
             cookies=cookies
         )
-        
+                
         myparser = MyHTMLParser(adfs_post.text)
 
         auth0_callback = requests.post(

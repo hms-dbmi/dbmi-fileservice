@@ -77,7 +77,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         removeTags = self.request.QUERY_PARAMS.get('removeTags', None)
         removePerms = self.request.QUERY_PARAMS.get('removePerms', None)
         tagstash=[]        
-        if removeTags and 'tags' in self.request.DATA:
+        if removeTags:
             try:
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()                
@@ -88,7 +88,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 tagstash.append(t)
             map(obj.tags.add, tagstash)
 
-        if removePerms and 'permissions' in self.request.DATA:
+        if removePerms:
             try:
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.killPerms()                                
@@ -115,7 +115,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.download_archivefile',archivefile):
             return HttpResponseForbidden()
         #get presigned url
-        url = signedUrlDownload(archivefile)
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        
+        url = signedUrlDownload(archivefile,aws_key=aws_key,aws_secret=aws_secret)
         return Response({'url': url})
 
     @detail_route(methods=['get'])
@@ -133,6 +136,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
         
+        cloud = self.request.QUERY_PARAMS.get('cloud', "aws")
         bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
         bucketobj = Bucket.objects.get(name=bucket)
         if not request.user.has_perm('filemaster.write_bucket',bucketobj):
@@ -141,14 +145,40 @@ class ArchiveFileList(viewsets.ModelViewSet):
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         
-        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret)
+        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,cloud=cloud)
 
         url = urlhash["url"]
         message = "PUT to this url"
         location = urlhash["location"]
+        locationid = urlhash["locationid"]
             
         #get presigned url
-        return Response({'url': url,'message':message,'location':location})
+        return Response({'url': url,'message':message,'location':location,'locationid':locationid})
+
+    @detail_route(methods=['get'])
+    def uploadcomplete(self, request, uuid=None):
+        from datetime import datetime
+        archivefile=None
+        message=None
+        location = self.request.QUERY_PARAMS.get('location', None)
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+        
+        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
+            return HttpResponseForbidden()
+
+        if not location:
+            return HttpResponseForbidden()
+
+        
+        fl = FileLocation.objects.get(id=location)
+        fl.uploadComplete=datetime.now()
+        fl.save()
+        return Response({'message':"upload complete"})
+
 
     @detail_route(methods=['post'])
     def register(self, request, uuid=None):
@@ -175,6 +205,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             elif self.request.DATA['location'].startswith("S3://"):
                 fl = None
                 try:
+                    #if file already exists, see if user has upload rights
                     fl = FileLocation.objects.get(url=self.request.DATA['location'])
                     for af in ArchiveFile.objects.filter(locations__id=fl.pk):
                         if not request.user.has_perm('filemaster.upload_archivefile',af):
@@ -182,6 +213,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     archivefile.locations.add(fl)
                     message = "S3 location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
                 except:
+                    #if file doesn't exist, register it.
                     fl = FileLocation(url=self.request.DATA['location'])
                     fl.save()
                     archivefile.locations.add(fl)
@@ -194,10 +226,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message':message})
 
 
-def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
-    if not bucket:
-        bucket=settings.S3_UPLOAD_BUCKET
-
+def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
     if not aws_key:
         aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
     if not aws_secret:
@@ -205,30 +234,53 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None):
 
     
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
-    foldername = str(uuid.uuid4())
 
     url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
+    #register file
     fl = FileLocation(url=url)
     fl.save()
     archiveFile.locations.add(fl)
+    return conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),fl
+
+def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cloud="aws"):
+    if not bucket:
+        bucket=settings.S3_UPLOAD_BUCKET
+    
+    url = None
+    fl = None
+    foldername = str(uuid.uuid4())
+    
+    try:
+        if cloud=="aws":
+            url,fl = awsSignedURLUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
+    except Exception,exc:
+        print "Error: %s" % exc
+        return {}
+
     return {
-            "url":conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),
-            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename
+            "url":url,
+            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename,
+            "locationid":fl.id
             }
 
 def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
-    if not aws_key:
-        aws_key=settings.S3_ID
-    if not aws_secret:
-        aws_secret=settings.S3_SECRET
-
-    conn = S3Connection(aws_key, aws_secret, is_secure=True)
-    url = archiveFile.locations.all()[0].url
+    url = None
+    for loc in archiveFile.locations.all():
+        if loc.uploadComplete:
+            url = loc.url
+            break
     bucket = ""
     key = ""
     _, path = url.split(":", 1)
     path = path.lstrip("/")
     bucket, path = path.split("/", 1)
+
+    if not aws_key:
+        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+    if not aws_secret:
+        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+
+    conn = S3Connection(aws_key, aws_secret, is_secure=True)
     
     return conn.generate_url(3600*24, 'GET', bucket, path)
 
