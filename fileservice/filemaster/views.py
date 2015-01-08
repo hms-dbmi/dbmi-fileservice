@@ -264,6 +264,7 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cl
             }
 
 def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
+    url = None
     for loc in archiveFile.locations.all():
         if loc.uploadComplete:
             url = loc.url
