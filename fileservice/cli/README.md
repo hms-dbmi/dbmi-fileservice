@@ -67,7 +67,7 @@ Prepare a file with your metadata.
 	}
 ]
 ```
-And run to upload that data.  
+And run to write that data.  
 ```
 fileservice -v write --jsonFile test.json
 ```
@@ -99,7 +99,20 @@ fileservice -v view --fileID=f149cf5d-722e-4a3f-9767-89b856458ddb
 }
 ```
 
+### Upload data to a "file" in the cloud
+Uploads a local file to the fileID submitted. Optional "bucket" option to specify a specific bucket in the cloud.
+```
+fileservice -v upload --fileID f149cf5d-722e-4a3f-9767-89b856458ddb \
+	--localFile /Users/db165/etl.retry \
+	--bucket "udnarchive-ci"
+```
+### Download data from the cloud
+Downalods a file to local filesystems
+```
+curl `fileservice download --fileID f149cf5d-722e-4a3f-9767-89b856458ddb | jq -r .url` > ~/test.txt
+```
+
+
 TODO:  
-Detail file  
 Add Users  
 Add Groups
