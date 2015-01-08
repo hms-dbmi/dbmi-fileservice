@@ -150,9 +150,35 @@ class ArchiveFileList(viewsets.ModelViewSet):
         url = urlhash["url"]
         message = "PUT to this url"
         location = urlhash["location"]
+        locationid = urlhash["locationid"]
             
         #get presigned url
-        return Response({'url': url,'message':message,'location':location})
+        return Response({'url': url,'message':message,'location':location,'locationid':locationid})
+
+    @detail_route(methods=['get'])
+    def uploadcomplete(self, request, uuid=None):
+        from datetime import datetime
+        archivefile=None
+        message=None
+        location = self.request.QUERY_PARAMS.get('location', None)
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+        
+        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
+            return HttpResponseForbidden()
+
+        if not location:
+            return HttpResponseForbidden()
+
+        
+        fl = FileLocation.objects.get(id=location)
+        fl.uploadComplete=datetime.now()
+        fl.save()
+        return Response({'message':"upload complete"})
+
 
     @detail_route(methods=['post'])
     def register(self, request, uuid=None):
@@ -214,29 +240,34 @@ def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None
     fl = FileLocation(url=url)
     fl.save()
     archiveFile.locations.add(fl)
-    return conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False)
+    return conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),fl
 
 def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cloud="aws"):
     if not bucket:
         bucket=settings.S3_UPLOAD_BUCKET
     
     url = None
+    fl = None
     foldername = str(uuid.uuid4())
     
     try:
         if cloud=="aws":
-            url = awsSignedURLUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
+            url,fl = awsSignedURLUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
     except Exception,exc:
         print "Error: %s" % exc
         return {}
 
     return {
             "url":url,
-            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename
+            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename,
+            "locationid":fl.id
             }
 
 def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
-    url = archiveFile.locations.all()[0].url
+    for loc in archiveFile.locations.all():
+        if loc.uploadComplete:
+            url = loc.url
+            break
     bucket = ""
     key = ""
     _, path = url.split(":", 1)

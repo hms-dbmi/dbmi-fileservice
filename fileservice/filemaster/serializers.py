@@ -16,7 +16,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class FileLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileLocation
-        fields = ('id', 'url')
+        fields = ('id', 'url','uploadComplete')
 
 class TokenSerializer(serializers.ModelSerializer):
     class Meta:

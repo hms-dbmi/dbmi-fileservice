@@ -191,10 +191,18 @@ class UploadFile(Command):
         r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
                                             "filemaster/api/file/%s/upload/" % (parsed_args.fileID)),
                                             headers=headers,
-                                            data={"bucket":bucket}
+                                            params={"bucket":bucket}
                                             )
         if r.status_code>=200 and r.status_code<300:
-            self.app.stdout.write("%s" % json.dumps(r.json(),indent=4))
+            uploadurl = r.json()["url"]
+            upload = requests.put(uploadurl,data=open(parsed_args.localFile))
+            if upload.status_code>=200 and upload.status_code<300:
+                uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
+                                                            "filemaster/api/file/%s/uploadcomplete/" % (parsed_args.fileID)),
+                                                            headers=headers,
+                                                            params={"location":r.json()["locationid"]}
+                                                            )                
+                self.app.stdout.write("%s uploaded to %s" % (parsed_args.fileID,uploadurl))
         else:
             self.app.stdout.write("%s" % r)
     
@@ -211,3 +219,16 @@ class DownloadFile(Command):
                             required=True)
 
         return parser
+    
+    def take_action(self, parsed_args):
+        self.log.debug(parsed_args)
+        self.log.debug("Logged in -- "+self.app.user.ssotoken)
+        headers={"Authorization":self.app.user.ssotoken,"Content-Type": "application/json"}
+
+        r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
+                                            "filemaster/api/file/%s/download/" % (parsed_args.fileID)),
+                                            headers=headers
+                                            )
+        self.app.stdout.write("%s" % json.dumps(r.json()))
+        
+
