@@ -95,3 +95,4 @@ BUCKETS = {
                              "AWS_SECRET":"AAAAAXXX"
                              } 
            }
+CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend',

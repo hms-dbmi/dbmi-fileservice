@@ -18,7 +18,10 @@ requests
 #django-haystack == 2.3.1
 -e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
 elasticsearch
+django-celery
 celery_haystack
 djangorestframework == 2.4.4
 drf-extensions
+django-kombu
+kombu
 drf-compound-fields

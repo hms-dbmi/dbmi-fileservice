@@ -94,3 +94,5 @@ BUCKETS = {
                              "AWS_SECRET":"AAAAAXXX"
                              } 
            }
+
+BROKER_URL = 'django://'
