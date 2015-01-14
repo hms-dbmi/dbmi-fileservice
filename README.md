@@ -224,9 +224,7 @@ curl -X GET -H 'Accept: application/json;indent=4' -H 'Content-Type:application/
 
 TODO:  
 
-Tests  
-Error Checking  
+Extensive error checking  
 Logging  
 Auditing Logs  
-Docs  
 MD Handling for new/edit files

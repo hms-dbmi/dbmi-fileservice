@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 import re,urllib,json
-
+from datetime import timedelta,date,datetime
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
 from django.core.mail import send_mail
@@ -24,6 +24,9 @@ from django.conf import settings
 
 from taggit.managers import TaggableManager
 
+EXPIRATIONDATE = 60
+if settings.EXPIRATIONDATE:
+    EXPIRATIONDATE = settings.EXPIRATIONDATE
 
 GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
 
@@ -63,8 +66,15 @@ class ArchiveFile(models.Model):
     locations = models.ManyToManyField(FileLocation)
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    expirationdate = models.DateField(auto_now=False, auto_now_add=False,blank=True,null=True)
     
     tags = TaggableManager()
+    
+    def save(self, *args, **kwargs):
+        #check if the row with this hash already exists.
+        if not self.pk and not self.expirationdate:
+            self.expirationdate = date.today()+timedelta(days=EXPIRATIONDATE) 
+        super(ArchiveFile, self).save(*args, **kwargs)
 
     def setDefaultPerms(self,group,types):
         try:

@@ -118,7 +118,7 @@ class ArchiveFileTest(TestCase):
         t = get_token('poweruser@thebeatles.com')
 
         self.c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
-        res = self.c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2","tag3"]}',content_type='application/json')
+        res = self.c.post('/filemaster/api/file/', data='{"expirationdate":"2020-10-5","permissions":["udntest"],"description":"this is a long description","metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2","tag3"]}',content_type='application/json')
         j = json.loads(res.content)["uuid"]
         
         url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
