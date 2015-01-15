@@ -210,7 +210,7 @@ LOCAL_APPS = (
     'haystack',
     'kombu.transport.django',
     'djcelery',
-    'djkombu'
+    #'djkombu'
     #'kombu.transport.django.KombuAppConfig',
 )
 
