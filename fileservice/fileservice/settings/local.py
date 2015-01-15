@@ -95,4 +95,5 @@ BUCKETS = {
                              "AWS_SECRET":"AAAAAXXX"
                              } 
            }
-CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend',
+BROKER_URL = 'django://'
+CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
