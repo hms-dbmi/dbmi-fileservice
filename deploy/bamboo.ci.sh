@@ -42,7 +42,7 @@ pip install -r ${BAMBOODIR}/requirements.txt
 cd ${BAMBOODIR}/fileservice
 ./manage.py migrate --settings fileservice.settings.local
 ./manage.py syncdb --settings fileservice.settings.local
-DJANGO_SETTINGS_MODULE="fileservice.settings.local" celery  worker -A fileservice --loglevel=info -b django:// &
+DJANGO_SETTINGS_MODULE="fileservice.settings.local" ~/python/bin/celery  worker -A fileservice --loglevel=info -b django:// &
 TEST_AWS_KEY=${TEST_AWS_KEY} TEST_AWS_SECRET=${TEST_AWS_SECRET}  ./manage.py test filemaster --settings fileservice.settings.local
 TESTCODE=$?
 echo $TESTCODE
