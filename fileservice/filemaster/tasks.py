@@ -11,6 +11,8 @@ from .models import ArchiveFile,FileLocation,Bucket
 import json,uuid,boto
 from datetime import date,datetime,timedelta
 from boto.s3.lifecycle import Lifecycle, Transition, Rule
+from boto.s3.connection import S3Connection
+
 #from filemaster.tasks import add
 #add.delay(2, 2)
 
@@ -29,10 +31,10 @@ def glaciermove(locationstring,id):
     aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
     aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
     
-    c = boto.connect_s3(aws_key, aws_secret, is_secure=True)
-    bucket = c.get_bucket(bucket)
+    c = S3Connection(aws_key, aws_secret, is_secure=True)
+    bucket = c.get_bucket(bucket,validate=False)
 
-    to_glacier = Transition(days=1, storage_class='GLACIER')
+    to_glacier = Transition(date=datetime.combine(af.expirationdate,datetime.min.time()).isoformat(), storage_class='GLACIER')
     rule = Rule(str(uuid.uuid4()), path, 'Enabled', transition=to_glacier)
     lifecycle = Lifecycle()
     lifecycle.append(rule)

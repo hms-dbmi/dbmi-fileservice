@@ -28,7 +28,7 @@ from filemaster.models import *
 for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__lt=today):
     copysuccessful = False
     try:
-        if af.locations.all()[0].startswith("s3://") or af.locations.all()[0].startswith("S3://"):
-            glaciermove.delay(af.locations.all()[0],af.id)
+        if (af.locations.all()[0].url.startswith("s3://") or af.locations.all()[0].url.startswith("S3://")) and af.locations.all()[0].storagetype!="glacier":
+            glaciermove.delay(af.locations.all()[0].url,af.id)
     except Exception,e:
         print e
