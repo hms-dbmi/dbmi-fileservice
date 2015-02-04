@@ -221,7 +221,10 @@ curl -X GET -H 'Accept: application/json;indent=4' -H 'Content-Type:application/
 * fields = field1,field2 -- to limit the search to certain fields. If you're looking for a field embedded in the regular metadata, try to start the field with md_ (md_permissions, md_coverage, etc).  
 * facets = facet1,facet2 -- implemented in indexing, but nothing visible to users now (http://django-haystack.readthedocs.org/en/latest/faceting.html) .  
 
-
+Tests
+```
+TEST_AWS_KEY=AKIAxxxxx TEST_AWS_SECRET=cXRrxxxxxxxxx coverage run --source='.' manage.py shell --settings fileservice.settings.local_dev
+```
 TODO:  
 
 Extensive error checking  
