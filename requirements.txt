@@ -19,6 +19,7 @@ requests
 -e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
 elasticsearch
 django-celery
+django-celery-transaction <= 0.2
 celery_haystack
 djangorestframework == 2.4.4
 drf-extensions
