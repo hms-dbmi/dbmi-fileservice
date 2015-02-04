@@ -1,15 +1,28 @@
-from django.contrib.auth.models import User 
-from django.contrib.auth import get_user_model
-from django.conf import settings
-from filemaster.tasks import glaciermove
-user = get_user_model()        
+from __future__ import absolute_import
 
-from .models import ArchiveFile,FileLocation,Bucket
+import os
+
+from django.conf import settings
+
 import json,uuid
 from datetime import date,datetime,timedelta
 
+from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+import os
+import sys
+
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+
+User = get_user_model()
+
 today = date.today()
 daysago =  today - timedelta(days=10)
+
+from filemaster.tasks import *
+from filemaster.models import *
 
 
 for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__lt=today):
@@ -19,11 +32,3 @@ for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__
             glaciermove.delay(af.locations.all()[0],af.id)
     except Exception,e:
         print e
-    
-
-# get all files with expire between today and 3 days ago
-# for each file: 
-#   copy to Glacier
-#   get id
-#   change location of file
-#   delete from s3 
