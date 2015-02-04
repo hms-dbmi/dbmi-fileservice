@@ -38,6 +38,7 @@ class FileLocation(models.Model):
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
     url = models.TextField(blank=False,null=False)
     uploadComplete = models.DateTimeField(auto_now=False, auto_now_add=False,blank=True,null=True)
+    storagetype = models.CharField(blank=True,null=True,max_length=255)
 
     class Meta:
         ordering = ('-creationdate',)

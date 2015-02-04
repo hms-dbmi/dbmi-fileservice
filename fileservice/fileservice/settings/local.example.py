@@ -92,7 +92,12 @@ BUCKETS = {
                              "type":"s3",
                              "AWS_KEY_ID":"AAAAAXXX",
                              "AWS_SECRET":"AAAAAXXX"
-                             } 
+                             },
+           "Glacier":{
+                      "type":"glacier",
+                             "AWS_KEY_ID":"AAAAAXXX",
+                             "AWS_SECRET":"AAAAAXXX"
+                      }
            }
 
 BROKER_URL = 'django://'
