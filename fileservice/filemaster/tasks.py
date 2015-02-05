@@ -17,9 +17,9 @@ from boto.s3.connection import S3Connection
 #add.delay(2, 2)
 
 @shared_task
-def glaciermove(locationstring,id):
+def glacierLifecycleMove(locationstring,pid):
     status = False
-    af = ArchiveFile.objects.get(id=id)
+    af = ArchiveFile.objects.get(id=pid)
     url= locationstring
 
     bucket = ""
@@ -39,6 +39,32 @@ def glaciermove(locationstring,id):
     lifecycle = Lifecycle()
     lifecycle.append(rule)
     status = bucket.configure_lifecycle(lifecycle)
+
+    if status:
+        loc = af.locations.all()[0]
+        loc.storagetype="glacier"
+        loc.save()
+
+    return status
+
+@shared_task
+def glacierVaultMove(locationstring,id):
+    status = False
+    af = ArchiveFile.objects.get(id=id)
+    url= locationstring
+
+    bucket = ""
+    key = ""
+    _, path = url.split(":", 1)
+    path = path.lstrip("/")
+    bucket, path = path.split("/", 1)
+
+    aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+    aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+    
+    c = S3Connection(aws_key, aws_secret, is_secure=True)
+    bucket = c.get_bucket(bucket,validate=False)
+
 
     if status:
         loc = af.locations.all()[0]
