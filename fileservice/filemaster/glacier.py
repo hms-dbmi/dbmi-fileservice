@@ -24,11 +24,20 @@ daysago =  today - timedelta(days=10)
 from filemaster.tasks import *
 from filemaster.models import *
 
+GLACIERTYPE = "lifecycle"
+if settings.GLACIERTYPE:
+    GLACIERTYPE = settings.GLACIERTYPE
+    
 
 for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__lt=today):
     copysuccessful = False
     try:
         if (af.locations.all()[0].url.startswith("s3://") or af.locations.all()[0].url.startswith("S3://")) and af.locations.all()[0].storagetype!="glacier":
-            glaciermove.delay(af.locations.all()[0].url,af.id)
+            if GLACIERTYPE=="lifecycle":
+                #glacierLifecycleMove.delay(af.locations.all()[0].url,af.id)
+                #do nothing as it is meant to work at filecreationtime
+                pass
+            elif GLACIERTYPE=="vault":
+                glacierVaultMove.delay(af.locations.all()[0].url,af.id)
     except Exception,e:
         print e

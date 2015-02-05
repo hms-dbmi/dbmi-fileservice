@@ -23,10 +23,18 @@ import random,string
 from django.conf import settings
 
 from taggit.managers import TaggableManager
+from django.db.models.signals import m2m_changed
+
+
 
 EXPIRATIONDATE = 60
 if settings.EXPIRATIONDATE:
     EXPIRATIONDATE = settings.EXPIRATIONDATE
+
+GLACIERTYPE = "lifecycle"
+if settings.GLACIERTYPE:
+    GLACIERTYPE = settings.GLACIERTYPE
+
 
 GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
 
@@ -46,6 +54,7 @@ class FileLocation(models.Model):
     def __unicode__(self):
         return "%s" % (self.id)
 
+
 class Bucket(models.Model):
     name = models.CharField(max_length=255,blank=False,null=False,unique=True)
 
@@ -56,6 +65,9 @@ class Bucket(models.Model):
         permissions = (
             ('write_bucket', 'Write to bucket'),
         )    
+
+        #if GLACIERTYPE=="lifecycle":
+        #    glacierLifecycleMove.delay(af.locations.all()[0].url,af.id)
  
  
 class ArchiveFile(models.Model):
@@ -215,3 +227,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         Sends an email to this User.
         """
         send_mail(subject, message, from_email, [self.email])
+
+def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
+    # Do something
+    from .tasks import glacierLifecycleMove
+
+    if action=="post_add":
+        af = instance
+        for p in pk_set:
+            loc = FileLocation.objects.get(id=p)
+            if GLACIERTYPE=="lifecycle":
+                glacierLifecycleMove.delay(loc.url,af.id)
+
+m2m_changed.connect(location_changed, sender=ArchiveFile.locations.through)
