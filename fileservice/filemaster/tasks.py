@@ -36,7 +36,15 @@ def glacierLifecycleMove(locationstring,pid):
 
     to_glacier = Transition(date=datetime.combine(af.expirationdate,datetime.min.time()).isoformat(), storage_class='GLACIER')
     rule = Rule(str(uuid.uuid4()), path, 'Enabled', transition=to_glacier)
-    lifecycle = Lifecycle()
+    lifecycle=None
+    try:
+        lifecycle = bucket.get_lifecycle_config()
+    except:
+        lifecycle = Lifecycle()
+    
+    if not lifecycle:
+        lifecycle=Lifecycle()
+    
     lifecycle.append(rule)
     status = bucket.configure_lifecycle(lifecycle)
 
