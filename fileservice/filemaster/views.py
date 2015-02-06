@@ -263,17 +263,20 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cl
             "locationid":fl.id
             }
 
+    
 def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
     url = None
     for loc in archiveFile.locations.all():
+        if not loc.storagetype:
+            pass
+        elif loc.storagetype=="glacier":
+            return False
+        
         if loc.uploadComplete:
             url = loc.url
             break
-    bucket = ""
-    key = ""
-    _, path = url.split(":", 1)
-    path = path.lstrip("/")
-    bucket, path = path.split("/", 1)
+        
+    bucket,path = loc.get_bucket()
 
     if not aws_key:
         aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
@@ -281,6 +284,15 @@ def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
         aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
 
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
+    
+    #check for glacier move
+    b = conn.get_bucket(bucket) 
+    k = b.get_key(path)
+    try:
+        if k.storage_class=="GLACIER":
+            return False
+    except:
+        pass
     
     return conn.generate_url(3600*24, 'GET', bucket, path)
 

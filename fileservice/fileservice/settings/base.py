@@ -5,7 +5,6 @@ from os.path import abspath, basename, dirname, join, normpath
 from sys import path
 import os
 
-
 ########## PATH CONFIGURATION
 # Absolute filesystem path to the Django project directory:
 DJANGO_ROOT = dirname(dirname(abspath(__file__)))
@@ -208,7 +207,12 @@ LOCAL_APPS = (
     'bootstrap3',
     'taggit',
     'django_extensions',
-    'haystack'
+    'haystack',
+    'kombu.transport.django',
+    'djcelery',
+    'celery_haystack'
+    #'djkombu'
+    #'kombu.transport.django.KombuAppConfig',
 )
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -302,3 +306,5 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = 'filemaster.CustomUser'
 TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'AKIAxxxxx')
 TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')
+EXPIRATIONDATE = 60
+

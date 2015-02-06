@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 import re,urllib,json
-
+from datetime import timedelta,date,datetime
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
 from django.core.mail import send_mail
@@ -23,6 +23,13 @@ import random,string
 from django.conf import settings
 
 from taggit.managers import TaggableManager
+from django.db.models.signals import m2m_changed
+
+
+
+EXPIRATIONDATE = 60
+if settings.EXPIRATIONDATE:
+    EXPIRATIONDATE = settings.EXPIRATIONDATE
 
 
 GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
@@ -35,12 +42,26 @@ class FileLocation(models.Model):
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
     url = models.TextField(blank=False,null=False)
     uploadComplete = models.DateTimeField(auto_now=False, auto_now_add=False,blank=True,null=True)
+    storagetype = models.CharField(blank=True,null=True,max_length=255)
 
     class Meta:
         ordering = ('-creationdate',)
 
     def __unicode__(self):
         return "%s" % (self.id)
+    
+    def get_bucket(self):
+        bucket = None
+        path = None
+        if self.url.startswith("s3://") or self.url.startswith("S3://"):
+            bucket = ""
+            key = ""
+            _, path = self.url.split(":", 1)
+            path = path.lstrip("/")
+            bucket, path = path.split("/", 1)
+        return bucket,path
+
+
 
 class Bucket(models.Model):
     name = models.CharField(max_length=255,blank=False,null=False,unique=True)
@@ -52,6 +73,9 @@ class Bucket(models.Model):
         permissions = (
             ('write_bucket', 'Write to bucket'),
         )    
+
+        #if GLACIERTYPE=="lifecycle":
+        #    glacierLifecycleMove.delay(af.locations.all()[0].url,af.id)
  
  
 class ArchiveFile(models.Model):
@@ -63,8 +87,15 @@ class ArchiveFile(models.Model):
     locations = models.ManyToManyField(FileLocation)
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    expirationdate = models.DateField(auto_now=False, auto_now_add=False,blank=True,null=True)
     
     tags = TaggableManager()
+    
+    def save(self, *args, **kwargs):
+        #check if the row with this hash already exists.
+        if not self.pk and not self.expirationdate:
+            self.expirationdate = date.today()+timedelta(days=EXPIRATIONDATE) 
+        super(ArchiveFile, self).save(*args, **kwargs)
 
     def setDefaultPerms(self,group,types):
         try:
@@ -204,3 +235,23 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         Sends an email to this User.
         """
         send_mail(subject, message, from_email, [self.email])
+
+def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
+    # Do something
+    from .tasks import glacierLifecycleMove
+
+    if action=="post_add":
+        af = instance
+        for p in pk_set:
+            loc = FileLocation.objects.get(id=p)
+            bucket,path = loc.get_bucket()
+            glaciertype="lifecycle"
+            try:
+                glaciertype=settings.BUCKETS[bucket]["glaciertype"]           
+            except:
+                pass
+            if bucket and glaciertype=="lifecycle":
+                glacierLifecycleMove(loc.url,af.id)
+                #glacierLifecycleMove.delay(loc.url,af.id)
+
+m2m_changed.connect(location_changed, sender=ArchiveFile.locations.through)

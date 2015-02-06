@@ -2,8 +2,9 @@ import datetime,json,ast
 from haystack import indexes
 from .models import ArchiveFile
 
+from celery_haystack.indexes import CelerySearchIndex
 
-class ArchiveFileIndex(indexes.SearchIndex, indexes.Indexable):
+class ArchiveFileIndex(CelerySearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
     description = indexes.EdgeNgramField(model_attr='description')
     filename = indexes.EdgeNgramField(model_attr='filename')
