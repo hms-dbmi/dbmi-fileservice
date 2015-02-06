@@ -91,8 +91,8 @@ HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
 BUCKETS = {
            S3_UPLOAD_BUCKET:{
                              "type":"s3",
-                             "AWS_KEY_ID":"AAAAAXXX",
-                             "AWS_SECRET":"AAAAAXXX",
+                             #"AWS_KEY_ID":"AAAAAXXX",
+                             #"AWS_SECRET":"AAAAAXXX",
                              "glaciertype":"lifecycle"
                              },
            "Glacier":{
