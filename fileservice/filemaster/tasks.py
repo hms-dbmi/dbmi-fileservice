@@ -24,12 +24,15 @@ def glacierLifecycleMove(locationstring,pid):
     try:
         AWS_KEY_ID = settings.BUCKETS[bucket]["AWS_KEY_ID"]
     except:
-        AWS_KEY_ID=""
+        AWS_KEY_ID=None
         
     try:
         AWS_SECRET = settings.BUCKETS[bucket]["AWS_SECRET"]
     except:
-        AWS_SECRET=""
+        AWS_SECRET=None
+    
+    if not AWS_KEY_ID:
+        return False
     
     c = S3Connection(AWS_KEY_ID, AWS_SECRET, is_secure=True)
     bucket = c.get_bucket(bucket,validate=False)
