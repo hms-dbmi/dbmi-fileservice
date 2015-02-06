@@ -31,10 +31,6 @@ EXPIRATIONDATE = 60
 if settings.EXPIRATIONDATE:
     EXPIRATIONDATE = settings.EXPIRATIONDATE
 
-GLACIERTYPE = "lifecycle"
-if settings.GLACIERTYPE:
-    GLACIERTYPE = settings.GLACIERTYPE
-
 
 GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
 
@@ -53,6 +49,18 @@ class FileLocation(models.Model):
 
     def __unicode__(self):
         return "%s" % (self.id)
+    
+    def get_bucket(self):
+        bucket = None
+        path = None
+        if self.url.startswith("s3://") or self.url.startswith("S3://"):
+            bucket = ""
+            key = ""
+            _, path = self.url.split(":", 1)
+            path = path.lstrip("/")
+            bucket, path = path.split("/", 1)
+        return bucket,path
+
 
 
 class Bucket(models.Model):
@@ -236,7 +244,12 @@ def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
         af = instance
         for p in pk_set:
             loc = FileLocation.objects.get(id=p)
-            if GLACIERTYPE=="lifecycle":
-                glacierLifecycleMove.delay(loc.url,af.id)
+            bucket,path = loc.get_bucket()
+            glaciertype="lifecycle"
+            if settings.BUCKETS[bucket]["glaciertype"]:
+                glaciertype=settings.BUCKETS[bucket]["glaciertype"]           
+            if bucket and glaciertype=="lifecycle":
+                glacierLifecycleMove(loc.url,af.id)
+                #glacierLifecycleMove.delay(loc.url,af.id)
 
 m2m_changed.connect(location_changed, sender=ArchiveFile.locations.through)

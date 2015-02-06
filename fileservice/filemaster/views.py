@@ -263,13 +263,6 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cl
             "locationid":fl.id
             }
 
-def getPath(url=None):
-    bucket = ""
-    key = ""
-    _, path = url.split(":", 1)
-    path = path.lstrip("/")
-    bucket, path = path.split("/", 1)
-    return bucket,path    
     
 def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
     url = None
@@ -283,7 +276,7 @@ def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
             url = loc.url
             break
         
-    bucket,path = getPath(url)
+    bucket,path = loc.get_bucket()
 
     if not aws_key:
         aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]

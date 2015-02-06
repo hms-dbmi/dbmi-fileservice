@@ -13,25 +13,25 @@ from datetime import date,datetime,timedelta
 from boto.s3.lifecycle import Lifecycle, Transition, Rule
 from boto.s3.connection import S3Connection
 
-#from filemaster.tasks import add
-#add.delay(2, 2)
-
 @shared_task
 def glacierLifecycleMove(locationstring,pid):
     status = False
     af = ArchiveFile.objects.get(id=pid)
     url= locationstring
+    loc = af.locations.all()[0]
+    bucket,path = loc.get_bucket()
 
-    bucket = ""
-    key = ""
-    _, path = url.split(":", 1)
-    path = path.lstrip("/")
-    bucket, path = path.split("/", 1)
-
-    aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
-    aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+    try:
+        AWS_KEY_ID = settings.BUCKETS[bucket]["AWS_KEY_ID"]
+    except:
+        AWS_KEY_ID=""
+        
+    try:
+        AWS_SECRET = settings.BUCKETS[bucket]["AWS_SECRET"]
+    except:
+        AWS_SECRET=""
     
-    c = S3Connection(aws_key, aws_secret, is_secure=True)
+    c = S3Connection(AWS_KEY_ID, AWS_SECRET, is_secure=True)
     bucket = c.get_bucket(bucket,validate=False)
 
     to_glacier = Transition(date=datetime.combine(af.expirationdate,datetime.min.time()).isoformat(), storage_class='GLACIER')
