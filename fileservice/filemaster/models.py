@@ -246,8 +246,10 @@ def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
             loc = FileLocation.objects.get(id=p)
             bucket,path = loc.get_bucket()
             glaciertype="lifecycle"
-            if settings.BUCKETS[bucket]["glaciertype"]:
+            try:
                 glaciertype=settings.BUCKETS[bucket]["glaciertype"]           
+            except:
+                pass
             if bucket and glaciertype=="lifecycle":
                 glacierLifecycleMove(loc.url,af.id)
                 #glacierLifecycleMove.delay(loc.url,af.id)
