@@ -3,9 +3,9 @@
 This is about the API. If you want the CLI, go to fileservice/cli  
 
 ## Diagrams -- open in draw.io plugin  
-[Login](https://drive.google.com/file/d/0B9lnki7dueLpV1pKbWJMVGNaRTQ/view?usp=sharing)
-[Upload](https://drive.google.com/file/d/0B9lnki7dueLpNFJfTHBfdEV5ZlU/view?usp=sharing)  
-[Download](https://drive.google.com/file/d/0B9lnki7dueLpTkRDOHg0N2hVRTQ/view?usp=sharing)  
+[Login](https://drive.google.com/file/d/0B9lnki7dueLpV1pKbWJMVGNaRTQ/view?usp=sharing)  
+[Upload](https://drive.google.com/file/d/0B9lnki7dueLpNFJfTHBfdEV5ZlU/view?usp=sharing)   
+[Download](https://drive.google.com/file/d/0B9lnki7dueLpTkRDOHg0N2hVRTQ/view?usp=sharing)    
 
 ## Log in  
 * HMS SAML via Auth0 -- alter first few lines of hms_saml_login.py and fill with your information. Then run it.  
