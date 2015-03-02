@@ -29,6 +29,16 @@ import random,string
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+def login(request):
+    auth0info={
+        "AUTH0_CLIENT_ID":settings.AUTH0_CLIENT_ID,
+        "AUTH0_CLIENT_SECRET":settings.AUTH0_CLIENT_SECRET,
+        "AUTH0_DOMAIN":settings.AUTH0_DOMAIN,
+        "AUTH0_CALLBACK_URL":settings.AUTH0_CALLBACK_URL,
+    }
+    
+    return render_to_response('rest_framework/login.html', {'auth0info': auth0info})
+
 #auth0 callback
 def callback(request):
     code = request.GET.get('code')
