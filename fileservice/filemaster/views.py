@@ -37,7 +37,7 @@ from .filters import ArchiveFileFilter
 from rest_framework_extensions.mixins import DetailSerializerMixin
 from guardian.shortcuts import assign_perm,get_objects_for_group
 from django.contrib.auth import get_user_model
-import json,uuid
+import json,uuid,string,random
 
 from boto.s3.connection import S3Connection
 
@@ -47,6 +47,8 @@ from haystack.inputs import AutoQuery, Exact, Clean
 
 
 User = get_user_model()        
+def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
 
 class HealthCheckList(viewsets.ModelViewSet):
     queryset = HealthCheck.objects.all()
@@ -434,6 +436,35 @@ class GroupDetail(APIView):
 #             assign_perm('delete_group', self.request.user, obj)
 #         except Exception,e:
 #             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class UserList(APIView):
+    authentication_classes = (Auth0Authentication,TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    """
+    List all groups that user can see, or create a new group.
+    """
+    def get(self, request, format=None):
+        return Response([])
+
+    def post(self, request, format=None):
+        if not request.user.has_perm('auth.add_user'):
+            return HttpResponseForbidden()
+
+        sdata=[]
+        userstructure=[]
+    
+        for u in self.request.DATA['users']:
+            try:
+                user = get_user_model().objects.create_user(id_generator(16),email=u,password=id_generator(16))
+                userstructure.append(user.email)
+            except Exception,e:
+                print "ERROR: %s" % e
+        
+        sdata.append({"users":userstructure}) 
+        
+        return Response(sdata, status=status.HTTP_201_CREATED)
+
 
 class SearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     authentication_classes = (Auth0Authentication,TokenAuthentication,)

@@ -62,6 +62,13 @@ class ArchiveFileTest(TestCase):
             gr = Group.objects.get(name=g)
             res = self.c.put('/filemaster/groups/%s/' % gr.id, data='{"users":[{"email":"regularuser@thebeatles.com"}],"buckets":[{"name":"cbmi-fileservice-test"}]}',content_type='application/json')
             self.assertEqual(res.status_code, 200)
+
+        u = User.objects.get(email='rootuser@thebeatles.com')
+        t = Token.objects.get(user=u)
+        c = Client()
+        c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
+        res = c.post('/filemaster/user/', data='{"users":["test@test.com"]}',content_type='application/json')
+        self.assertEqual(res.status_code, 201)
                         
 
     def test_a_user_tokens(self):
