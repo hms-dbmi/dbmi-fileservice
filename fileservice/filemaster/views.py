@@ -105,7 +105,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     print "ERROR permissions: %s " % e
         return super(ArchiveFileList, self).post_save(obj)        
 
-    @detail_route(methods=['get'])
+    @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
     def download(self, request, uuid=None):
         url = None
         archivefile=None
@@ -123,7 +123,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         url = signedUrlDownload(archivefile,aws_key=aws_key,aws_secret=aws_secret)
         return Response({'url': url})
 
-    @detail_route(methods=['get'])
+    @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
     def upload(self, request, uuid=None):
         #take uuid, create presigned url, put location into original file
         archivefile=None
@@ -157,7 +157,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         #get presigned url
         return Response({'url': url,'message':message,'location':location,'locationid':locationid})
 
-    @detail_route(methods=['get'])
+    @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
     def uploadcomplete(self, request, uuid=None):
         from datetime import datetime
         archivefile=None
@@ -182,7 +182,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message':"upload complete"})
 
 
-    @detail_route(methods=['post'])
+    @detail_route(methods=['post'],permission_classes=[DjangoObjectPermissionsAll])
     def register(self, request, uuid=None):
         #take uuid, create presigned url, put location into original file
         archivefile=None
