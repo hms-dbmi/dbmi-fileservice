@@ -46,6 +46,7 @@ class DjangoObjectPermissionsChange(permissions.DjangoObjectPermissions):
                 for usergroup in request.user.groups.all():
                     if usergroup.name == group.name:
                         return True
+            return False
         return True
 
 
