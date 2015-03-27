@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import authentication
 from rest_framework import exceptions
-import jwt,base64,requests
+import jwt,base64,requests,json
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
@@ -57,7 +57,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
                 r = requests.post("https://%s/tokeninfo" %
                                   (settings.AUTH0_DOMAIN),
                                   headers=headers,
-                                  data={"id_token":auth})
+                                  data=json.dumps({"id_token":auth}))
                 user = User.objects.get(email=r.json()["email"])
         except User.DoesNotExist:
             raise exceptions.AuthenticationFailed('No such user')
