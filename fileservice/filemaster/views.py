@@ -239,10 +239,10 @@ def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None
 
     url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
     #register file
-    fl = FileLocation(url=url)
+    fl = FileLocation(url=url,storagetype=settings.BUCKETS[bucket]['type'])
     fl.save()
     archiveFile.locations.add(fl)
-    return conn.generate_url(3600*24, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),fl
+    return conn.generate_url(3600*24*7, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),fl
 
 def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cloud="aws"):
     if not bucket:
