@@ -51,10 +51,10 @@ def glacierLifecycleMove(locationstring,pid):
     lifecycle.append(rule)
     status = bucket.configure_lifecycle(lifecycle)
 
-    if status:
-        loc = af.locations.all()[0]
-        loc.storagetype="glacier"
-        loc.save()
+    #if status:
+    #    loc = af.locations.all()[0]
+    #    loc.storagetype="glacier"
+    #    loc.save()
 
     return status
 
