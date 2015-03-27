@@ -67,7 +67,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     filter_class = ArchiveFileFilter
     filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
     #filter_fields = ('uuid',)
-
+    
     def pre_save(self, obj):
         u = User.objects.get(email=self.request.user.email)
         obj.owner = u

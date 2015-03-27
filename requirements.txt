@@ -26,3 +26,4 @@ drf-extensions
 django-kombu
 kombu
 drf-compound-fields
+django-nose
