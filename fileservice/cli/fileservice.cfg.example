@@ -15,3 +15,7 @@ token = asdfasdfdasfasdfsda
 #auth0initial = https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&client_id=oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb&redirect_uri="+callback+"&connection=hms-it-test
 #auth0callback = https://hms-dbmi.auth0.com/login/callback?connection=hms-it-test
 #### end hmssaml
+
+[udn]
+udntoken = xx
+udnurl = xx

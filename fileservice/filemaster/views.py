@@ -28,7 +28,6 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
-
 from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation,Bucket
 from .authenticate import ExampleAuthentication,Auth0Authentication
 from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
@@ -179,7 +178,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         fl = FileLocation.objects.get(id=location)
         fl.uploadComplete=datetime.now()
         fl.save()
-        return Response({'message':"upload complete"})
+        return Response({'message':"upload complete","filename":archivefile.filename,"uuid":archivefile.uuid})
 
 
     @detail_route(methods=['post'],permission_classes=[DjangoObjectPermissionsAll])
