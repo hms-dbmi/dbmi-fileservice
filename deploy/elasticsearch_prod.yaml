@@ -1,0 +1,18 @@
+ImageId: ami-1c323274
+InstanceType: t2.medium
+KeyPair: udnprod
+ChefRole: elasticsearch
+IPAddress: 52.6.194.219
+environment: production
+InstanceName: elasticsearch
+StackName: elasticsearch
+SecGroups: 
+    - fileserviceprod
+cloudtype: aws
+AppServerAvailabilityZones:
+    - us-east-1a
+LoadBalancer: false
+AutoScalingGroupMaxSize: 1
+AutoScalingGroupMinSize: 1
+Tags:
+ environment: production
