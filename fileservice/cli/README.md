@@ -112,6 +112,11 @@ Downalods a file to local filesystems
 curl `fileservice download --fileID f149cf5d-722e-4a3f-9767-89b856458ddb | jq -r .url` > ~/test.txt
 ```
 
+### Register a file into UDN Gateway
+Adds a file to UDN
+```
+fileservice udn --fileID <FILE UUID when you write file> --patientID <UDN PATIENT UUID>
+```
 
 TODO:  
 Add Users  
