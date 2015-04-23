@@ -105,12 +105,13 @@ class ArchiveFile(models.Model):
                 assign_perm('add_archivefile', g, self)                
                 assign_perm('change_archivefile', g, self)
                 assign_perm('delete_archivefile', g, self)            
-                assign_perm('download_archivefile', g, self)            
+                assign_perm('download_archivefile', g, self)
+                assign_perm('upload_archivefile', g, self)             
             elif types=="READERS":
                 assign_perm('view_archivefile', g, self)
             elif types=="WRITERS":
+                assign_perm('add_archivefile', g, self)
                 assign_perm('change_archivefile', g, self)
-                assign_perm('upload_archivefile', g, self)                
             elif types=="UPLOADERS":
                 assign_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":
@@ -127,12 +128,13 @@ class ArchiveFile(models.Model):
                 remove_perm('add_archivefile', g, self)                
                 remove_perm('change_archivefile', g, self)
                 remove_perm('delete_archivefile', g, self)            
-                remove_perm('download_archivefile', g, self)            
+                remove_perm('download_archivefile', g, self)
+                remove_perm('upload_archivefile', g, self)                        
             elif types=="READERS":
                 remove_perm('view_archivefile', g, self)
             elif types=="WRITERS":
+                remove_perm('add_archivefile', g, self)                
                 remove_perm('change_archivefile', g, self)
-                remove_perm('upload_archivefile', g, self)                
             elif types=="UPLOADERS":
                 remove_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":

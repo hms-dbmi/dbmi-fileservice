@@ -202,7 +202,7 @@ class UploadFile(Command):
                                                             headers=headers,
                                                             params={"location":r.json()["locationid"]}
                                                             )                
-                self.app.stdout.write("%s uploaded to %s" % (parsed_args.fileID,uploadurl))
+                self.app.stdout.write("%s,%s,%s" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
         else:
             self.app.stdout.write("%s" % r)
     

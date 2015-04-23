@@ -1,4 +1,4 @@
-Django >= 1.7
+Django == 1.7.7
 django-guardian
 django-extensions
 boto
@@ -26,3 +26,4 @@ drf-extensions
 django-kombu
 kombu
 drf-compound-fields
+django-nose

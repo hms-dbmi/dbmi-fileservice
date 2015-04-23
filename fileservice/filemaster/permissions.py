@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+from django.http import Http404
+from django.contrib.auth.models import User, Group, Permission
+
 from rest_framework import permissions
 from rest_framework.compat import (get_model_name, oauth2_provider_scope,
                                    oauth2_constants)
@@ -36,7 +40,15 @@ class DjangoObjectPermissionsChange(permissions.DjangoObjectPermissions):
     }
 
     def has_permission(self, request, view):
+        if request.method=="POST":
+            for g in request.DATA['permissions']:
+                group = Group.objects.get(name=g+"__WRITERS")
+                for usergroup in request.user.groups.all():
+                    if usergroup.name == group.name:
+                        return True
+            return False
         return True
+
 
     
     

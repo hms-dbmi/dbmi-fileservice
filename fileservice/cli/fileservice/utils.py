@@ -14,6 +14,7 @@ def parseConfig(configfile):
                     "appcallback",
                     "auth0initial",
                     "auth0callback"]
+    udnfields=["udntoken","udnurl"]
     configoptions = {}
     
     config = ConfigParser.RawConfigParser()
@@ -44,6 +45,12 @@ def parseConfig(configfile):
         except Exception,e:
             log.info("Error in conf file hmssaml auth: %s" % e)
             return None
+    
+    try:
+        for f in udnfields:
+            configoptions[f] = config.get("udn", f) 
+    except:
+        pass
 
     
     return configoptions
