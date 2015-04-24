@@ -27,4 +27,5 @@ django-kombu
 kombu
 drf-compound-fields
 django-nose
-django-health-check
+#django-health-check
+-e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
