@@ -18,6 +18,7 @@ urlpatterns = patterns('',
     url(r'', include('social_auth.urls')),
     url(r'^filemaster/',include('filemaster.urls')),
     url(r'^api-token-auth/', 'rest_framework.authtoken.views.obtain_auth_token'),
+    url(r'^ht/', include('health_check.urls')),    
     url(r'', login),    
 
 )
