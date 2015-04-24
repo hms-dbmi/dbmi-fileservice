@@ -214,7 +214,7 @@ LOCAL_APPS = (
     'celery_haystack',
     'health_check',
     'health_check_celery3',
-    'health_check_db',    
+    #'health_check_db',    
     #'djkombu'
     #'kombu.transport.django.KombuAppConfig',
 )
