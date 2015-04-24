@@ -80,7 +80,7 @@ class Bucket(models.Model):
  
 class ArchiveFile(models.Model):
     uuid = UUIDField()
-    description = models.CharField(max_length=255,blank=True,null=True)
+    description = models.CharField(max_length=255,blank=True,null=True,default='')
     filename = models.TextField()
     metadata=JSONField(blank=True,null=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL,blank=True,null=True)
