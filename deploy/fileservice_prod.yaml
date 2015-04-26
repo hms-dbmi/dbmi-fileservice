@@ -4,7 +4,7 @@ KeyPair: udnprod
 ChefRole: fileservice
 environment: production
 InstanceName: fileservice
-StackName: fileservice
+StackName: fileservice_prod
 cloudtype: aws
 SecGroups:
     - fileserviceprod

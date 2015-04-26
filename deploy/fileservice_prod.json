@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Auto Generated -- fileservice",
+  "Description": "Auto Generated -- fileservice_prod",
   "Parameters": {
     "SecretStashUsername": {
       "Type": "String",
@@ -47,7 +47,8 @@
           "us-east-1a",
           "us-east-1c",
           "us-east-1d"
-        ]
+        ],
+        "LoadBalancerName": "fileservice_prod"
       }
     },
     "ELBSecurityGroup": {
@@ -133,7 +134,7 @@
         "Tags": [
           {
             "PropagateAtLaunch": true,
-            "Value": "fileservice",
+            "Value": "fileservice_prod",
             "Key": "Name"
           }
         ],
