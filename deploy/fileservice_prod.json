@@ -23,47 +23,24 @@
     }
   },
   "Resources": {
-    "SSHSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "SecurityGroupIngress": {
-          "ToPort": "22",
-          "IpProtocol": "tcp",
-          "FromPort": "22",
-          "CidrIp": "0.0.0.0/0"
-        },
-        "GroupDescription": "allows inbound SSH from all"
-      }
-    },
-    "HTTPSSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "SecurityGroupIngress": {
-          "ToPort": "443",
-          "IpProtocol": "tcp",
-          "FromPort": "443",
-          "CidrIp": "0.0.0.0/0"
-        },
-        "GroupDescription": "allows inbound HTTPS from all"
-      }
-    },
     "LoadBalancer": {
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
         "HealthCheck": {
           "HealthyThreshold": "2",
           "Interval": "30",
-          "Target": "HTTP:80/",
-          "Timeout": "5",
-          "UnhealthyThreshold": "2"
+          "Target": "HTTPS:443/ht/",
+          "Timeout": "15",
+          "UnhealthyThreshold": "3"
         },
         "Listeners": [
           {
-            "InstancePort": "80",
+            "InstancePort": "443",
+            "Protocol": "HTTPS",
+            "InstanceProtocol": "HTTPS",
+            "LoadBalancerPort": "443",
             "PolicyNames": [],
-            "LoadBalancerPort": "80",
-            "Protocol": "HTTP",
-            "InstanceProtocol": "HTTP"
+            "SSLCertificateId": "arn:aws:iam::646975045128:server-certificate/fileserviceprod"
           }
         ],
         "AvailabilityZones": [
@@ -80,6 +57,29 @@
       }
     },
     "ELBSecurityGroupIngressHTTP": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "FromPort": "80",
+        "GroupName": {
+          "Ref": "ELBSecurityGroup"
+        },
+        "SourceSecurityGroupOwnerId": {
+          "Fn::GetAtt": [
+            "LoadBalancer",
+            "SourceSecurityGroup.OwnerAlias"
+          ]
+        },
+        "SourceSecurityGroupName": {
+          "Fn::GetAtt": [
+            "LoadBalancer",
+            "SourceSecurityGroup.GroupName"
+          ]
+        },
+        "ToPort": "80",
+        "IpProtocol": "tcp"
+      }
+    },
+    "ELBSecurityGroupIngressHTTPS": {
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
         "FromPort": "443",
@@ -102,6 +102,30 @@
         "IpProtocol": "tcp"
       }
     },
+    "SSHSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": {
+          "ToPort": "22",
+          "IpProtocol": "tcp",
+          "FromPort": "22",
+          "CidrIp": "0.0.0.0/0"
+        },
+        "GroupDescription": "allows inbound SSH from all"
+      }
+    },
+    "PublicHTTTPSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": {
+          "ToPort": "443",
+          "IpProtocol": "tcp",
+          "FromPort": "443",
+          "CidrIp": "0.0.0.0/0"
+        },
+        "GroupDescription": "allows inbound HTTPS from all"
+      }
+    },
     "AppServerAutoScalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
@@ -113,8 +137,9 @@
             "Key": "Name"
           }
         ],
-        "MaxSize": 1,
+        "MaxSize": 2,
         "HealthCheckGracePeriod": 300,
+        "DesiredCapacity": 2,
         "LaunchConfigurationName": {
           "Ref": "TheComputeLaunch"
         },
@@ -252,13 +277,13 @@
           }
         ],
         "SecurityGroups": [
+          "fileserviceprod",
           {
-            "Ref": "HTTPSSecurityGroup"
+            "Ref": "ELBSecurityGroup"
           },
           {
             "Ref": "SSHSecurityGroup"
-          },
-          "fileserviceprod"
+          }
         ],
         "InstanceType": "t2.medium"
       },
@@ -301,6 +326,84 @@
             "packages": {}
           }
         }
+      }
+    },
+    "AppServerScaleUpPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "ScalingAdjustment": "1",
+        "Cooldown": "600",
+        "AutoScalingGroupName": {
+          "Ref": "AppServerAutoScalingGroup"
+        },
+        "AdjustmentType": "ChangeInCapacity"
+      }
+    },
+    "AppServerScaleDownPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "ScalingAdjustment": "-1",
+        "Cooldown": "600",
+        "AutoScalingGroupName": {
+          "Ref": "AppServerAutoScalingGroup"
+        },
+        "AdjustmentType": "ChangeInCapacity"
+      }
+    },
+    "AppServerCPUAlarmHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": {
+              "Ref": "AppServerAutoScalingGroup"
+            }
+          }
+        ],
+        "Namespace": "AWS/EC2",
+        "ActionsEnabled": true,
+        "MetricName": "CPUUtilization",
+        "EvaluationPeriods": "5",
+        "AlarmActions": [
+          {
+            "Ref": "AppServerScaleUpPolicy"
+          }
+        ],
+        "AlarmDescription": "Scale up if average CPU usage of the AppServers stays above 75% for at least 5 minutes",
+        "Period": "60",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "Statistic": "Average",
+        "Threshold": "75",
+        "Unit": "Percent"
+      }
+    },
+    "AppServerCPUAlarmLow": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": {
+              "Ref": "AppServerAutoScalingGroup"
+            }
+          }
+        ],
+        "Namespace": "AWS/EC2",
+        "ActionsEnabled": true,
+        "MetricName": "CPUUtilization",
+        "EvaluationPeriods": "5",
+        "AlarmActions": [
+          {
+            "Ref": "AppServerScaleUpPolicy"
+          }
+        ],
+        "AlarmDescription": "Scale down if average CPU usage of the AppServers stays below 25% for at least 5 minutes",
+        "Period": "60",
+        "ComparisonOperator": "LessThanThreshold",
+        "Statistic": "Average",
+        "Threshold": "25",
+        "Unit": "Percent"
       }
     }
   },
