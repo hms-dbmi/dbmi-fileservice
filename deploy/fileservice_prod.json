@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Auto Generated -- fileservice_prod",
+  "Description": "Auto Generated -- fileservice",
   "Parameters": {
     "SecretStashUsername": {
       "Type": "String",
@@ -47,6 +47,26 @@
           "us-east-1a",
           "us-east-1c",
           "us-east-1d"
+        ],
+        "Tags": [
+          {
+            "Value": "production",
+            "Key": "environment"
+          },
+          {
+            "Value": "fileservice",
+            "Key": "stackname"
+          },
+          {
+            "Value": "fileservice",
+            "Key": "Name"
+          },
+          {
+            "Value": {
+              "Ref": "AWS::StackName"
+            },
+            "Key": "CFStackName"
+          }
         ]
       }
     },
@@ -133,11 +153,11 @@
         "Tags": [
           {
             "PropagateAtLaunch": true,
-            "Value": "fileservice_prod",
+            "Value": "fileservice",
             "Key": "Name"
           }
         ],
-        "MaxSize": 2,
+        "MaxSize": 4,
         "HealthCheckGracePeriod": 300,
         "DesiredCapacity": 2,
         "LaunchConfigurationName": {
@@ -154,6 +174,14 @@
           }
         ],
         "HealthCheckType": "ELB"
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "PauseTime": "PT15M",
+          "WaitOnResourceSignals": "false",
+          "MaxBatchSize": "1",
+          "MinInstancesInService": "1"
+        }
       }
     },
     "TheComputeLaunch": {
