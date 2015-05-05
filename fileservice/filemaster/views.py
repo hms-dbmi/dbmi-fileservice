@@ -447,7 +447,7 @@ class UserList(APIView):
         return Response([])
 
     def post(self, request, format=None):
-        if not request.user.has_perm('auth.add_user'):
+        if not request.user.has_perm('filemaster.add_customuser'):
             return HttpResponseForbidden()
 
         sdata=[]
