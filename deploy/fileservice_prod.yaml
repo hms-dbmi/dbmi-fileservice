@@ -4,7 +4,7 @@ KeyPair: udnprod
 ChefRole: fileservice
 environment: production
 InstanceName: fileservice
-StackName: fileservice_prod
+StackName: fileservice
 cloudtype: aws
 SecGroups:
     - fileserviceprod
@@ -14,10 +14,12 @@ AppServerAvailabilityZones:
     - us-east-1c
     - us-east-1d
 LoadBalancer: true
-AutoScalingGroupMaxSize: 2
+AutoScalingGroupMaxSize: 4
 AutoScalingGroupMinSize: 1
 AutoScalingDesiredCapacitySize: 2
-cert: arn:aws:iam::646975045128:server-certificate/fileserviceprod
+cert: arn:aws:iam::646975045128:server-certificate/fileserviceprod_chain
 CloudWatchAlarmActionsEnabled: true
 Tags:
  environment: production
+ stackname: fileservice
+ 
