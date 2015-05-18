@@ -135,7 +135,7 @@ class WriteFile(Command):
                                              data=json.dumps(j)
                                              )
             if r.status_code>=200 and r.status_code<300:
-                self.app.stdout.write("%s" % json.dumps(r.json()["uuid"]))
+                self.app.stdout.write("%s\n" % json.dumps(r.json()["uuid"]))
             else:
                 self.app.stdout.write("ERROR WRITING: %s" % r.status_code)
             continue
@@ -203,10 +203,10 @@ class UploadFile(Command):
                                             )
         if r.status_code>=200 and r.status_code<300:
             uploadurl = r.json()["url"]
-            stream = ReadCallbackStream(open(parsed_args.localFile).read(), callback,parsed_args.localFile)
-            #upload = requests.put(uploadurl,data=open(parsed_args.localFile))
+            #stream = ReadCallbackStream(open(parsed_args.localFile).read(), callback,parsed_args.localFile)
+            upload = requests.put(uploadurl,data=open(parsed_args.localFile))
             #upload = requests.put(uploadurl,data=upload_in_chunks(parsed_args.localFile, chunksize=10,app=self.app))
-            upload = requests.put(uploadurl,stream)
+            #upload = requests.put(uploadurl,stream)
 
             if upload.status_code>=200 and upload.status_code<300:
                 uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
