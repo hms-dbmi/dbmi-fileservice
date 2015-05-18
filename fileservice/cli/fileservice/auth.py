@@ -18,7 +18,7 @@ class User:
         requests_log.setLevel(logging.WARNING)
         
         if self.configoptions['authtype']=="token":
-            self.ssotoken=self.configoptions['token']
+            self.ssotoken="Token %s" % self.configoptions['token']
             return True
         
         #try other methods

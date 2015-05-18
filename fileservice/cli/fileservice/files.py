@@ -1,4 +1,6 @@
 import logging,json, os,jsonschema,importlib,uuid,requests,sys
+import cStringIO as StringIO
+import urllib2
 
 from cliff.command import Command
 
@@ -155,6 +157,11 @@ class WriteFile(Command):
                 raise
                 return False
 
+def callback(num_bytes_read):
+    #print num_bytes_read, 'bytes read'
+    pass
+
+
 class UploadFile(Command):
     "Upload a file"
     log = logging.getLogger(__name__)
@@ -176,6 +183,7 @@ class UploadFile(Command):
 
 
         return parser
+
     
     def take_action(self, parsed_args):
         self.log.debug(parsed_args)
@@ -195,18 +203,48 @@ class UploadFile(Command):
                                             )
         if r.status_code>=200 and r.status_code<300:
             uploadurl = r.json()["url"]
-            upload = requests.put(uploadurl,data=open(parsed_args.localFile))
+            stream = ReadCallbackStream(open(parsed_args.localFile).read(), callback,parsed_args.localFile)
+            #upload = requests.put(uploadurl,data=open(parsed_args.localFile))
+            #upload = requests.put(uploadurl,data=upload_in_chunks(parsed_args.localFile, chunksize=10,app=self.app))
+            upload = requests.put(uploadurl,stream)
+
             if upload.status_code>=200 and upload.status_code<300:
                 uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
                                                             "filemaster/api/file/%s/uploadcomplete/" % (parsed_args.fileID)),
                                                             headers=headers,
                                                             params={"location":r.json()["locationid"]}
                                                             )                
-                self.app.stdout.write("%s,%s,%s" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
+                self.app.stdout.write("\n%s,%s,%s\n" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
         else:
             self.app.stdout.write("%s" % r)
-    
 
+
+class ReadCallbackStream(object):
+    """Wraps a string in a read-only file-like object, but also calls
+    callback(num_bytes_read) whenever read() is called on the stream. Used for
+    tracking upload progress. Idea taken from this StackOverflow answer:
+    http://stackoverflow.com/a/5928451/68707
+    """
+    def __init__(self, data, callback,filename):
+        self._len = len(data)
+        self._io = StringIO.StringIO(data)
+        self._callback = callback
+        self.totalsize = os.path.getsize(filename)
+        self.readsofar = 0
+        sys.stderr.write("Uploading %s" % filename)
+
+    def __len__(self):
+        return self._len
+
+    def read(self, *args):
+        chunk = self._io.read(*args)
+        if len(chunk) > 0:
+            self._callback(len(chunk))
+        self.readsofar += len(chunk)
+        percent = self.readsofar * 1e2 / self.totalsize
+        sys.stderr.write("\r{percent:3.0f}%".format(percent=percent))            
+        return chunk
+    
 class DownloadFile(Command):
     "Download a file"
     log = logging.getLogger(__name__)
