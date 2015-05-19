@@ -48,7 +48,6 @@ class RegisterFile(Command):
                           headers=headers
                           )
         
-        print r.text
         if r.status_code>=200 and r.status_code<300:
             self.app.stdout.write("%s" % json.dumps(r.json()))
         else:
