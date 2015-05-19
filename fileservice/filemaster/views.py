@@ -271,7 +271,15 @@ def awsTVMUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,folde
                     "arn:aws:s3:::%s/%s/*" % (bucket,foldername)
                   ],
                   "Effect": "Allow"
-            }
+            },{
+                  "Action": [
+                    "s3:PutObject"
+                  ],
+                  "Resource": [
+                    "arn:aws:s3:::%s*" % (bucket)
+                  ],
+                  "Effect": "Allow"
+            }                              
         ] }
 
     policystring = json.dumps(policydict)
