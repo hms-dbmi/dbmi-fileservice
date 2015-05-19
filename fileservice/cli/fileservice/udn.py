@@ -43,10 +43,15 @@ class RegisterFile(Command):
         #    headers={"Authorization":self.app.user.ssotoken,"Content-Type": "application/json"}
         #else:
         headers={"Authorization":"Token "+self.app.configoptions["udntoken"],"Content-Type": "application/json"}
-
         r = requests.post("%s/patient/registerapi/%s/%s/" % (self.app.configoptions["udnurl"],parsed_args.patientID,parsed_args.fileID),
                           data=json.dumps({"filename":filename}),
                           headers=headers
                           )
-        self.app.stdout.write("%s" % json.dumps(r.json()))
+        
+        print r.text
+        if r.status_code>=200 and r.status_code<300:
+            self.app.stdout.write("%s" % json.dumps(r.json()))
+        else:
+            self.log.debug("%s" % r.status_code)
+
         
