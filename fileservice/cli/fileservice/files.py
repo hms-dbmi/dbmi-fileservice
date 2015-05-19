@@ -1,7 +1,8 @@
 import logging,json, os,jsonschema,importlib,uuid,requests,sys
 import cStringIO as StringIO
 import urllib2
-
+from boto.sts import STSConnection
+from boto.s3.connection import S3Connection
 from cliff.command import Command
 
 class SearchFiles(Command):
@@ -135,7 +136,7 @@ class WriteFile(Command):
                                              data=json.dumps(j)
                                              )
             if r.status_code>=200 and r.status_code<300:
-                self.app.stdout.write("%s" % json.dumps(r.json()["uuid"]))
+                self.app.stdout.write("%s\n" % json.dumps(r.json()["uuid"]))
             else:
                 self.app.stdout.write("ERROR WRITING: %s" % r.status_code)
             continue
@@ -203,20 +204,33 @@ class UploadFile(Command):
                                             )
         if r.status_code>=200 and r.status_code<300:
             uploadurl = r.json()["url"]
-            stream = ReadCallbackStream(open(parsed_args.localFile).read(), callback,parsed_args.localFile)
             #upload = requests.put(uploadurl,data=open(parsed_args.localFile))
-            #upload = requests.put(uploadurl,data=upload_in_chunks(parsed_args.localFile, chunksize=10,app=self.app))
-            upload = requests.put(uploadurl,stream)
+            conn = S3Connection(aws_access_key_id=r.json()["accesskey"], 
+                                aws_secret_access_key=r.json()["secretkey"],
+                                security_token=r.json()['sessiontoken'],
+                                is_secure=True)
 
-            if upload.status_code>=200 and upload.status_code<300:
-                uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
+            b = conn.get_bucket(r.json()['bucket'],validate=False)
+
+            from boto.s3.key import Key
+            k = Key(b)
+            k.key = "/"+r.json()['foldername']+"/"+r.json()['filename']
+            k.set_contents_from_filename(parsed_args.localFile, cb=self.percent_cb, num_cb=10)
+
+            uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
                                                             "filemaster/api/file/%s/uploadcomplete/" % (parsed_args.fileID)),
                                                             headers=headers,
                                                             params={"location":r.json()["locationid"]}
                                                             )                
-                self.app.stdout.write("\n%s,%s,%s\n" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
+            self.app.stdout.write("\n%s,%s,%s\n" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
         else:
             self.app.stdout.write("%s" % r)
+        
+    def percent_cb(self,complete, total):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+    
+
 
 
 class ReadCallbackStream(object):

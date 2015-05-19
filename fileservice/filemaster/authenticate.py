@@ -35,7 +35,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
             auth = request.COOKIES[ 'Authorization' ]
         else:
             return None
-                
+        
         try:
             payload = jwt.decode(
                                  auth,

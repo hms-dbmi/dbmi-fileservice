@@ -39,6 +39,7 @@ from django.contrib.auth import get_user_model
 import json,uuid,string,random
 
 from boto.s3.connection import S3Connection
+from boto.sts import STSConnection
 
 from haystack.forms import ModelSearchForm
 from haystack.query import EmptySearchQuerySet,SearchQuerySet,SQ
@@ -152,9 +153,18 @@ class ArchiveFileList(viewsets.ModelViewSet):
         message = "PUT to this url"
         location = urlhash["location"]
         locationid = urlhash["locationid"]
-            
+        
         #get presigned url
-        return Response({'url': url,'message':message,'location':location,'locationid':locationid})
+        return Response({'url': url,
+                         'message':message,
+                         'location':location,
+                         'locationid':locationid,
+                         'bucket':urlhash['bucket'],
+                         'foldername':urlhash['foldername'],
+                         'filename':urlhash['filename'],
+                         'secretkey':urlhash['secretkey'],
+                         'accesskey':urlhash['accesskey'],
+                         'sessiontoken':urlhash['sessiontoken']})
 
     @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
     def uploadcomplete(self, request, uuid=None):
@@ -243,6 +253,36 @@ def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None
     archiveFile.locations.add(fl)
     return conn.generate_url(3600*24*7, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),fl
 
+def awsTVMUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
+    if not aws_key:
+        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+    if not aws_secret:
+        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+
+    stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
+
+    policydict={
+                "Statement": [
+                {
+                  "Action": [
+                    "s3:*"
+                  ],
+                  "Resource": [
+                    "arn:aws:s3:::%s/%s/*" % (bucket,foldername)
+                  ],
+                  "Effect": "Allow"
+            }
+        ] }
+
+    policystring = json.dumps(policydict)
+    ststoken = stsconn.get_federation_token("sys_upload", 24*3600, policystring)
+    jsonoutput={}
+    jsonoutput["SecretAccessKey"]=ststoken.credentials.secret_key
+    jsonoutput["AccessKeyId"]=ststoken.credentials.access_key
+    jsonoutput["SessionToken"]=ststoken.credentials.session_token
+    return jsonoutput
+
+
 def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cloud="aws"):
     if not bucket:
         bucket=settings.S3_UPLOAD_BUCKET
@@ -254,6 +294,7 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cl
     try:
         if cloud=="aws":
             url,fl = awsSignedURLUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
+            jsonoutput = awsTVMUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
     except Exception,exc:
         print "Error: %s" % exc
         return {}
@@ -261,7 +302,13 @@ def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cl
     return {
             "url":url,
             "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename,
-            "locationid":fl.id
+            "locationid":fl.id,
+            "bucket":bucket,
+            "foldername":foldername,
+            "filename":archiveFile.filename,
+            "secretkey":jsonoutput["SecretAccessKey"],
+            "accesskey":jsonoutput["AccessKeyId"],
+            "sessiontoken":jsonoutput["SessionToken"]
             }
 
     
