@@ -4,6 +4,8 @@ import urllib2
 from boto.sts import STSConnection
 from boto.s3.connection import S3Connection
 from cliff.command import Command
+from filechunkio import FileChunkIO
+import math, os
 
 class SearchFiles(Command):
     "Search by keywords, tags and fields: fileservice search --fields 'description' --keyword testfile"
@@ -209,13 +211,19 @@ class UploadFile(Command):
                                 aws_secret_access_key=r.json()["secretkey"],
                                 security_token=r.json()['sessiontoken'],
                                 is_secure=True)
-
+            
             b = conn.get_bucket(r.json()['bucket'],validate=False)
-
+            
             from boto.s3.key import Key
             k = Key(b)
             k.key = "/"+r.json()['foldername']+"/"+r.json()['filename']
-            k.set_contents_from_filename(parsed_args.localFile, cb=self.percent_cb, num_cb=10)
+            
+            source_size = os.stat(parsed_args.localFile).st_size
+            if source_size < 1000000000:
+                k.set_contents_from_filename(parsed_args.localFile, cb=self.percent_cb, num_cb=10)
+            else:
+                mp = b.initiate_multipart_upload(k.key)
+                self.multipartUpload(parsed_args.localFile,mp)
 
             uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
                                                             "filemaster/api/file/%s/uploadcomplete/" % (parsed_args.fileID)),
@@ -225,6 +233,21 @@ class UploadFile(Command):
             self.app.stdout.write("\n%s,%s,%s\n" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
         else:
             self.app.stdout.write("%s" % r)
+    
+    def multipartUpload(self,filepath,mp):
+        chunk_size = 52428800
+        source_size = os.stat(filepath).st_size
+        chunk_count = int(math.ceil(source_size / float(chunk_size)))
+
+        self.app.stdout.write(("Uploading in %s Chunks") % str(chunk_count))
+        for i in range(chunk_count):
+            offset = chunk_size * i
+            bytes = min(chunk_size, source_size - offset)
+            with FileChunkIO(filepath, 'r', offset=offset,bytes=bytes) as fp:
+                mp.upload_part_from_file(fp, part_num=i + 1, cb=self.percent_cb, num_cb=10)
+                self.app.stdout.write(("Completed %s of %s chunks\n") % (i+1,str(chunk_count)))
+        mp.complete_upload()
+        self.app.stdout.write("Upload Complete\n")        
         
     def percent_cb(self,complete, total):
         sys.stdout.write('.')

@@ -40,7 +40,7 @@ setup(
     scripts=[],
 
     provides=[],
-    install_requires=['cliff','requests','jsonschema','boto','nose','coverage','python-magic','libmagic'],
+    install_requires=['cliff','requests','jsonschema','boto','nose','coverage','python-magic','libmagic','filechunkio'],
 
     namespace_packages=[],
     packages=find_packages(),
