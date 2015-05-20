@@ -43,6 +43,7 @@ class FileLocation(models.Model):
     url = models.TextField(blank=False,null=False)
     uploadComplete = models.DateTimeField(auto_now=False, auto_now_add=False,blank=True,null=True)
     storagetype = models.CharField(blank=True,null=True,max_length=255)
+    filesize = models.BigIntegerField(blank=True,null=True)
 
     class Meta:
         ordering = ('-creationdate',)

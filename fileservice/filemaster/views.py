@@ -184,8 +184,19 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not location:
             return HttpResponseForbidden()
 
-        
         fl = FileLocation.objects.get(id=location)
+        bucket,path = fl.get_bucket()
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        if not aws_key:
+            aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        if not aws_secret:
+            aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+    
+        conn = S3Connection(aws_key, aws_secret, is_secure=True)
+        b = conn.get_bucket(bucket) 
+        k = b.get_key(path)
+        fl.filesize=k.size
         fl.uploadComplete=datetime.now()
         fl.save()
         return Response({'message':"upload complete","filename":archivefile.filename,"uuid":archivefile.uuid})
