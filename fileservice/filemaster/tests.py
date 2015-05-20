@@ -135,8 +135,12 @@ class ArchiveFileTest(TestCase):
         locationid = json.loads(res.content)["locationid"]
         
         res = requests.put(url,data=open('test2.txt'))
+        
         self.assertEqual(res.status_code, 200)
-        url = '/filemaster/api/file/%s/uploadcomplete/?location=%s' % (j,locationid)
+        url = '/filemaster/api/file/%s/uploadcomplete/?location=%s&aws_key=%s&aws_secret=%s' % (j,locationid,self.aws_key,urllib.quote(self.aws_secret,''))
+        res = self.c.get(url,content_type='application/json')
+
+        url = '/filemaster/api/file/%s/' % (j)
         res = self.c.get(url,content_type='application/json')
 
         #get link and upload file
