@@ -65,7 +65,7 @@ class ArchiveFileTest(TestCase):
 
         for g in groups_for_regular:
             gr = Group.objects.get(name=g)
-            res = self.c.put('/filemaster/groupsname/%s/' % gr.name, data='{"users":[{"email":"regularuser@thebeatles.com"}],"buckets":[{"name":"cbmi-fileservice-test"}]}',content_type='application/json')
+            res = self.c.put('/filemaster/groups/%s/' % gr.name, data='{"users":[{"email":"regularuser@thebeatles.com"}],"buckets":[{"name":"cbmi-fileservice-test"}]}',content_type='application/json')
             self.assertEqual(res.status_code, 200)
 
 

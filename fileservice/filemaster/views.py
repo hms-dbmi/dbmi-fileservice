@@ -469,7 +469,7 @@ class GroupDetail(APIView):
     def put(self, request, pk,format=None):
         if pk.isdigit():
             group = self.get_object(pk)
-        elif not "__" in pk:
+        elif "__" in pk:
             group = Group.objects.get(name=pk)
         else:
             return HttpResponseForbidden()
