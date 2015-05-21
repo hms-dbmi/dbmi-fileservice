@@ -466,8 +466,17 @@ class GroupDetail(APIView):
         except:
             pass
 
-    def put(self, request, pk, format=None):
-        group = self.get_object(pk)
+    def put(self, request, pk,format=None):
+        if pk.isdigit():
+            group = self.get_object(pk)
+        elif not "__" in pk:
+            group = Group.objects.get(name=pk)
+        else:
+            return HttpResponseForbidden()
+            
+        if not group:
+            return HttpResponseForbidden()
+            
         if not request.user.has_perm('auth.change_group', group):
             return HttpResponseForbidden()
         
