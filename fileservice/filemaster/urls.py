@@ -16,7 +16,7 @@ urlpatterns = patterns(
                        'filemaster.views',
                        url(r'^groups/$', GroupList.as_view()),
                        url(r'^user/$', UserList.as_view()),
-                       url(r'^groups/(?P<pk>[0-9]+)/$', GroupDetail.as_view()),
+                       url(r'^groups/(?P<pk>[^/]+)/$', GroupDetail.as_view()),
                        url(r'^token/$', 'token'),                                              
                        url(r'^api/', include(router.urls)),
 
