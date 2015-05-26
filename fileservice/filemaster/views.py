@@ -408,6 +408,8 @@ class GroupList(APIView):
             assign_perm('add_group', self.request.user, group)                
             assign_perm('change_group', self.request.user, group)
             assign_perm('delete_group', self.request.user, group)
+
+            assign_perm('change_group', Group.objects.get(name="powerusers"), group)
     
             for u in self.request.DATA['users']:
                 try:
