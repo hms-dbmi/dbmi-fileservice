@@ -168,7 +168,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'social_auth.middleware.SocialAuthExceptionMiddleware'    
+    'social_auth.middleware.SocialAuthExceptionMiddleware',
+    'axes.middleware.FailedLoginMiddleware'    
 )
 ########## END MIDDLEWARE CONFIGURATION
 
@@ -212,6 +213,7 @@ LOCAL_APPS = (
     'djcelery',
     'django_nose',
     'celery_haystack',
+    'axes',
     'health_check',
     'health_check_celery3',
     'health_check_db',    
@@ -312,3 +314,5 @@ TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'AKIAxxxxx')
 TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')
 EXPIRATIONDATE = 60
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+

@@ -1,4 +1,4 @@
-Django == 1.7.7
+Django == 1.7.9
 django-guardian
 django-extensions
 boto
@@ -29,3 +29,4 @@ drf-compound-fields
 django-nose
 #django-health-check
 -e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
+django-axes
