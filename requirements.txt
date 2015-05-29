@@ -29,3 +29,4 @@ drf-compound-fields
 django-nose
 #django-health-check
 -e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
+django-axes
