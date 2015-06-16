@@ -49,7 +49,11 @@ def glacierLifecycleMove(locationstring,pid):
         lifecycle=Lifecycle()
     
     lifecycle.append(rule)
-    status = bucket.configure_lifecycle(lifecycle)
+    try:
+        status = bucket.configure_lifecycle(lifecycle)
+    except Exception,e:
+        print "Glacier Error %s" % e
+        
 
     #if status:
     #    loc = af.locations.all()[0]
