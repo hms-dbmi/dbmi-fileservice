@@ -168,11 +168,13 @@ $curl -k -v -X GET --cookie "Authorization=$CBMI1" \
  -H "Content-Type: application/json" \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/0c19072c-9a6f-4a96-88ec-a9bb4033c4d6/upload/"
 
-{"url": "https://udnarchive-ci.s3.amazonaws.com/55a529e9-2677-4feb-bc71-171d49750798/test2.txt?Signature=al%2BeX%2BV04HeyIJTXPF6xQM6Ugy8%3D&Expires=1413916977&AWSAccessKeyId=AKIAJB22JW7JSGJXYYZA",  "location":"s3://udnarchive-ci/55a529e9-2677-4feb-bc71-171d49750798/test2.txt", "message": "PUT to this url"}
+{"url": "https://udnarchive-ci.s3.amazonaws.com/55a529e9-2677-4feb-bc71-171d49750798/test2.txt?Signature=al%2BeX%2BV04HeyIJTXPF6xQM6Ugy8%3D&Expires=1413916977&AWSAccessKeyId=AKIAJB22JW7JSGJXYYZA",  "location":"s3://udnarchive-ci/55a529e9-2677-4feb-bc71-171d49750798/test2.txt", "secretkey": "+AcXO0xxxxxxx", "sessiontoken": "AQoDYXdzEDUaxxxxxxxxx","accesskey": "ASIAJxxxxxxx", "foldername": "8519a097-79cf-469d-af65-346272905903","message": "PUT to this url"}
 
 $curl -v -X PUT --upload-file "~/location/of/localfile.txt" \
 "https://udnarchive-ci.s3.amazonaws.com/55a529e9-2677-4feb-bc71-171d49750798/test2.txt?Signature=al%2BeX%2BV04HeyIJTXPF6xQM6Ugy8%3D&Expires=1413916977&AWSAccessKeyId=AKIAJB22JW7JSGJXYYZA"
 ```
+OR use the secretkey,sessiontoken and foldername (prefix) and use your own tools to upload, especially for multipart uploads (the CLI uses this).  
+
 You can register a file location manually if you want.  
 ```
 $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
