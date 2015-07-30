@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "File Service Template",
+  "Description": "Auto Generated -- fileservice-dev",
   "Parameters": {
     "SecretStashUsername": {
       "Type": "String",
@@ -23,30 +23,6 @@
     }
   },
   "Resources": {
-    "SSHSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "SecurityGroupIngress": {
-          "ToPort": "22",
-          "IpProtocol": "tcp",
-          "FromPort": "22",
-          "CidrIp": "0.0.0.0/0"
-        },
-        "GroupDescription": "allows inbound SSH from all"
-      }
-    },
-    "HTTPSSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "SecurityGroupIngress": {
-          "ToPort": "443",
-          "IpProtocol": "tcp",
-          "FromPort": "443",
-          "CidrIp": "0.0.0.0/0"
-        },
-        "GroupDescription": "allows inbound HTTPS from all"
-      }
-    },
     "IPAssociation": {
       "Type": "AWS::EC2::EIPAssociation",
       "Properties": {
@@ -82,14 +58,15 @@
                 "sudo rm -fR /var/lib/apt/lists/*\n",
                 "sudo apt-get update 2> /dev/null\n",
                 "sudo apt-get -y install build-essential 2> /dev/null\n",
-                "sudo apt-get -y install libmysqlclient-dev python-setuptools python-dev 2> /dev/null\n",
+                "sudo apt-get -y install libmysqlclient-dev python-setuptools python-dev python-docutils 2> /dev/null\n",
                 "sudo apt-get -y install git 2> /dev/null\n",
                 "sudo apt-get -y install curl 2> /dev/null\n",
                 "sudo apt-get -y install language-pack-en 2> /dev/null\n",
                 "sudo apt-get -y install libxml2-dev 2> /dev/null\n",
                 "sudo apt-get -y install libxslt-dev 2> /dev/null\n",
-                "sudo apt-get -y install libpq-dev 2> /dev/null\n",
-                "sudo apt-get -y upgrade 2> /dev/null\n",
+                "sudo apt-get -y install libpq-dev libffi-dev 2> /dev/null\n",
+                "export DEBIAN_FRONTEND=noninteractive\n",
+                "DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade 2> /dev/null\n",
                 "sudo wget http://stedolan.github.io/jq/download/linux64/jq\n",
                 "sudo mv jq /usr/bin/jq\n",
                 "sudo chmod +x /usr/bin/jq\n",
@@ -139,6 +116,8 @@
                 "/opt/chef/embedded/bin/gem install aws-sdk --no-rdoc --no-ri\n",
                 "/opt/chef/embedded/bin/gem install right_aws --no-rdoc --no-ri\n",
                 "/opt/chef/embedded/bin/gem install librarian-chef --no-rdoc --no-ri\n",
+                "/opt/chef/embedded/bin/gem install rest-client --no-rdoc --no-ri\n",
+                "export HOME=/root\n",
                 "GITHUB=`cat /root/github.txt`\n",
                 "git clone https://dbmibot:$GITHUB@github.com/hms-dbmi/chef.git --branch=develop /var/chef-repo \n",
                 "mkdir -p /var/chef\n",
@@ -153,24 +132,45 @@
             ]
           }
         },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvdb",
+            "VirtualName": "ephemeral0"
+          },
+          {
+            "DeviceName": "/dev/xvdc",
+            "VirtualName": "ephemeral1"
+          },
+          {
+            "DeviceName": "/dev/xvdd",
+            "VirtualName": "ephemeral2"
+          },
+          {
+            "DeviceName": "/dev/xvde",
+            "VirtualName": "ephemeral3"
+          }
+        ],
+        "KeyName": "udndevelopment",
+        "SecurityGroups": [
+          "fileservicedev"
+        ],
+        "AvailabilityZone": "us-east-1a",
         "Tags": [
+          {
+            "Value": "development",
+            "Key": "environment"
+          },
+          {
+            "Value": "fileservice",
+            "Key": "stackname"
+          },
           {
             "Value": "fileservice-dev",
             "Key": "Name"
           }
         ],
-        "ImageId": "ami-9aaa1cf2",
-        "KeyName": "udndevelopment",
-        "SecurityGroups": [
-          {
-            "Ref": "HTTPSSecurityGroup"
-          },
-          {
-            "Ref": "SSHSecurityGroup"
-          },
-          "fileservicedev"
-        ],
-        "InstanceType": "t2.medium"
+        "InstanceType": "t2.medium",
+        "ImageId": "ami-1c323274"
       },
       "Metadata": {
         "AWS::CloudFormation::Init": {
@@ -181,7 +181,7 @@
                   "Fn::Join": [
                     "",
                     [
-                      "{\n  \"environment\": \"develop\", \n",
+                      "{\n  \"devices\": [],\"mountpoints\": [],\"volumes\": [],\"stackname\": \"fileservice-dev\",\"environment\": \"develop\", \n",
                       "\"secretstash\": \"",
                       {
                         "Ref": "SecretStashURL"
