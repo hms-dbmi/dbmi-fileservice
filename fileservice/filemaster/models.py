@@ -254,7 +254,8 @@ def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
             except:
                 pass
             if bucket and glaciertype=="lifecycle":
-                glacierLifecycleMove(loc.url,af.id)
+                #glacierLifecycleMove(loc.url,af.id)
                 #glacierLifecycleMove.delay(loc.url,af.id)
+                pass
 
 m2m_changed.connect(location_changed, sender=ArchiveFile.locations.through)
