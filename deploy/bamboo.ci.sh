@@ -29,12 +29,12 @@ sudo  chkconfig --add elasticsearch
 JAVA_HOME=/usr/lib/jvm/jre-1.7.0 sudo /etc/init.d/elasticsearch restart
 cd ~
 wget https://bootstrap.pypa.io/ez_setup.py -O - |sudo python27
-sudo  /usr/bin/easy_install-2.7 pip
-sudo  /usr/bin/pip2.7 install --upgrade awscli
-sudo  /usr/bin/pip2.7 install --upgrade virtualenv
+sudo  /usr/bin/easy_install-2.7 --upgrade pip
+sudo  /usr/local/bin/pip2.7 install --upgrade awscli
+sudo  /usr/local/bin/pip2.7 install --upgrade virtualenv
 
 cd ~
-virtualenv -p /usr/bin/python2.7 python
+/usr/local/bin/virtualenv -p /usr/bin/python2.7 python
 
 cd ~/python
 . bin/activate

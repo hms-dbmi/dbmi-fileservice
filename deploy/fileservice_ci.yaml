@@ -1,4 +1,4 @@
-ImageId: ami-9aaa1cf2
+ImageId: ami-1c323274
 InstanceType: t2.medium
 KeyPair: udndevelopment
 ChefRole: fileservice
@@ -17,3 +17,7 @@ AppServerAvailabilityZones:
 LoadBalancer: false
 AutoScalingGroupMaxSize: 1
 AutoScalingGroupMinSize: 1
+Tags:
+ environment: development
+ stackname: fileservice
+ 
