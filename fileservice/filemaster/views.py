@@ -356,8 +356,17 @@ def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
     b = conn.get_bucket(bucket) 
     k = b.get_key(path)
     try:
+        #restoring
         if k.storage_class=="GLACIER":
-            return False
+            #still restoring
+            if k.ongoing_restore and not k.expiry_date:
+                return False
+            #no restore tried... still in glacier
+            if not k.ongoing_restore and not k.expiry_date:
+                pass
+            #idone restoring with expiration date -- done glacier restore
+            if not k.ongoing_restore and k.expiry_date:
+                pass
     except:
         pass
     
