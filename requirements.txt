@@ -22,7 +22,7 @@ elasticsearch
 django-celery
 -e git+https://github.com/bradleyayers/django-celery-transactions.git#egg=django-celery-transactions
 celery_haystack
-djangorestframework == 3.2.4
+djangorestframework == 2.4.4
 drf-extensions
 django-kombu
 kombu
