@@ -6,6 +6,13 @@ from boto.s3.connection import S3Connection
 from cliff.command import Command
 from filechunkio import FileChunkIO
 import math, os
+import multiprocessing
+from multiprocessing.pool import IMapIterator
+import threading
+import time
+
+threadLimiter = threading.BoundedSemaphore(multiprocessing.cpu_count())
+chunk_size = 52428800
 
 class SearchFiles(Command):
     "Search by keywords, tags and fields: fileservice search --fields 'description' --keyword testfile"
@@ -164,6 +171,32 @@ def callback(num_bytes_read):
     #print num_bytes_read, 'bytes read'
     pass
 
+class processMultipart(threading.Thread):
+    def __init__(self, i,chunk_count,filepath,mp,app):
+        threading.Thread.__init__(self)
+        self.i = i
+        self.chunk_count = chunk_count
+        self.filepath = filepath
+        self.mp = mp
+        self.app = app
+
+    def run(self):
+        threadLimiter.acquire()
+        try:
+            offset = chunk_size * self.i
+            source_size = os.stat(self.filepath).st_size
+    
+            bytes = min(chunk_size, source_size - offset)
+            with FileChunkIO(self.filepath, 'r', offset=offset,bytes=bytes) as fp:
+                self.mp.upload_part_from_file(fp, part_num=self.i + 1, cb=self.percent_cb, num_cb=10)
+                self.app.stdout.write(("Completed %s of %s chunks\n") % (self.i+1,str(self.chunk_count)))
+        finally:
+            threadLimiter.release()
+            
+    def percent_cb(self,complete, total):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+            
 
 class UploadFile(Command):
     "Upload a file"
@@ -233,29 +266,32 @@ class UploadFile(Command):
             self.app.stdout.write("\n%s,%s,%s\n" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
         else:
             self.app.stdout.write("%s" % r)
-    
+        
     def multipartUpload(self,filepath,mp):
-        chunk_size = 52428800
         source_size = os.stat(filepath).st_size
         chunk_count = int(math.ceil(source_size / float(chunk_size)))
 
-        self.app.stdout.write(("Uploading in %s Chunks") % str(chunk_count))
+        self.app.stdout.write(("Uploading in %s Chunks\n") % str(chunk_count))
+        threads = []
+
         for i in range(chunk_count):
-            offset = chunk_size * i
-            bytes = min(chunk_size, source_size - offset)
-            with FileChunkIO(filepath, 'r', offset=offset,bytes=bytes) as fp:
-                mp.upload_part_from_file(fp, part_num=i + 1, cb=self.percent_cb, num_cb=10)
-                self.app.stdout.write(("Completed %s of %s chunks\n") % (i+1,str(chunk_count)))
+            self.app.stdout.write(("Starting thread for Chunk %s\n") % str(i))
+            thread = processMultipart(i,chunk_count,filepath,mp,self.app)
+            #thread = threading.Thread(target=processMultipart, args=(i,chunk_count,filepath,mp,self.app))
+            thread.start()
+            threads.append(thread)            
+                
+        for thread in threads:
+            thread.join()                                
         mp.complete_upload()
         self.app.stdout.write("Upload Complete\n")        
         
     def percent_cb(self,complete, total):
         sys.stdout.write('.')
         sys.stdout.flush()
+
+
     
-
-
-
 class ReadCallbackStream(object):
     """Wraps a string in a read-only file-like object, but also calls
     callback(num_bytes_read) whenever read() is called on the stream. Used for
