@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User, Group, Permission
 from rest_framework.authtoken.models import Token
-from drf_compound_fields.fields import ListField,DictField,ListOrItemField
+# from drf_compound_fields.fields import ListField,DictField,ListOrItemField
 from rest_framework import relations
 from rest_framework.exceptions import ParseError
 import json,ast
