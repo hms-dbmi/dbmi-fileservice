@@ -23,8 +23,8 @@ django-celery == 3.1.17
 celery_haystack
 djangorestframework == 2.4.4
 drf-extensions
-django-kombu
-kombu
+django-kombu == 0.9.4
+kombu == 3.0.37
 drf-compound-fields
 django-nose
 django-health-check == 1.0.2
