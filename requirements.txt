@@ -27,7 +27,7 @@ django-kombu
 kombu
 drf-compound-fields
 django-nose
-#django-health-check
--e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
+django-health-check == 1.0.2
+#-e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
 django-axes == 1.7.0
 celery == 3.1.25
