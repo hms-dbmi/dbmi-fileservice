@@ -18,7 +18,7 @@ requests
 #django-haystack == 2.3.1
 -e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
 elasticsearch
-django-celery
+django-celery == 3.1.17
 -e git+https://github.com/bradleyayers/django-celery-transactions.git#egg=django-celery-transactions
 celery_haystack
 djangorestframework == 2.4.4
@@ -29,4 +29,5 @@ drf-compound-fields
 django-nose
 #django-health-check
 -e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
-django-axes
+django-axes == 1.7.0
+celery == 3.1.25
