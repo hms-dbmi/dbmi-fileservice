@@ -25,7 +25,7 @@ path.append(DJANGO_ROOT)
 
 ########## DEBUG CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = False
+DEBUG = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
 TEMPLATE_DEBUG = DEBUG
@@ -62,7 +62,6 @@ DATABASES = {
     }
 }
 ########## END DATABASE CONFIGURATION
-
 
 ########## GENERAL CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#time-zone
@@ -216,11 +215,9 @@ LOCAL_APPS = (
     'bootstrap3',
     'taggit',
     'django_extensions',
-    'haystack',
     'kombu.transport.django',
     'djcelery',
     'django_nose',
-    'celery_haystack',
     'axes',
     'health_check',
     'health_check_celery3',
@@ -316,25 +313,12 @@ TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')
 EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
+AUTH0_CLIENT_ID="oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb"
+AUTH0_CLIENT_SECRET="hfYYdRybBCK57U5MHvpe8dEZAShJyjtIsLYoX6GY-TUYYeJMvmjXq81vHL_Q3OPN"
+AUTH0_DOMAIN="hms-dbmi.auth0.com"
+AUTH0_CALLBACK_URL="http://localhost:8010/callback/"
+AUTH0_DELEGATE_SECRET="oI1eRm6NxzYD4fcikngYYKDnxjLLY7wb"
 
-HAYSTACK_CONNECTIONS = {
-    'default': {
-        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
-        'URL': 'http://127.0.0.1:9200/',
-        'INDEX_NAME': 'haystack',
-    },
-}
-
-HAYSTACK_LIMIT_TO_REGISTERED_MODELS = False
-
-# increase the default number of results (from 20)
-HAYSTACK_SEARCH_RESULTS_PER_PAGE = 40
-#HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
-HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
-
-
-AUTH0_CLIENT_ID=""
-AUTH0_CLIENT_SECRET=""
-AUTH0_DOMAIN=""
-AUTH0_CALLBACK_URL=""
-AUTH0_DELEGATE_SECRET=""
+S3_UPLOAD_BUCKET=""
+AWS_ACCESS_KEY_ID = ""
+AWS_SECRET_ACCESS_KEY=""

@@ -41,7 +41,8 @@ class Auth0Authentication(authentication.BaseAuthentication):
                                  auth,
                                  #key=base64.b64decode(settings.AUTH0_CLIENT_SECRET.replace("_","/").replace("-","+")),
                                  key=settings.AUTH0_CLIENT_SECRET,
-                                 audience=settings.AUTH0_CLIENT_ID
+                                 audience=settings.AUTH0_CLIENT_ID,
+                leeway=10
         )
         except jwt.ExpiredSignature:
             print "Expired"
