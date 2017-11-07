@@ -38,13 +38,10 @@ from guardian.shortcuts import assign_perm,get_objects_for_group
 from django.contrib.auth import get_user_model
 import json,uuid,string,random
 
+import sys
+
 from boto.s3.connection import S3Connection
 from boto.sts import STSConnection
-
-from haystack.forms import ModelSearchForm
-from haystack.query import EmptySearchQuerySet,SearchQuerySet,SQ
-from haystack.inputs import AutoQuery, Exact, Clean
-
 
 User = get_user_model()        
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
@@ -140,6 +137,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         
         cloud = self.request.QUERY_PARAMS.get('cloud', "aws")
         bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
+        sys.stderr.write("bucket %s\n" % bucket)
         bucketobj = Bucket.objects.get(name=bucket)
         if not request.user.has_perm('filemaster.write_bucket',bucketobj):
             return HttpResponseForbidden()
@@ -549,52 +547,6 @@ class UserList(APIView):
         sdata.append({"users":userstructure}) 
         
         return Response(sdata, status=status.HTTP_201_CREATED)
-
-
-class SearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    authentication_classes = (Auth0Authentication,TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
-    serializer_class = SearchSerializer
- 
- 
-    def get_queryset(self, *args, **kwargs):
-        # This will return a dict of the first known
-        # unit of distance found in the query
-        request = self.request
-        queryset = EmptySearchQuerySet()
-
-        fieldlist = []
-        if request.GET.get('fields'):
-            rawfields = request.GET.get('fields')
-            fieldlist = rawfields.split(',')        
-        
-        facetlist = []
-        if request.GET.get('facets'):
-            rawfacets = request.GET.get('facets')
-            facetlist = rawfacets.split(',')        
- 
-        if request.GET.get('q'):
-            query = request.GET.get('q')
-            sqs = SearchQuerySet()
-            for item in facetlist:
-                sqs = sqs.facet(item)
-            if not fieldlist:            
-                sqs = sqs.filter(content=AutoQuery(query))
-            else:
-                for idx, field in enumerate(fieldlist):
-                    if idx==0:
-                        sqs = sqs.filter(SQ(**{field+"__icontains":query}))
-                    else:    
-                        sqs = sqs.filter_or(SQ(**{field+"__icontains":query}))
-        
-        finalResult=[]
-        for m in list(sqs):
-            if request.user.has_perm('filemaster.view_archivefile',m.object):
-                finalResult.append(m)
-            else:
-                continue 
-        
-        return finalResult
     
 @api_view(['GET'])
 @authentication_classes((Auth0Authentication,TokenAuthentication,))
