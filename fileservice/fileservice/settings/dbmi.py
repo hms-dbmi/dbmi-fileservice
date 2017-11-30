@@ -310,22 +310,13 @@ EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 S3_UPLOAD_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET', 'dbmi')
-AWS_S3_ACCESS_KEY_ID = os.environ.get('AWS_S3_ACCESS_KEY_ID', '')
-AWS_S3_SECRET_ACCESS_KEY = os.environ.get('AWS_S3_SECRET_ACCESS_KEY', '')
-
-AWS_GLACIER_ACCESS_KEY_ID = os.environ.get('AWS_GLACIER_ACCESS_KEY_ID', '')
-AWS_GLACIER_SECRET_ACCESS_KEY = os.environ.get('AWS_GLACIER_SECRET_ACCESS_KEY', '')
 
 BUCKETS = {
     S3_UPLOAD_BUCKET: {
         "type": "s3",
-        "AWS_KEY_ID": AWS_S3_ACCESS_KEY_ID,
-        "AWS_SECRET": AWS_S3_SECRET_ACCESS_KEY,
         "glaciertype": "lifecycle"
     },
     "Glacier": {
         "type": "glacier",
-        "AWS_KEY_ID": AWS_GLACIER_ACCESS_KEY_ID,
-        "AWS_SECRET": AWS_GLACIER_SECRET_ACCESS_KEY,
     }
 }

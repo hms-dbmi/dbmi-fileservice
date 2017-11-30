@@ -159,9 +159,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         if not aws_key:
-            aws_key = settings.BUCKETS[bucket]["AWS_KEY_ID"]
+            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
         if not aws_secret:
-            aws_secret = settings.BUCKETS[bucket]["AWS_SECRET"]
+            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
         conn = S3Connection(aws_key, aws_secret, is_secure=True)
         b = conn.get_bucket(bucket)
@@ -268,9 +268,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         if not aws_key:
-            aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+            aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
         if not aws_secret:
-            aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+            aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
     
         conn = S3Connection(aws_key, aws_secret, is_secure=True)
         b = conn.get_bucket(bucket) 
@@ -329,9 +329,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
 def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
     if not aws_key:
-        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
 
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
@@ -345,9 +345,9 @@ def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None
 
 def awsTVMUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
     if not aws_key:
-        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
     stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
@@ -425,9 +425,9 @@ def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
     bucket,path = loc.get_bucket()
 
     if not aws_key:
-        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
     
