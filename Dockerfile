@@ -2,7 +2,7 @@ FROM python:2.7
 
 # Installing os packages
 RUN	apt-get -y update && \
- 	apt-get install -y && \
+ 	apt-get install -y \
  	nginx apache2-utils unzip && \
  	apt-get clean && \
  	rm -rf /tmp/* /var/lib/apt/lists/*
@@ -17,7 +17,7 @@ COPY fileservice /app/
 
 WORKDIR /app/
 
-# Copying files required for NGINX.
+#Copying files required for NGINX.
 RUN rm -rf /etc/nginx/sites-available/default
 RUN mkdir /etc/nginx/ssl/
 RUN chmod 710 /etc/nginx/ssl/
