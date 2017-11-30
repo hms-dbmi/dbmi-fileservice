@@ -1,2 +1,5 @@
+fileservice/fileservice.db
+fileservice/assets
+fileservice/src
 .idea/
 *.pyc
