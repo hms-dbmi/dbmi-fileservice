@@ -1,15 +1,13 @@
 FROM python:2.7
 
-#Installing os packages
+# Installing os packages
 RUN	apt-get -y update && \
- 	apt-get -y install nginx && \
- 	apt-get -y install apache2-utils && \
-	apt-get -y update && \
- 	apt-get -y install unzip && \
- 	apt-get -y install sqlite3
+ 	apt-get install -y \
+ 	nginx apache2-utils unzip && \
+ 	apt-get clean && \
+ 	rm -rf /tmp/* /var/lib/apt/lists/*
 
-#Installing python packages
-RUN pip install django
+# Installing python packages
 RUN pip install gunicorn
 
 COPY requirements.txt /app/requirements.txt

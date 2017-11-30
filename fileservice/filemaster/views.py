@@ -102,6 +102,81 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     print "ERROR permissions: %s " % e
         return super(ArchiveFileList, self).post_save(obj)        
 
+    @list_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def list(self, request, *args, **kwargs):
+
+        # Get the UUIDs from the request data.
+        uuids_string = self.request.QUERY_PARAMS.get('uuids', None)
+        if uuids_string is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        # Break them apart.
+        uuids = uuids_string.split(',')
+        if len(uuids) == 0:
+            return HttpResponseBadRequest()
+
+        try:
+            # Fetch the files
+            archivefiles = ArchiveFile.objects.filter(uuid__in=uuids)
+        except:
+            return HttpResponseNotFound()
+
+        # Filter out files the user doesn't have permissions for
+        archivefiles_allowed = [archivefile for archivefile in archivefiles
+                                if request.user.has_perm('filemaster.view_archivefile', archivefile)]
+
+        # Check for an empty set and quit early.
+        if len(archivefiles_allowed) == 0:
+            return HttpResponseForbidden()
+
+        # Serialize them.
+        serializer = ArchiveFileSerializer(archivefiles_allowed, many=True)
+
+        # Return them
+        return Response(serializer.data)
+
+    def destroy(self, request, uuid=None, *args, **kwargs):
+
+        # UUID is required.
+        if not uuid:
+            return HttpResponseBadRequest('"uuid" is required')
+
+        # Get the location from the query
+        location = self.request.QUERY_PARAMS.get('location', None)
+        if not location:
+            return HttpResponseBadRequest('"location" parameter is required')
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+
+        if not request.user.has_perm('filemaster.delete_archivefile', archivefile):
+            return HttpResponseForbidden()
+
+        fl = FileLocation.objects.get(id=location)
+        bucket, path = fl.get_bucket()
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        if not aws_key:
+            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
+        if not aws_secret:
+            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
+
+        conn = S3Connection(aws_key, aws_secret, is_secure=True)
+        b = conn.get_bucket(bucket)
+        k = b.get_key(path)
+
+        # Delete it.
+        if k is not None:
+            k.delete()
+
+        # Remove everything.
+        fl.delete()
+        archivefile.delete()
+
+        return Response({'message': "file deleted", "uuid": uuid})
+
     @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
     def download(self, request, uuid=None):
         url = None
@@ -169,13 +244,19 @@ class ArchiveFileList(viewsets.ModelViewSet):
         from datetime import datetime
         archivefile=None
         message=None
+
+        # Get location
         location = self.request.QUERY_PARAMS.get('location', None)
 
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Check for missing location.
+            if not location and archivefile.locations.first():
+                location = archivefile.locations.first().id
         except:
             return HttpResponseNotFound()
-        
+
         if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
             return HttpResponseForbidden()
 
@@ -187,9 +268,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
         aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
         if not aws_key:
-            aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+            aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
         if not aws_secret:
-            aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+            aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
     
         conn = S3Connection(aws_key, aws_secret, is_secure=True)
         b = conn.get_bucket(bucket) 
@@ -248,11 +329,11 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
 def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
     if not aws_key:
-        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-    
+
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
 
     url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
@@ -264,9 +345,9 @@ def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None
 
 def awsTVMUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
     if not aws_key:
-        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
     stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
@@ -344,9 +425,9 @@ def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
     bucket,path = loc.get_bucket()
 
     if not aws_key:
-        aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
+        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
     
