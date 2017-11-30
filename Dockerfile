@@ -2,6 +2,7 @@ FROM python:2.7
 
 # Installing os packages
 RUN	apt-get -y update && \
+ 	apt-get install -y && \
  	nginx apache2-utils unzip && \
  	apt-get clean && \
  	rm -rf /tmp/* /var/lib/apt/lists/*
