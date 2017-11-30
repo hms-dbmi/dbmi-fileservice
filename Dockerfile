@@ -3,12 +3,12 @@ FROM python:2.7
 # Installing os packages
 RUN	apt-get -y update && \
  	apt-get install -y \
- 	nginx apache2-utils unzip && \
+ 	nginx apache2-utils unzip jq && \
  	apt-get clean && \
  	rm -rf /tmp/* /var/lib/apt/lists/*
 
 # Installing python packages
-RUN pip install gunicorn
+RUN pip install gunicorn awscli
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
