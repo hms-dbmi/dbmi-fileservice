@@ -44,7 +44,7 @@ for i in $(echo $ADMIN_EMAILS | sed "s/,/ /g")
 do
     python /app/manage.py shell <<EOF
 from django.contrib.auth import get_user_model
-get_user_model().objects.create_superuser(username='$i', email='$i', password=None)
+get_user_model().objects.create_superuser(username=next(iter('$i'.split('@')), '$i'[:30]), email='$i', password=None)
 EOF
 
 done
