@@ -5,17 +5,5 @@
 	    "fields": {
 	        "name": "powerusers"
 	    }
-	},
-	{
-	    "model": "filemaster.bucket",
-	    "fields": {
-	        "name": "dbmi-files-dev"
-	    }
-	},
-	{
-	    "model": "filemaster.bucket",
-	    "fields": {
-	        "name": "dbmi-files"
-	    }
 	}
 ]

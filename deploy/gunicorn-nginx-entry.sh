@@ -49,6 +49,12 @@ EOF
 
 done
 
+# Add the bucket
+python /app/manage.py shell <<EOF
+from filemaster.models import Bucket
+Bucket.objects.get_or_create(name='$AWS_S3_UPLOAD_BUCKET')
+EOF
+
 # Link nginx logs to stdout/stderr
 ln -sf /dev/stdout /var/log/nginx/access.log
 ln -sf /dev/stderr /var/log/nginx/error.log
