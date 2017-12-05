@@ -349,8 +349,6 @@ def awsTVMUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,folde
     if not aws_secret:
         aws_secret=settings.AWS_STS_SECRET_ACCESS_KEY
 
-    print('AWS KEY: {}'.format(aws_key))
-
     stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
     policydict={
