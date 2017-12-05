@@ -310,6 +310,8 @@ EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 S3_UPLOAD_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET', 'dbmi')
+AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID', '')
+AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY', '')
 
 BUCKETS = {
     S3_UPLOAD_BUCKET: {

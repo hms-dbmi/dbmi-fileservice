@@ -4,6 +4,8 @@ export SECRET_KEY=$(aws ssm get-parameters --names $PS_PATH.django_secret --with
 export ALLOWED_HOSTS=$(aws ssm get-parameters --names $PS_PATH.allowed_hosts --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 export ADMIN_EMAILS=$(aws ssm get-parameters --names $PS_PATH.admin_emails --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 export AWS_S3_UPLOAD_BUCKET=$(aws ssm get-parameters --names $PS_PATH.aws_s3_upload_bucket --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
+export AWS_STS_ACCESS_KEY_ID=$(aws ssm get-parameters --names $PS_PATH.aws_sts_access_key_id --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
+export AWS_STS_SECRET_ACCESS_KEY=$(aws ssm get-parameters --names $PS_PATH.aws_sts_secret_access_key --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 
 export AUTH0_DOMAIN=$(aws ssm get-parameters --names $PS_PATH.auth0_domain --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 export AUTH0_CLIENT_ID=$(aws ssm get-parameters --names $PS_PATH.auth0_client_id --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
