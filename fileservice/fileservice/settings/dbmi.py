@@ -316,7 +316,9 @@ AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY', '')
 BUCKETS = {
     S3_UPLOAD_BUCKET: {
         "type": "s3",
-        "glaciertype": "lifecycle"
+        "glaciertype": "lifecycle",
+        "AWS_KEY_ID": AWS_STS_ACCESS_KEY_ID,
+        "AWS_SECRET": AWS_STS_SECRET_ACCESS_KEY
     },
     "Glacier": {
         "type": "glacier",
