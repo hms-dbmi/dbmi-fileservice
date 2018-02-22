@@ -31,8 +31,8 @@ class Auth0Authentication(authentication.BaseAuthentication):
                 auth = authstring[4:]
             else: 
                 return None
-        elif request.COOKIES.has_key( 'Authorization' ):
-            auth = request.COOKIES[ 'Authorization' ]
+        elif request.COOKIES.has_key( 'DBMI_JWT' ):
+            auth = request.COOKIES[ 'DBMI_JWT' ]
         else:
             return None
         
