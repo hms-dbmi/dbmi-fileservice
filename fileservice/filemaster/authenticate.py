@@ -94,7 +94,7 @@ class ServiceAuthentication(authentication.BaseAuthentication):
 
             if authstring.startswith('HYPATIO '):
                 auth = authstring[8:]
-                if auth == settings.HYPATIO_TOKEN:
+                if auth == settings.HYPATIO_FILESERVICE_TOKEN:
                     try:
                         service_user = CustomUser.objects.get(email="hypatio_account")
                         log.debug("[authenticate][ServiceAuthentication][authenticate] - Hypatio logged in.")

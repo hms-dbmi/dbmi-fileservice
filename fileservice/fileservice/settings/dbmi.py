@@ -324,3 +324,6 @@ BUCKETS = {
         "type": "glacier",
     }
 }
+
+HYPATIO_FILESERVICE_TOKEN = os.environ.get("HYPATIO_FILESERVICE_TOKEN", "")
+
