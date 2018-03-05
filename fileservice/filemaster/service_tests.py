@@ -4,8 +4,15 @@ from django.contrib.auth.models import User, Group
 from django.test import Client
 from filemaster.models import Bucket, ArchiveFile
 
+import urllib
 import json
+import requests
+import logging
+log = logging.getLogger(__name__)
+
 from django.conf import settings
+
+# python manage.py test filemaster.service_tests --settings=fileservice.settings.test_settings
 
 User = get_user_model()
 
@@ -33,9 +40,10 @@ file_data = {
 
 class ServiceConnectionTest(TestCase):
     def setUp(self):
+        log.debug("Set Up")
         super(ServiceConnectionTest, self).setUp()
 
-        bucket = Bucket(name="hypatio-test")
+        bucket = Bucket(name="dbmi-test")
         bucket.save()
 
         print("[TEST][ServiceConnectionTest][setUp] - Create Hypatio Account")
@@ -60,6 +68,7 @@ class ServiceConnectionTest(TestCase):
         settings.HYPATIO_FILESERVICE_TOKEN = HYPATIO_TOKEN
 
         self.file_uuid = None
+        log.debug("Set Up Done")
 
     def test_wrong_token(self):
         c = Client()
@@ -71,7 +80,6 @@ class ServiceConnectionTest(TestCase):
         self.assertEqual(returned_post.status_code, 403)
 
     def test_file(self):
-
         c = Client()
         c.defaults['HTTP_AUTHORIZATION'] = 'HYPATIO ' + HYPATIO_TOKEN
         res = c.post('/filemaster/api/file/', data=json.dumps(file_data),content_type='application/json')
@@ -81,6 +89,14 @@ class ServiceConnectionTest(TestCase):
         c.defaults['HTTP_AUTHORIZATION'] = 'HYPATIO ' + HYPATIO_TOKEN
         res = c.get('/filemaster/api/file/%s/' % self.file_uuid, content_type='application/json')
         self.assertEqual(res.status_code, 200)
+
+        url = '/filemaster/api/file/%s/upload/?bucket=dbmi-test&aws_key=%s&aws_secret=%s' % (self.file_uuid, settings.TEST_AWS_KEY, urllib.quote(settings.TEST_AWS_SECRET, ''))
+        res = c.get(url, content_type='application/json')
+        self.assertEqual(res.status_code, 200)
+        url = json.loads(res.content)["url"]
+        locationid = json.loads(res.content)["locationid"]
+
+        res = requests.put(url, data=open('test2.txt'))
 
         res = c.get('/filemaster/api/file/%s/download/' % self.file_uuid, content_type='application/json')
         self.assertEqual(res.status_code, 200)
