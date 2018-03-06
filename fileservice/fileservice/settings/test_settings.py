@@ -4,7 +4,9 @@
 from os.path import abspath, basename, dirname, join, normpath
 from sys import path
 import os
-from django.utils.crypto import get_random_string
+import sys
+
+SECRET_KEY = "TEST1234"
 
 ########## PATH CONFIGURATION
 # Absolute filesystem path to the Django project directory:
@@ -31,16 +33,13 @@ TEMPLATE_DEBUG = DEBUG
 ########## END DEBUG CONFIGURATION
 
 
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST')
-EMAIL_USER = os.environ.get('EMAIL_USER')
-EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-EMAIL_PORT = os.environ.get('EMAIL_PORT', '25')
-EMAIL_SSL = os.environ.get('EMAIL_SSL', False)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 ########## MANAGER CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = ()
+ADMINS = (
+    ('Your Name', 'your_email@example.com'),
+)
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
@@ -51,12 +50,16 @@ MANAGERS = ADMINS
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_NAME'),
-        'USER': os.environ.get('MYSQL_USER'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
-        'HOST': os.environ.get('MYSQL_HOST'),
-        'PORT': os.environ.get('MYSQL_PORT', '3306'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        # 'ENGINE' : 'django.db.backends.mysql',
+        'NAME': normpath(join(SITE_ROOT, 'fileservice.db')),
+        # 'NAME' : 'db',
+        # 'USER': '',
+        # 'USER' : 'root',
+        # 'PASSWORD': '',
+        # 'PASSWORD' : 'root',
+        # 'HOST': 'udngateway-db',
+        # 'PORT': '3306',
     }
 }
 ########## END DATABASE CONFIGURATION
@@ -114,15 +117,14 @@ STATICFILES_FINDERS = (
 ########## SECRET CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 # Note: This key should only be used for development and testing.
-chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = os.environ.get("SECRET_KEY", get_random_string(50, chars))
+
 ########## END SECRET CONFIGURATION
 
 
 ########## SITE CONFIGURATION
 # Hosts/domain names that are valid for this site
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS')]
+ALLOWED_HOSTS = ["localhost"]
 ########## END SITE CONFIGURATION
 
 
@@ -175,7 +177,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_auth.middleware.SocialAuthExceptionMiddleware',
-    'axes.middleware.FailedLoginMiddleware'    
+    'axes.middleware.FailedLoginMiddleware'
 )
 ########## END MIDDLEWARE CONFIGURATION
 
@@ -210,7 +212,7 @@ LOCAL_APPS = (
     'social_auth',
     'rest_framework',
     'rest_framework.authtoken',
-    'filemaster',   
+    'filemaster',
     'bootstrap3',
     'taggit',
     'django_extensions',
@@ -220,7 +222,7 @@ LOCAL_APPS = (
     'axes',
     'health_check',
     'health_check_celery3',
-    'health_check_db',    
+    'health_check_db',
     #'djkombu'
     #'kombu.transport.django.KombuAppConfig',
 )
@@ -239,28 +241,45 @@ INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 # more details on how to customize your logging configuration.
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+        },
+        'file_debug': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+        'file_error': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'error.log',
         }
     },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
+    'root': {
+        'handlers': ['console', 'file_debug'],
+        'level': 'DEBUG'
     },
     'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
+        'django': {
+            'handlers': ['console', 'file_error'],
             'level': 'ERROR',
             'propagate': True,
         },
-    }
+    },
 }
 ########## END LOGGING CONFIGURATION
+
+########## SOUTH CONFIGURATION
+# See: http://south.readthedocs.org/en/latest/installation.html#configuring-your-django-installation
+#INSTALLED_APPS += (
+#    # Database migration helpers:
+#    'south',
+#)
+# Don't need to use South when setting up a test database.
+#SOUTH_TESTS_MIGRATE = False
+########## END SOUTH CONFIGURATION
 
 ######## AUTH CONFIG
 AUTHENTICATION_BACKENDS = (
@@ -278,20 +297,14 @@ LOGIN_ERROR_URL = '/'
 ANONYMOUS_USER_ID = 1
 ##### END AUTH CONFIG
 
-AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID")
-AUTH0_SECRET = os.environ.get("AUTH0_SECRET")
-AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET")
-AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL")
-
-ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', ',')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
-        'filemaster.authenticate.Auth0Authentication'
+        'filemaster.authenticate.Auth0Authentication',
+        'filemaster.authenticate.ServiceAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -300,30 +313,32 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.MultiPartRenderer',
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.YAMLRenderer'
-    )                                    
+    )
 }
 
 AUTH_USER_MODEL = 'filemaster.CustomUser'
-TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'AKIAxxxxx')
-TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')
+TEST_AWS_KEY = os.environ.get('AWS_ACCESS_KEY_ID', 'AKIAxxxxx')
+TEST_AWS_SECRET = os.environ.get('AWS_SECRET_ACCESS_KEY', 'asdfadsfadsf')
 EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
-S3_UPLOAD_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET', 'dbmi')
-AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID', '')
-AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY', '')
+
+S3_UPLOAD_BUCKET=""
+AWS_ACCESS_KEY_ID = ""
+AWS_SECRET_ACCESS_KEY=""
+
+HYPATIO_FILESERVICE_TOKEN="HYPATIO TEST1234"
+
+S3_UPLOAD_BUCKET = "dbmi-test"
 
 BUCKETS = {
     S3_UPLOAD_BUCKET: {
         "type": "s3",
         "glaciertype": "lifecycle",
-        "AWS_KEY_ID": AWS_STS_ACCESS_KEY_ID,
-        "AWS_SECRET": AWS_STS_SECRET_ACCESS_KEY
+        "AWS_KEY_ID": os.environ.get('AWS_ACCESS_KEY_ID', 'AKIAxxxxx'),
+        "AWS_SECRET": os.environ.get('AWS_SECRET_ACCESS_KEY', 'asdfadsfadsf')
     },
     "Glacier": {
         "type": "glacier",
     }
 }
-
-HYPATIO_FILESERVICE_TOKEN = os.environ.get("HYPATIO_FILESERVICE_TOKEN", "")
-

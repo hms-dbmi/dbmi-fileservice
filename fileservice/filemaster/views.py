@@ -1,49 +1,32 @@
-from django.shortcuts import render
-from django.db import models
 from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
-from django.shortcuts import render_to_response
-from django.core.urlresolvers import reverse
-from django.conf import settings
-from django.db.models import Q
-from django.contrib import messages
-from django.db import transaction
-from django.contrib.auth import logout,authenticate, login
-from django.contrib.sites.models import Site
-from django.core.files.storage import default_storage
 
-from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
 from django.contrib.auth.models import User, Group, Permission
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required,permission_required
-from django.contrib.admin.sites import site
-from django.template import RequestContext, loader
 
 from rest_framework import status,filters,viewsets,mixins
 from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import permissions
+
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import detail_route, list_route
+
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
-from .models import HealthCheck,GROUPTYPES,ArchiveFile,FileLocation,Bucket
-from .authenticate import ExampleAuthentication,Auth0Authentication
-from .serializers import HealthCheckSerializer,UserSerializer,GroupSerializer,SpecialGroupSerializer,ArchiveFileSerializer,TokenSerializer, SearchSerializer
-from .permissions import DjangoObjectPermissionsAll,DjangoModelPermissionsAll,DjangoObjectPermissionsChange
-from .filters import ArchiveFileFilter
-from rest_framework_extensions.mixins import DetailSerializerMixin
+from .models import HealthCheck,GROUPTYPES,Bucket
+from .authenticate import Auth0Authentication, ServiceAuthentication
+from .serializers import HealthCheckSerializer,SpecialGroupSerializer,TokenSerializer
+
 from guardian.shortcuts import assign_perm,get_objects_for_group
 from django.contrib.auth import get_user_model
-import json,uuid,string,random
+import string,random
 
-import sys
 
-from boto.s3.connection import S3Connection
-from boto.sts import STSConnection
+import logging
+log = logging.getLogger(__name__)
 
-User = get_user_model()        
+User = get_user_model()
+
+
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
@@ -54,402 +37,6 @@ class HealthCheckList(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('message', 'id')
-
-class ArchiveFileList(viewsets.ModelViewSet):
-    queryset = ArchiveFile.objects.all()
-    serializer_class = ArchiveFileSerializer
-    lookup_field = 'uuid'    
-    authentication_classes = (Auth0Authentication,TokenAuthentication,)
-    permission_classes = (IsAuthenticated,DjangoObjectPermissionsChange,)
-    filter_class = ArchiveFileFilter
-    filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
-    #filter_fields = ('uuid',)
-    
-    def pre_save(self, obj):
-        u = User.objects.get(email=self.request.user.email)
-        obj.owner = u
-        
-
-    def post_save(self, obj, created=False):
-        #if 'tags' in self.request.DATA:
-        #    self.object.tags.set(*self.request.DATA['tags']) # type(self.object.tags) == <taggit.managers._TaggableManager>
-        removeTags = self.request.QUERY_PARAMS.get('removeTags', None)
-        removePerms = self.request.QUERY_PARAMS.get('removePerms', None)
-        tagstash=[]        
-        if removeTags:
-            try:
-                af = ArchiveFile.objects.get(uuid=obj.uuid)
-                af.tags.clear()                
-            except Exception,e:
-                print "ERROR tags: %s " % e
-        if 'tags' in self.request.DATA:        
-            for t in self.request.DATA['tags']:
-                tagstash.append(t)
-            map(obj.tags.add, tagstash)
-
-        if removePerms:
-            try:
-                af = ArchiveFile.objects.get(uuid=obj.uuid)
-                af.killPerms()                                
-            except:
-                pass
-        if 'permissions' in self.request.DATA:
-            for p in self.request.DATA['permissions']:
-                try:
-                    af = ArchiveFile.objects.get(uuid=obj.uuid)
-                    af.setPerms(p)
-                except Exception,e:
-                    print "ERROR permissions: %s " % e
-        return super(ArchiveFileList, self).post_save(obj)        
-
-    @list_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
-    def list(self, request, *args, **kwargs):
-
-        # Get the UUIDs from the request data.
-        uuids_string = self.request.QUERY_PARAMS.get('uuids', None)
-        if uuids_string is None:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        # Break them apart.
-        uuids = uuids_string.split(',')
-        if len(uuids) == 0:
-            return HttpResponseBadRequest()
-
-        try:
-            # Fetch the files
-            archivefiles = ArchiveFile.objects.filter(uuid__in=uuids)
-        except:
-            return HttpResponseNotFound()
-
-        # Filter out files the user doesn't have permissions for
-        archivefiles_allowed = [archivefile for archivefile in archivefiles
-                                if request.user.has_perm('filemaster.view_archivefile', archivefile)]
-
-        # Check for an empty set and quit early.
-        if len(archivefiles_allowed) == 0:
-            return HttpResponseForbidden()
-
-        # Serialize them.
-        serializer = ArchiveFileSerializer(archivefiles_allowed, many=True)
-
-        # Return them
-        return Response(serializer.data)
-
-    def destroy(self, request, uuid=None, *args, **kwargs):
-
-        # UUID is required.
-        if not uuid:
-            return HttpResponseBadRequest('"uuid" is required')
-
-        # Get the location from the query
-        location = self.request.QUERY_PARAMS.get('location', None)
-        if not location:
-            return HttpResponseBadRequest('"location" parameter is required')
-
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
-
-        if not request.user.has_perm('filemaster.delete_archivefile', archivefile):
-            return HttpResponseForbidden()
-
-        fl = FileLocation.objects.get(id=location)
-        bucket, path = fl.get_bucket()
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
-        if not aws_key:
-            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-        if not aws_secret:
-            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
-
-        conn = S3Connection(aws_key, aws_secret, is_secure=True)
-        b = conn.get_bucket(bucket)
-        k = b.get_key(path)
-
-        # Delete it.
-        if k is not None:
-            k.delete()
-
-        # Remove everything.
-        fl.delete()
-        archivefile.delete()
-
-        return Response({'message': "file deleted", "uuid": uuid})
-
-    @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
-    def download(self, request, uuid=None):
-        url = None
-        archivefile=None
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
-        
-        if not request.user.has_perm('filemaster.download_archivefile',archivefile):
-            return HttpResponseForbidden()
-        #get presigned url
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
-        
-        url = signedUrlDownload(archivefile,aws_key=aws_key,aws_secret=aws_secret)
-        return Response({'url': url})
-
-    @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
-    def upload(self, request, uuid=None):
-        #take uuid, create presigned url, put location into original file
-        archivefile=None
-        message=None
-        url = None
-
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
-        
-        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
-            return HttpResponseForbidden()
-        
-        cloud = self.request.QUERY_PARAMS.get('cloud', "aws")
-        bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
-        sys.stderr.write("bucket %s\n" % bucket)
-        bucketobj = Bucket.objects.get(name=bucket)
-        if not request.user.has_perm('filemaster.write_bucket',bucketobj):
-            return HttpResponseForbidden()
-        
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
-        
-        urlhash=signedUrlUpload(archivefile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,cloud=cloud)
-
-        url = urlhash["url"]
-        message = "PUT to this url"
-        location = urlhash["location"]
-        locationid = urlhash["locationid"]
-        
-        #get presigned url
-        return Response({'url': url,
-                         'message':message,
-                         'location':location,
-                         'locationid':locationid,
-                         'bucket':urlhash['bucket'],
-                         'foldername':urlhash['foldername'],
-                         'filename':urlhash['filename'],
-                         'secretkey':urlhash['secretkey'],
-                         'accesskey':urlhash['accesskey'],
-                         'sessiontoken':urlhash['sessiontoken']})
-
-    @detail_route(methods=['get'],permission_classes=[DjangoObjectPermissionsAll])
-    def uploadcomplete(self, request, uuid=None):
-        from datetime import datetime
-        archivefile=None
-        message=None
-
-        # Get location
-        location = self.request.QUERY_PARAMS.get('location', None)
-
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-
-            # Check for missing location.
-            if not location and archivefile.locations.first():
-                location = archivefile.locations.first().id
-        except:
-            return HttpResponseNotFound()
-
-        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
-            return HttpResponseForbidden()
-
-        if not location:
-            return HttpResponseForbidden()
-
-        fl = FileLocation.objects.get(id=location)
-        bucket,path = fl.get_bucket()
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
-        if not aws_key:
-            aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-        if not aws_secret:
-            aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
-    
-        conn = S3Connection(aws_key, aws_secret, is_secure=True)
-        b = conn.get_bucket(bucket) 
-        k = b.get_key(path)
-        fl.filesize=k.size
-        fl.uploadComplete=datetime.now()
-        fl.save()
-        return Response({'message':"upload complete","filename":archivefile.filename,"uuid":archivefile.uuid})
-
-
-    @detail_route(methods=['post'],permission_classes=[DjangoObjectPermissionsAll])
-    def register(self, request, uuid=None):
-        #take uuid, create presigned url, put location into original file
-        archivefile=None
-        message=None
-        url = None
-
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
-        
-        if not request.user.has_perm('filemaster.upload_archivefile',archivefile):
-            return HttpResponseForbidden()
-        
-        if 'location' in self.request.DATA:
-            if self.request.DATA['location'].startswith("file://"):
-                fl = FileLocation(url=self.request.DATA['location'])
-                fl.save()
-                archivefile.locations.add(fl)
-                url = self.request.DATA['location']
-                message="Local location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
-            elif self.request.DATA['location'].startswith("S3://"):
-                fl = None
-                try:
-                    #if file already exists, see if user has upload rights
-                    fl = FileLocation.objects.get(url=self.request.DATA['location'])
-                    for af in ArchiveFile.objects.filter(locations__id=fl.pk):
-                        if not request.user.has_perm('filemaster.upload_archivefile',af):
-                            return HttpResponseForbidden()
-                    archivefile.locations.add(fl)
-                    message = "S3 location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
-                except:
-                    #if file doesn't exist, register it.
-                    fl = FileLocation(url=self.request.DATA['location'])
-                    fl.save()
-                    archivefile.locations.add(fl)
-                    message="S3 location %s added to file %s" % (self.request.DATA['location'],archivefile.uuid)
-            else:
-                return HttpResponseBadRequest("Currently only 'file://' and 'S3://' accepted at this time.")
-                
-                                
-        #get presigned url
-        return Response({'message':message})
-
-
-def awsSignedURLUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
-    if not aws_key:
-        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-    if not aws_secret:
-        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
-
-
-    conn = S3Connection(aws_key, aws_secret, is_secure=True)
-
-    url = "S3://%s/%s" % (bucket,foldername+"/"+archiveFile.filename)
-    #register file
-    fl = FileLocation(url=url,storagetype=settings.BUCKETS[bucket]['type'])
-    fl.save()
-    archiveFile.locations.add(fl)
-    return conn.generate_url(3600*24*7, 'PUT', bucket=bucket, key=foldername+"/"+archiveFile.filename, force_http=False),fl
-
-def awsTVMUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,foldername=None):
-    if not aws_key:
-        aws_key=settings.AWS_STS_ACCESS_KEY_ID
-    if not aws_secret:
-        aws_secret=settings.AWS_STS_SECRET_ACCESS_KEY
-
-    stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
-
-    policydict={
-                "Statement": [
-                {
-                  "Action": [
-                    "s3:*"
-                  ],
-                  "Resource": [
-                    "arn:aws:s3:::%s/%s/*" % (bucket,foldername)
-                  ],
-                  "Effect": "Allow"
-            },{
-                  "Action": [
-                    "s3:PutObject"
-                  ],
-                  "Resource": [
-                    "arn:aws:s3:::%s*" % (bucket)
-                  ],
-                  "Effect": "Allow"
-            }                              
-        ] }
-
-    policystring = json.dumps(policydict)
-    ststoken = stsconn.get_federation_token("sys_upload", 24*3600, policystring)
-    jsonoutput={}
-    jsonoutput["SecretAccessKey"]=ststoken.credentials.secret_key
-    jsonoutput["AccessKeyId"]=ststoken.credentials.access_key
-    jsonoutput["SessionToken"]=ststoken.credentials.session_token
-    return jsonoutput
-
-
-def signedUrlUpload(archiveFile=None,bucket=None,aws_key=None,aws_secret=None,cloud="aws"):
-    if not bucket:
-        bucket=settings.S3_UPLOAD_BUCKET
-    
-    url = None
-    fl = None
-    foldername = str(uuid.uuid4())
-    
-    try:
-        if cloud=="aws":
-            url,fl = awsSignedURLUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
-            jsonoutput = awsTVMUpload(archiveFile=archiveFile,bucket=bucket,aws_key=aws_key,aws_secret=aws_secret,foldername=foldername)
-    except Exception,exc:
-        print "Error: %s" % exc
-        return {}
-
-    return {
-            "url":url,
-            "location":"s3://"+bucket+"/"+foldername+"/"+archiveFile.filename,
-            "locationid":fl.id,
-            "bucket":bucket,
-            "foldername":foldername,
-            "filename":archiveFile.filename,
-            "secretkey":jsonoutput["SecretAccessKey"],
-            "accesskey":jsonoutput["AccessKeyId"],
-            "sessiontoken":jsonoutput["SessionToken"]
-            }
-
-    
-def signedUrlDownload(archiveFile=None,aws_key=None,aws_secret=None):
-    url = None
-    for loc in archiveFile.locations.all():
-        if not loc.storagetype:
-            pass
-        elif loc.storagetype=="glacier":
-            return False
-        
-        if loc.uploadComplete:
-            url = loc.url
-            break
-        
-    bucket,path = loc.get_bucket()
-
-    if not aws_key:
-        aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-    if not aws_secret:
-        aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
-
-    conn = S3Connection(aws_key, aws_secret, is_secure=True)
-    
-    #check for glacier move
-    b = conn.get_bucket(bucket) 
-    k = b.get_key(path)
-    try:
-        #restoring
-        if k.storage_class=="GLACIER":
-            #still restoring
-            if k.ongoing_restore and not k.expiry_date:
-                return False
-            #no restore tried... still in glacier
-            if not k.ongoing_restore and not k.expiry_date:
-                pass
-            #idone restoring with expiration date -- done glacier restore
-            if not k.ongoing_restore and k.expiry_date:
-                pass
-    except:
-        pass
-    
-    return conn.generate_url(3600*24, 'GET', bucket, path)
 
     
 def serializeGroup(user,group=None):
@@ -472,13 +59,16 @@ def serializeGroup(user,group=None):
 
 
 class GroupList(APIView):
-    authentication_classes = (Auth0Authentication,TokenAuthentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     """
     List all groups that user can see, or create a new group.
     """
     def get(self, request, format=None):
+
+        log.debug("[views][GroupList][get]")
+
         groupstructure = serializeGroup(request.user)
         serializer = SpecialGroupSerializer(groupstructure, many=True)
         return Response(serializer.data)
@@ -584,22 +174,7 @@ class GroupDetail(APIView):
             return HttpResponseForbidden()        
         snippet.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
-# class GroupViewSet(viewsets.ModelViewSet):
-#     serializer_class = GroupSerializer
-#     queryset = Group.objects.all()
-#     authentication_classes = (Auth0Authentication,)
-#     permission_classes = (DjangoObjectPermissionsAll,)
-#     filter_backends = (filters.DjangoFilterBackend,filters.DjangoObjectPermissionsFilter,)
-#     filter_fields = ('name',)
-#         
-#     def post_save(self, obj,created=True):
-#         try:
-#             assign_perm('view_group', self.request.user, obj)
-#             assign_perm('change_group', self.request.user, obj)
-#             assign_perm('delete_group', self.request.user, obj)
-#         except Exception,e:
-#             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class UserList(APIView):
     authentication_classes = (Auth0Authentication,TokenAuthentication,)
@@ -628,7 +203,8 @@ class UserList(APIView):
         sdata.append({"users":userstructure}) 
         
         return Response(sdata, status=status.HTTP_201_CREATED)
-    
+
+
 @api_view(['GET'])
 @authentication_classes((Auth0Authentication,TokenAuthentication,))
 @permission_classes((IsAuthenticated,))

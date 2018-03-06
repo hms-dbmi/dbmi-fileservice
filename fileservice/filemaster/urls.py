@@ -1,7 +1,8 @@
 from django.conf.urls import patterns, include, url
 from django.contrib.auth import views
 from rest_framework.urlpatterns import format_suffix_patterns
-from .views import HealthCheckList,GroupList,GroupDetail,ArchiveFileList,UserList
+from .views import HealthCheckList,GroupList,GroupDetail,UserList
+from .files import ArchiveFileList
 from rest_framework.routers import DefaultRouter
 from rest_framework import renderers
 
