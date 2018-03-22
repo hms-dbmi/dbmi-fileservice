@@ -6,7 +6,7 @@ from rest_framework.response import Response
 
 from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
 from django.conf import settings
-
+from django.core.exceptions import ObjectDoesNotExist
 from .models import ArchiveFile, FileLocation, Bucket
 
 from django.contrib.auth.models import User, Group, Permission
@@ -23,6 +23,9 @@ from .aws import signedUrlUpload, signedUrlDownload
 from boto.s3.connection import S3Connection
 
 import sys
+from uuid import uuid4
+import boto3
+from botocore.client import Config
 
 import logging
 log = logging.getLogger(__name__)
@@ -166,6 +169,64 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
         return Response({'url': url})
+
+    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def post(self, request, uuid=None):
+
+        # Get the file record
+        try:
+            archive_file = ArchiveFile.objects.get(uuid=uuid)
+        except ObjectDoesNotExist:
+            return HttpResponseNotFound()
+
+        # Check permissions
+        if not request.user.has_perm('filemaster.upload_archivefile', archive_file):
+            return HttpResponseForbidden()
+
+        # Pull request parameters
+        expires = self.request.QUERY_PARAMS.get('expires', 10)
+        bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
+
+        # Generate a folder name
+        folder_name = str(uuid4())
+        log.debug('Folder: {}'.format(folder_name))
+
+        # Ensure the bucket is writable
+        if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=bucket)):
+            return HttpResponseForbidden()
+
+        # Build the key
+        key = folder_name + "/" + archive_file.filename
+        log.debug('Key: {}'.format(key))
+
+        # Get credentials
+        aws_key = self.request.QUERY_PARAMS.get('aws_key', settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID"))
+        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', settings.BUCKETS.get(bucket, {}).get('AWS_SECRET'))
+
+        # Generate the post
+        s3 = boto3.client('s3',
+                          aws_access_key_id=aws_key,
+                          aws_secret_access_key=aws_secret,
+                          config=Config(signature_version='s3v4'))
+
+        post = s3.generate_presigned_post(
+            Bucket=bucket,
+            Key=key,
+            ExpiresIn=expires,
+        )
+
+        # Form the URL to the file
+        url = "S3://%s/%s" % (bucket, key)
+        log.debug('Url: {}'.format(url))
+
+        # Register file
+        file_location = FileLocation(url=url, storagetype=settings.BUCKETS[bucket]['type'])
+        file_location.save()
+        archive_file.locations.add(file_location)
+
+        # Return the POST to the uploader
+        return Response({'post': post,
+                         'locationid': file_location.id})
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def upload(self, request, uuid=None):
