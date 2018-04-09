@@ -33,7 +33,7 @@ def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
 class HealthCheckList(viewsets.ModelViewSet):
     queryset = HealthCheck.objects.all()
     serializer_class = HealthCheckSerializer
-    authentication_classes = (Auth0Authentication,TokenAuthentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication)
     permission_classes = (IsAuthenticated,)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('message', 'id')
@@ -107,7 +107,7 @@ class GroupDetail(APIView):
     """
     Retrieve, update or delete a Group instance.
     """
-    authentication_classes = (Auth0Authentication,TokenAuthentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication)
     permission_classes = (IsAuthenticated,)
 
     def get_object(self, pk):
@@ -177,7 +177,7 @@ class GroupDetail(APIView):
 
 
 class UserList(APIView):
-    authentication_classes = (Auth0Authentication,TokenAuthentication,)
+    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication)
     permission_classes = (IsAuthenticated,)
 
     """
@@ -206,7 +206,7 @@ class UserList(APIView):
 
 
 @api_view(['GET'])
-@authentication_classes((Auth0Authentication,TokenAuthentication,))
+@authentication_classes((Auth0Authentication,TokenAuthentication,ServiceAuthentication))
 @permission_classes((IsAuthenticated,))
 def token(request):
     """

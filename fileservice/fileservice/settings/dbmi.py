@@ -3,8 +3,10 @@
 
 from os.path import abspath, basename, dirname, join, normpath
 from sys import path
-import os
+import os, sys
 from django.utils.crypto import get_random_string
+
+from fileservice.settings import environment
 
 ########## PATH CONFIGURATION
 # Absolute filesystem path to the Django project directory:
@@ -175,7 +177,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_auth.middleware.SocialAuthExceptionMiddleware',
-    'axes.middleware.FailedLoginMiddleware'    
+    'axes.middleware.FailedLoginMiddleware',
+    'fileservice.logging_middleware.LogSetupMiddleware'
 )
 ########## END MIDDLEWARE CONFIGURATION
 
@@ -237,28 +240,47 @@ INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 # the site admins on every HTTP 500 error when DEBUG=False.
 # See http://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
+# Configure logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d]'
+                      '[%(username)s][%(userid)s] - %(message)s',
+        },
+    },
     'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
+        # Add an unbound RequestFilter.
+        'request': {
+            '()': 'fileservice.logging_middleware.RequestFilter',
+        },
     },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'console',
+            'stream': sys.stdout,
+            'filters': ['request'],
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+        'filters': ['request'],
     },
     'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': True,
         },
-    }
+        'urllib3': {
+            'handlers': ['console'],
+            'level': 'WARNING'
+        }
+    },
 }
 ########## END LOGGING CONFIGURATION
 
@@ -276,8 +298,8 @@ AUTHENTICATION_BACKENDS = (
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
 LOGIN_ERROR_URL = '/'
 ANONYMOUS_USER_ID = 1
-##### END AUTH CONFIG
 
+# Auth0 stuff
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID")
 AUTH0_SECRET = os.environ.get("AUTH0_SECRET")
@@ -285,6 +307,11 @@ AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET")
 AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL")
 
 ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', ',')
+
+# Get service level accounts
+SERVICE_ACCOUNTS = environment.ENV_DICT('SERVICE_ACCOUNTS')
+
+##### END AUTH CONFIG
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

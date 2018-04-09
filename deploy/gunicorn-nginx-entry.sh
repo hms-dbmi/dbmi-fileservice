@@ -6,6 +6,7 @@ export ADMIN_EMAILS=$(aws ssm get-parameters --names $PS_PATH.admin_emails --wit
 export AWS_S3_UPLOAD_BUCKET=$(aws ssm get-parameters --names $PS_PATH.aws_s3_upload_bucket --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 export AWS_STS_ACCESS_KEY_ID=$(aws ssm get-parameters --names $PS_PATH.aws_sts_access_key_id --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 export AWS_STS_SECRET_ACCESS_KEY=$(aws ssm get-parameters --names $PS_PATH.aws_sts_secret_access_key --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
+export SERVICE_ACCOUNTS=$(aws ssm get-parameters --names $PS_PATH.service_accounts --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 
 export AUTH0_DOMAIN=$(aws ssm get-parameters --names $PS_PATH.auth0_domain --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
 export AUTH0_CLIENT_ID=$(aws ssm get-parameters --names $PS_PATH.auth0_client_id --with-decryption --region us-east-1 | jq -r '.Parameters[].Value')
@@ -40,6 +41,16 @@ cd /app/
 python manage.py migrate
 python manage.py loaddata initial_data
 python manage.py collectstatic --noinput
+
+# Add service users
+python /app/manage.py shell <<-EOF
+from django.contrib.auth import get_user_model
+import json
+
+# Parse the service account
+service_accounts = json.loads('$SERVICE_ACCOUNTS')
+for account, token in service_accounts.iteritems(): get_user_model().objects.create_superuser(username=account, email=account, password=None)
+EOF
 
 # Add admin users
 for i in $(echo $ADMIN_EMAILS | sed "s/,/ /g")
