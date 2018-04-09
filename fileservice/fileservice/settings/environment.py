@@ -83,13 +83,10 @@ def ENV_DICT(name, default={}):
     """
     if name not in os.environ:
         logger.error('Nothing found for: {}'.format(name))
-        print('Nothing found for: {}'.format(name))
         return default
     try:
-        print('SA: ' + os.environ[name])
         dict = json.loads(os.environ[name])
         return dict
     except ValueError as e:
         logger.error('Failed to parse value for: {}: {}'.format(name, e))
-        print('Failed to parse value for: {}: {}'.format(name, e))
         return default
