@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from .models import CustomUser
 
 import logging
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ExampleAuthentication(authentication.BaseAuthentication):
@@ -27,21 +27,21 @@ class ExampleAuthentication(authentication.BaseAuthentication):
 class Auth0Authentication(authentication.BaseAuthentication):
     def authenticate(self, request):
 
-        log.debug("[authenticate][Auth0Authentication][authenticate] - Starting authn.")
+        logger.debug("[authenticate][Auth0Authentication][authenticate] - Starting authn.")
 
         auth = None
         user = None
         User = get_user_model()
 
         if 'HTTP_AUTHORIZATION' in request.META:
-            log.debug("[authenticate][Auth0Authentication][authenticate] - HTTP_AUTHORIZATION Found in META.")
+            logger.debug("[authenticate][Auth0Authentication][authenticate] - HTTP_AUTHORIZATION Found in META.")
             authstring = request.META['HTTP_AUTHORIZATION']
             if authstring.startswith('JWT '):
                 auth = authstring[4:]
             else:
                 return None
         elif request.COOKIES.has_key( 'DBMI_JWT' ):
-            log.debug("[authenticate][Auth0Authentication][authenticate] - DBMI_JWT.")
+            logger.debug("[authenticate][Auth0Authentication][authenticate] - DBMI_JWT.")
             auth = request.COOKIES[ 'DBMI_JWT' ]
         else:
             return None
@@ -52,15 +52,15 @@ class Auth0Authentication(authentication.BaseAuthentication):
                                  algorithms=['HS256'],
                                  audience=settings.AUTH0_CLIENT_ID)
         except jwt.ExpiredSignature:
-            log.debug("[authenticate][Auth0Authentication][authenticate] - JWT Expired.")
+            logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT Expired.")
             return None
         except jwt.DecodeError:
-            log.debug("[authenticate][Auth0Authentication][authenticate] - JWT DecodeError.")
+            logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT DecodeError.")
             return None
         except Exception as e:
-            log.debug("[authenticate][Auth0Authentication][authenticate] - Other error %s" % e)
+            logger.debug("[authenticate][Auth0Authentication][authenticate] - Other error %s" % e)
 
-        log.debug("[authenticate][Auth0Authentication][authenticate] - JWT Valid.")
+        logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT Valid.")
 
         try:
             try:
@@ -83,26 +83,37 @@ class Auth0Authentication(authentication.BaseAuthentication):
 class ServiceAuthentication(authentication.BaseAuthentication):
 
     def authenticate(self, request):
-
-        log.debug("[authenticate][ServiceAuthentication][authenticate] - Starting authn.")
+        logger.debug("Starting service auth")
 
         if 'HTTP_AUTHORIZATION' in request.META:
+            logger.debug("HTTP_AUTHORIZATION.")
 
-            log.debug("[authenticate][ServiceAuthentication][authenticate] - HTTP_AUTHORIZATION.")
+            # Get the token
+            auth_string = request.META['HTTP_AUTHORIZATION']
+            if auth_string.startswith('SERVICE '):
+                logger.debug('Service account...')
 
-            authstring = request.META['HTTP_AUTHORIZATION']
+                # Get the token
+                auth_token = auth_string[8:]
 
-            if authstring.startswith('HYPATIO '):
-                auth = authstring[8:]
-                if auth == settings.HYPATIO_FILESERVICE_TOKEN:
-                    try:
-                        service_user = CustomUser.objects.get(email="hypatio_account")
-                        log.debug("[authenticate][ServiceAuthentication][authenticate] - Hypatio logged in.")
-                        return (service_user, None)
-                    except Exception, e:
-                        log.debug("[authenticate][ServiceAuthentication][authenticate] - Error fetching service user."
-                                  "%s" % e)
-                else:
-                    return None
+                # Get the service accounts
+                for account, token in settings.SERVICE_ACCOUNTS.iteritems():
+
+                    # Compare tokens
+                    if token == auth_token:
+                        logger.debug("Service account matched: {}".format(account))
+
+                        try:
+                            service_user = CustomUser.objects.get(email=account)
+                            logger.debug("{} logged in.".format(account))
+                            return service_user, None
+
+                        except Exception, e:
+                            logger.debug("Error fetching service user: {}".format(e))
+
+                logger.warning('Service account not found')
+                return None
+            else:
+                return None
         else:
             return None
