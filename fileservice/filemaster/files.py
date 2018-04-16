@@ -184,7 +184,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseForbidden()
 
         # Pull request parameters
-        expires = self.request.QUERY_PARAMS.get('expires', 10)
+        expires = int(self.request.QUERY_PARAMS.get('expires', '10'))
         bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
 
         # Generate a folder name
