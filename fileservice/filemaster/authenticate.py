@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 
 from .models import CustomUser
 
+import jwcrypto.jwk as jwk
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,36 @@ class ExampleAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed('No such user')
 
         return (user, None)
-    
+
+
+def get_public_keys_from_auth0():
+    jwks_return = requests.get("https://" + settings.AUTH0_DOMAIN + "/.well-known/jwks.json")
+    jwks = jwks_return.json()
+
+    return jwks
+
+
+def retrieve_public_key(jwt_string):
+
+    jwks = get_public_keys_from_auth0()
+
+    unverified_header = jwt.get_unverified_header(str(jwt_string))
+
+    rsa_key = {}
+
+    for key in jwks["keys"]:
+        if key["kid"] == unverified_header["kid"]:
+            rsa_key = {
+                "kty": key["kty"],
+                "kid": key["kid"],
+                "use": key["use"],
+                "n": key["n"],
+                "e": key["e"]
+            }
+
+    return rsa_key
+
+
 class Auth0Authentication(authentication.BaseAuthentication):
     def authenticate(self, request):
 
@@ -46,10 +76,15 @@ class Auth0Authentication(authentication.BaseAuthentication):
         else:
             return None
 
+        rsa_pub_key = retrieve_public_key(auth)
+        payload = None
+        jwk_key = jwk.JWK(**rsa_pub_key)
+
         try:
-            payload = jwt.decode(auth,
-                                 base64.b64decode(settings.AUTH0_SECRET, '-_'),
-                                 algorithms=['HS256'],
+            payload = jwt.decode(jwt_string,
+                                 jwk_key.export_to_pem(private_key=False),
+                                 algorithms=['RS256'],
+                                 leeway=120,
                                  audience=settings.AUTH0_CLIENT_ID)
         except jwt.ExpiredSignature:
             logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT Expired.")
