@@ -76,8 +76,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
         else:
             return None
 
-        jwt_string = request.COOKIES[ 'DBMI_JWT' ]
-        rsa_pub_key = retrieve_public_key(jwt_string)
+        rsa_pub_key = retrieve_public_key(auth)
         payload = None
         jwk_key = jwk.JWK(**rsa_pub_key)
 
