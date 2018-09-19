@@ -2,6 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 from rest_framework.authtoken.models import Token
 import json, ast
+from taggit_serializer.serializers import (TagListSerializerField,
+                                           TaggitSerializer)
 
 from .models import HealthCheck,ArchiveFile,FileLocation
 
@@ -9,6 +11,10 @@ from .models import HealthCheck,ArchiveFile,FileLocation
 class WritableField(serializers.Field):
     def to_representation(self, value):
         return self.to_native(value)
+
+    def to_internal_value(self, data):
+        print('WARNING: This has not been implemented as it doesn\'t seem like it was used')
+        return self.to_native(data)
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -71,12 +77,12 @@ class JSONFieldSerializer(WritableField):
         return obj
 
 
-class ArchiveFileSerializer(serializers.ModelSerializer):
-    tags = serializers.Field(source='get_tags_display')
+class ArchiveFileSerializer(TaggitSerializer, serializers.ModelSerializer):
+    tags = TagListSerializerField(required=False)
     metadata = JSONFieldSerializer(required=False)
     owner = UserSerializer(required=False)
-    locations = FileLocationSerializer(required=False)
-    permissions = serializers.Field(source='get_permissions_display')
+    locations = FileLocationSerializer(read_only=True, required=False, many=True)
+    permissions = serializers.ListField(read_only=True, source='get_permissions_display')
     expirationdate = serializers.DateField(required=False)
     class Meta:
         model = ArchiveFile
@@ -96,7 +102,7 @@ class TagSearchField(WritableField):
         return value
 
         
-class SearchSerializer(serializers.Serializer):
+class SearchSerializer(TaggitSerializer, serializers.Serializer):
     #text = serializers.CharField()
     #creationdate = serializers.DateTimeField(source="creationdate")
     #modifydate = serializers.DateTimeField(source="modifydate")
@@ -104,6 +110,6 @@ class SearchSerializer(serializers.Serializer):
     filename = serializers.CharField(source="filename")
     uuid = serializers.CharField(source="uuid")
     owner = serializers.CharField(source="owner")
-    tags = TagSearchField(source='tags')
+    tags = TagListSerializerField()
     #metadata = MetadataSearchSerializer(source='metadata')
     metadata = JSONSearchField(source='metadata')

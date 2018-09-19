@@ -57,25 +57,21 @@ class ArchiveFileList(viewsets.ModelViewSet):
     filter_class = ArchiveFileFilter
     filter_backends = (filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
 
-    def pre_save(self, obj):
+    def perform_create(self, serializer):
         log.debug("[files][ArchiveFileList][pre_savepre_save] - Making user owner.")
-        u = User.objects.get(email=self.request.user.email)
-        obj.owner = u
+        user = User.objects.get(email=self.request.user.email)
+        obj = serializer.save(owner=user)
 
-    def post_save(self, obj, created=False):
-        removeTags = self.request.QUERY_PARAMS.get('removeTags', None)
-        removePerms = self.request.QUERY_PARAMS.get('removePerms', None)
-        tagstash = []
+        # Check request
+        removeTags = self.request.query_params.get('removeTags', None)
+        removePerms = self.request.query_params.get('removePerms', None)
+
         if removeTags:
             try:
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()
             except Exception, e:
                 print "ERROR tags: %s " % e
-        if 'tags' in self.request.DATA:
-            for t in self.request.DATA['tags']:
-                tagstash.append(t)
-            map(obj.tags.add, tagstash)
 
         if removePerms:
             try:
@@ -83,19 +79,18 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af.killPerms()
             except:
                 pass
-        if 'permissions' in self.request.DATA:
-            for p in self.request.DATA['permissions']:
+        if 'permissions' in self.request.data:
+            for p in self.request.data['permissions']:
                 try:
                     af = ArchiveFile.objects.get(uuid=obj.uuid)
                     af.setPerms(p)
                 except Exception, e:
                     print "ERROR permissions: %s " % e
-        return super(ArchiveFileList, self).post_save(obj)
 
     def list(self, request, *args, **kwargs):
         log.debug("[files][ArchiveFileList][list] - Listing Files.")
         # Get the UUIDs from the request data.
-        uuids_string = self.request.QUERY_PARAMS.get('uuids', None)
+        uuids_string = self.request.query_params.get('uuids', None)
         if uuids_string is None:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -131,7 +126,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseBadRequest('"uuid" is required')
 
         # Get the location from the query
-        location = self.request.QUERY_PARAMS.get('location', None)
+        location = self.request.query_params.get('location', None)
         if not location:
             return HttpResponseBadRequest('"location" parameter is required')
 
@@ -145,8 +140,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         fl = FileLocation.objects.get(id=location)
         bucket, path = fl.get_bucket()
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
         if not aws_key:
             aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
         if not aws_secret:
@@ -178,8 +173,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.download_archivefile', archivefile):
             return HttpResponseForbidden()
         # get presigned url
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
 
         url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
         return Response({'url': url})
@@ -198,8 +193,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseForbidden()
 
         # Pull request parameters
-        expires = int(self.request.QUERY_PARAMS.get('expires', '10'))
-        bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
+        expires = int(self.request.query_params.get('expires', '10'))
+        bucket = self.request.query_params.get('bucket', settings.S3_UPLOAD_BUCKET)
 
         # Generate a folder name
         folder_name = str(uuid4())
@@ -214,8 +209,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
         log.debug('Key: {}'.format(key))
 
         # Get credentials
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID"))
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', settings.BUCKETS.get(bucket, {}).get('AWS_SECRET'))
+        aws_key = self.request.query_params.get('aws_key', settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID"))
+        aws_secret = self.request.query_params.get('aws_secret', settings.BUCKETS.get(bucket, {}).get('AWS_SECRET'))
 
         # Generate the post
         s3 = boto3.client('s3',
@@ -257,15 +252,15 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
             return HttpResponseForbidden()
 
-        cloud = self.request.QUERY_PARAMS.get('cloud', "aws")
-        bucket = self.request.QUERY_PARAMS.get('bucket', settings.S3_UPLOAD_BUCKET)
+        cloud = self.request.query_params.get('cloud', "aws")
+        bucket = self.request.query_params.get('bucket', settings.S3_UPLOAD_BUCKET)
         sys.stderr.write("bucket %s\n" % bucket)
         bucketobj = Bucket.objects.get(name=bucket)
         if not request.user.has_perm('filemaster.write_bucket', bucketobj):
             return HttpResponseForbidden()
 
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
 
         urlhash = signedUrlUpload(archivefile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret, cloud=cloud)
 
@@ -293,7 +288,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         message = None
 
         # Get location
-        location = self.request.QUERY_PARAMS.get('location', None)
+        location = self.request.query_params.get('location', None)
 
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
@@ -312,8 +307,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         fl = FileLocation.objects.get(id=location)
         bucket, path = fl.get_bucket()
-        aws_key = self.request.QUERY_PARAMS.get('aws_key', None)
-        aws_secret = self.request.QUERY_PARAMS.get('aws_secret', None)
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
         if not aws_key:
             aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
         if not aws_secret:
@@ -343,29 +338,29 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
             return HttpResponseForbidden()
 
-        if 'location' in self.request.DATA:
-            if self.request.DATA['location'].startswith("file://"):
-                fl = FileLocation(url=self.request.DATA['location'])
+        if 'location' in self.request.data:
+            if self.request.data['location'].startswith("file://"):
+                fl = FileLocation(url=self.request.data['location'])
                 fl.save()
                 archivefile.locations.add(fl)
-                url = self.request.DATA['location']
-                message = "Local location %s added to file %s" % (self.request.DATA['location'], archivefile.uuid)
-            elif self.request.DATA['location'].startswith("S3://"):
+                url = self.request.data['location']
+                message = "Local location %s added to file %s" % (self.request.data['location'], archivefile.uuid)
+            elif self.request.data['location'].startswith("S3://"):
                 fl = None
                 try:
                     # if file already exists, see if user has upload rights
-                    fl = FileLocation.objects.get(url=self.request.DATA['location'])
+                    fl = FileLocation.objects.get(url=self.request.data['location'])
                     for af in ArchiveFile.objects.filter(locations__id=fl.pk):
                         if not request.user.has_perm('filemaster.upload_archivefile', af):
                             return HttpResponseForbidden()
                     archivefile.locations.add(fl)
-                    message = "S3 location %s added to file %s" % (self.request.DATA['location'], archivefile.uuid)
+                    message = "S3 location %s added to file %s" % (self.request.data['location'], archivefile.uuid)
                 except:
                     # if file doesn't exist, register it.
-                    fl = FileLocation(url=self.request.DATA['location'])
+                    fl = FileLocation(url=self.request.data['location'])
                     fl.save()
                     archivefile.locations.add(fl)
-                    message = "S3 location %s added to file %s" % (self.request.DATA['location'], archivefile.uuid)
+                    message = "S3 location %s added to file %s" % (self.request.data['location'], archivefile.uuid)
             else:
                 return HttpResponseBadRequest("Currently only 'file://' and 'S3://' accepted at this time.")
 

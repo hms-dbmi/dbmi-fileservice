@@ -39,7 +39,7 @@ class DjangoObjectPermissionsChange(permissions.DjangoObjectPermissions):
 
     def has_permission(self, request, view):
         if request.method=="POST":
-            for g in request.DATA['permissions']:
+            for g in request.data['permissions']:
                 group = Group.objects.get(name=g+"__WRITERS")
                 for usergroup in request.user.groups.all():
                     if usergroup.name == group.name:

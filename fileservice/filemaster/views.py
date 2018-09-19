@@ -79,7 +79,7 @@ class GroupList(APIView):
         sdata=[]
         for types in GROUPTYPES: 
             userstructure=[]           
-            group, created = Group.objects.get_or_create(name=request.DATA['name']+"__"+types)
+            group, created = Group.objects.get_or_create(name=request.data['name']+"__"+types)
 
             self.request.user.groups.add(group)
             assign_perm('view_group', self.request.user, group)
@@ -89,7 +89,7 @@ class GroupList(APIView):
 
             assign_perm('change_group', Group.objects.get(name="powerusers"), group)
     
-            for u in self.request.DATA['users']:
+            for u in self.request.data['users']:
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
@@ -126,7 +126,7 @@ class GroupDetail(APIView):
     
     def getUsers(self,request,group):
         try:
-            for u in request.DATA['users']:
+            for u in request.data['users']:
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
@@ -137,7 +137,7 @@ class GroupDetail(APIView):
     
     def getBuckets(self,request,group):
         try:
-            for u in request.DATA['buckets']:
+            for u in request.data['buckets']:
                 try:
                     bucket = Bucket.objects.get(name=u["name"])
                     assign_perm('filemaster.write_bucket', group, bucket)
@@ -193,7 +193,7 @@ class UserList(APIView):
         sdata=[]
         userstructure=[]
     
-        for u in self.request.DATA['users']:
+        for u in self.request.data['users']:
             try:
                 user = get_user_model().objects.create_user(id_generator(16),email=u,password=id_generator(16))
                 userstructure.append(user.email)

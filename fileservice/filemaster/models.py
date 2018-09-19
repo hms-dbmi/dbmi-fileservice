@@ -143,10 +143,9 @@ class ArchiveFile(models.Model):
             print "ERROR %s" % e
             return         
 
-            
-    def setPerms(self,permissions):
+    def setPerms(self, permissions):
             for types in GROUPTYPES:
-                self.setDefaultPerms(permissions,types)
+                self.setDefaultPerms(permissions, types)
 
     def killPerms(self):
         for groupname in self.get_permissions_display():
