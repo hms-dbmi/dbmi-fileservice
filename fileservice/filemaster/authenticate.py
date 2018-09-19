@@ -57,21 +57,19 @@ def retrieve_public_key(jwt_string):
 class Auth0Authentication(authentication.BaseAuthentication):
     def authenticate(self, request):
 
-        logger.debug("[authenticate][Auth0Authentication][authenticate] - Starting authn.")
-
         auth = None
         user = None
         User = get_user_model()
 
         if 'HTTP_AUTHORIZATION' in request.META:
-            logger.debug("[authenticate][Auth0Authentication][authenticate] - HTTP_AUTHORIZATION Found in META.")
+            logger.debug("HTTP_AUTHORIZATION Found in META.")
             authstring = request.META['HTTP_AUTHORIZATION']
             if authstring.startswith('JWT '):
                 auth = authstring[4:]
             else:
                 return None
         elif request.COOKIES.has_key( 'DBMI_JWT' ):
-            logger.debug("[authenticate][Auth0Authentication][authenticate] - DBMI_JWT.")
+            logger.debug("DBMI_JWT")
             auth = request.COOKIES[ 'DBMI_JWT' ]
         else:
             return None
@@ -81,21 +79,21 @@ class Auth0Authentication(authentication.BaseAuthentication):
         jwk_key = jwk.JWK(**rsa_pub_key)
 
         try:
-            payload = jwt.decode(jwt_string,
+            payload = jwt.decode(auth,
                                  jwk_key.export_to_pem(private_key=False),
                                  algorithms=['RS256'],
                                  leeway=120,
                                  audience=settings.AUTH0_CLIENT_ID)
         except jwt.ExpiredSignature:
-            logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT Expired.")
+            logger.debug("JWT Expired.")
             return None
         except jwt.DecodeError:
-            logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT DecodeError.")
+            logger.debug("JWT DecodeError.")
             return None
         except Exception as e:
-            logger.debug("[authenticate][Auth0Authentication][authenticate] - Other error %s" % e)
+            logger.debug("Other error %s" % e)
 
-        logger.debug("[authenticate][Auth0Authentication][authenticate] - JWT Valid.")
+        logger.debug("JWT Valid.")
 
         try:
             try:
@@ -109,7 +107,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
                 user = User.objects.get(email=r.json()["email"])
         except User.DoesNotExist:
             raise exceptions.AuthenticationFailed('No such user')
-        except Exception,e:
+        except Exception, e:
             print "error %s" % e
 
         return (user, None)   

@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
-import re,urllib,json
-from datetime import timedelta,date,datetime
+
+import datetime
+import re,urllib
+from datetime import timedelta,date
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
 from django.core.mail import send_mail
@@ -8,13 +10,9 @@ from django.core import validators
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
-from django.dispatch import receiver
-from django.contrib.auth import get_user_model
-from django.db.models.signals import post_save,post_syncdb
-#from uuidfield import UUIDField
-from django_extensions.db.fields import UUIDField
+from django.db.models import UUIDField
 from jsonfield import JSONField
-from django.contrib.auth.models import User,Group
+from django.contrib.auth.models import Group
 
 
 from guardian.shortcuts import assign_perm,remove_perm,get_groups_with_perms
@@ -182,6 +180,16 @@ class ArchiveFile(models.Model):
 
 class HealthCheck(models.Model):
     message = models.CharField(max_length=255)
+
+
+def get_anonymous_user_instance(User):
+    return User(username='',
+                email='AnonymousUser',
+                password='!k1IjmeTmhVLJsfPIQ5l1ojH1U1PzgI0IjGvqm0Cd',
+                is_active=True,
+                last_login=datetime.date(1970, 1, 1),
+                date_joined=datetime.date(1970, 1, 1),)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(_('username'), max_length=30, unique=True,

@@ -1,31 +1,61 @@
-FROM python:2.7
+FROM python:2.7-alpine3.8 AS builder
 
-# Installing os packages
-RUN	apt-get -y update && \
- 	apt-get install -y \
- 	nginx apache2-utils unzip jq && \
- 	apt-get clean && \
- 	rm -rf /tmp/* /var/lib/apt/lists/*
+# Install dependencies
+RUN apk add --update \
+    build-base \
+    g++ \
+    libffi-dev \
+    mariadb-dev \
+    git
 
-# Installing python packages
-RUN pip install gunicorn awscli
+# Add requirements
+ADD requirements.txt /requirements.txt
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
+# Install Python packages
+RUN pip install -r /requirements.txt
 
-COPY fileservice /app/
+FROM hmsdbmitc/dbmisvc:2.7-alpine
 
-WORKDIR /app/
+RUN apk add --no-cache --update \
+    mariadb-connector-c git libffi-dev \
+  && rm -rf /var/cache/apk/*
 
-#Copying files required for NGINX.
-RUN rm -rf /etc/nginx/sites-available/default
-RUN mkdir /etc/nginx/ssl/
-RUN chmod 710 /etc/nginx/ssl/
-COPY deploy/app.conf /etc/nginx/sites-available/
-RUN ln -s /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
+# Copy pip packages from builder
+COPY --from=builder /root/.cache /root/.cache
 
-RUN mkdir /entry_scripts/
-COPY deploy/gunicorn-nginx-entry.sh /entry_scripts/
-RUN chmod u+x /entry_scripts/gunicorn-nginx-entry.sh
+# Add requirements
+ADD requirements.txt /requirements.txt
 
-ENTRYPOINT ["/entry_scripts/gunicorn-nginx-entry.sh"]
+# Install Python packages
+RUN pip install -r /requirements.txt
+
+# Add additional init scripts
+ADD /docker-entrypoint-init.d/* /docker-entrypoint-init.d/
+
+# Copy app source
+COPY /fileservice /app
+
+# Set the build env
+ENV DBMI_ENV=prod
+
+# Set app parameters
+ENV DBMI_PARAMETER_STORE_PREFIX=dbmi.fileservice.${DBMI_ENV}
+ENV DBMI_PARAMETER_STORE_PRIORITY=true
+ENV DBMI_AWS_REGION=us-east-1
+
+ENV DBMI_APP_WSGI=fileservice
+ENV DBMI_APP_ROOT=/app
+ENV DBMI_APP_DB=true
+ENV DBMI_APP_DOMAIN=fileservice.dbmi.hms.harvard.edu
+
+# Static files
+ENV DBMI_STATIC_FILES=true
+ENV DBMI_APP_STATIC_URL_PATH=/static
+ENV DBMI_APP_STATIC_ROOT=/app/assets
+
+# Set nginx and network parameters
+ENV DBMI_PORT=443
+ENV DBMI_LB=true
+ENV DBMI_SSL=true
+ENV DBMI_CREATE_SSL=true
+ENV DBMI_HEALTHCHECK=true

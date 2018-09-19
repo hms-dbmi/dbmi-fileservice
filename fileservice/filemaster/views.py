@@ -1,8 +1,7 @@
-from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
+from django.http import Http404, HttpResponseForbidden
+from django.contrib.auth.models import User, Group
 
-from django.contrib.auth.models import User, Group, Permission
-
-from rest_framework import status,filters,viewsets,mixins
+from rest_framework import status,filters,viewsets
 from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -29,6 +28,7 @@ User = get_user_model()
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 class HealthCheckList(viewsets.ModelViewSet):
     queryset = HealthCheck.objects.all()

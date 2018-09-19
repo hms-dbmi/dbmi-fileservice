@@ -1,7 +1,7 @@
-from rest_framework.decorators import detail_route, list_route
+from rest_framework.decorators import detail_route, list_route, permission_classes, authentication_classes
 from rest_framework import status,filters,viewsets,mixins
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
@@ -33,12 +33,27 @@ log = logging.getLogger(__name__)
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
+
+# Subclass IsAuthenticated to allow writes from un-authenticated users
+class IsAuthenticatedOrObjectPermissionsAll(BasePermission):
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated():
+            if view.action == 'list':
+                object_perms = DjangoObjectPermissionsAll()
+                return object_perms.has_permission(request, view)
+            else:
+                return False
+        else:
+            return True
+
+
 class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
     authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication,)
-    permission_classes = (IsAuthenticated, DjangoObjectPermissionsChange,)
+    permission_classes = (IsAuthenticatedOrObjectPermissionsAll, DjangoObjectPermissionsChange,)
     filter_class = ArchiveFileFilter
     filter_backends = (filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
 
@@ -77,7 +92,6 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     print "ERROR permissions: %s " % e
         return super(ArchiveFileList, self).post_save(obj)
 
-    @list_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def list(self, request, *args, **kwargs):
         log.debug("[files][ArchiveFileList][list] - Listing Files.")
         # Get the UUIDs from the request data.

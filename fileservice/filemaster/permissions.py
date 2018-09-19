@@ -1,10 +1,8 @@
 from __future__ import unicode_literals
-from django.http import Http404
-from django.contrib.auth.models import User, Group, Permission
+
+from django.contrib.auth.models import Group
 
 from rest_framework import permissions
-from rest_framework.compat import (get_model_name, oauth2_provider_scope,
-                                   oauth2_constants)
 
 
 class DjangoObjectPermissionsAll(permissions.DjangoObjectPermissions):
