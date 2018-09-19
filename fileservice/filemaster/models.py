@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import uuid
 import datetime
 import re,urllib
 from datetime import timedelta,date
@@ -78,7 +79,7 @@ class Bucket(models.Model):
  
  
 class ArchiveFile(models.Model):
-    uuid = UUIDField()
+    uuid = UUIDField(default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=255,blank=True,null=True,default='')
     filename = models.TextField()
     metadata=JSONField(blank=True,null=True)
