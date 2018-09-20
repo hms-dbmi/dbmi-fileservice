@@ -1,9 +1,9 @@
 from rest_framework.decorators import detail_route, list_route, permission_classes, authentication_classes
-from rest_framework import status,filters,viewsets,mixins
+from rest_framework import status, viewsets, filters
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
-
+from django_filters import rest_framework as rest_framework_filters
 from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -55,7 +55,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication,)
     permission_classes = (IsAuthenticatedOrObjectPermissionsAll, DjangoObjectPermissionsChange,)
     filter_class = ArchiveFileFilter
-    filter_backends = (filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
+    filter_backends = (rest_framework_filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
         log.debug("[files][ArchiveFileList][pre_savepre_save] - Making user owner.")
