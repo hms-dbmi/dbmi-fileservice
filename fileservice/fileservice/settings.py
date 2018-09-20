@@ -6,11 +6,11 @@ from sys import path
 import os, sys
 from django.utils.crypto import get_random_string
 
-from fileservice.settings import environment
+from fileservice import environment
 
 ########## PATH CONFIGURATION
 # Absolute filesystem path to the Django project directory:
-DJANGO_ROOT = dirname(dirname(abspath(__file__)))
+DJANGO_ROOT = dirname(abspath(__file__))
 
 # Absolute filesystem path to the top-level project folder:
 SITE_ROOT = dirname(DJANGO_ROOT)
@@ -28,8 +28,6 @@ path.append(DJANGO_ROOT)
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = True
 
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
-TEMPLATE_DEBUG = DEBUG
 ########## END DEBUG CONFIGURATION
 
 
@@ -124,7 +122,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", get_random_string(50, chars))
 ########## SITE CONFIGURATION
 # Hosts/domain names that are valid for this site
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS')]
+ALLOWED_HOSTS = environment.ENV_LIST("ALLOWED_HOSTS")
 ########## END SITE CONFIGURATION
 
 
@@ -137,32 +135,23 @@ FIXTURE_DIRS = (
 
 
 ########## TEMPLATE CONFIGURATION
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#template-context-processors
-TEMPLATE_CONTEXT_PROCESSORS = (
-    'django.contrib.auth.context_processors.auth',
-    'django.core.context_processors.debug',
-    'django.core.context_processors.i18n',
-    'django.core.context_processors.media',
-    'django.core.context_processors.static',
-    'django.core.context_processors.tz',
-    'django.contrib.messages.context_processors.messages',
-    'django.core.context_processors.request',
-    'social_auth.context_processors.social_auth_by_name_backends',
-    'social_auth.context_processors.social_auth_backends',
-    'social_auth.context_processors.social_auth_by_type_backends',
-    'social_auth.context_processors.social_auth_login_redirect',
-)
 
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#template-loaders
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [normpath(join(SITE_ROOT, 'templates'))],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#template-dirs
-TEMPLATE_DIRS = (
-    normpath(join(SITE_ROOT, 'templates')),
-)
 ########## END TEMPLATE CONFIGURATION
 
 
@@ -176,9 +165,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'social_auth.middleware.SocialAuthExceptionMiddleware',
+    # 'social_auth.middleware.SocialAuthExceptionMiddleware',
     'axes.middleware.FailedLoginMiddleware',
-    'fileservice.logging_middleware.LogSetupMiddleware'
 )
 ########## END MIDDLEWARE CONFIGURATION
 
@@ -210,22 +198,16 @@ DJANGO_APPS = (
 # Apps specific for this project go here.
 LOCAL_APPS = (
     'guardian',
-    'social_auth',
     'rest_framework',
     'rest_framework.authtoken',
-    'filemaster',   
+    'filemaster',
     'bootstrap3',
     'taggit',
-    'django_extensions',
-    'kombu.transport.django',
-    'djcelery',
+    'taggit_serializer',
     'django_nose',
     'axes',
     'health_check',
-    'health_check_celery3',
-    'health_check_db',    
-    #'djkombu'
-    #'kombu.transport.django.KombuAppConfig',
+    'health_check.db',
 )
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -246,14 +228,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'console': {
-            'format': '[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d]'
-                      '[%(username)s][%(userid)s] - %(message)s',
-        },
-    },
-    'filters': {
-        # Add an unbound RequestFilter.
-        'request': {
-            '()': 'fileservice.logging_middleware.RequestFilter',
+            'format': '[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] - %(message)s',
         },
     },
     'handlers': {
@@ -262,13 +237,11 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'console',
             'stream': sys.stdout,
-            'filters': ['request'],
         },
     },
     'root': {
         'handlers': ['console'],
         'level': 'DEBUG',
-        'filters': ['request'],
     },
     'loggers': {
         'django': {
@@ -286,11 +259,11 @@ LOGGING = {
 
 ######## AUTH CONFIG
 AUTHENTICATION_BACKENDS = (
-    'social_auth.backends.twitter.TwitterBackend',
-    'social_auth.backends.facebook.FacebookBackend',
-    'social_auth.backends.google.GoogleOAuth2Backend',
-    'social_auth.backends.contrib.linkedin.LinkedinBackend',
-    'social_auth.backends.OpenIDBackend',
+    # 'social_auth.backends.twitter.TwitterBackend',
+    # 'social_auth.backends.facebook.FacebookBackend',
+    # 'social_auth.backends.google.GoogleOAuth2Backend',
+    # 'social_auth.backends.contrib.linkedin.LinkedinBackend',
+    # 'social_auth.backends.OpenIDBackend',
     'django.contrib.auth.backends.ModelBackend', # default
     'guardian.backends.ObjectPermissionBackend',
 )
@@ -302,16 +275,13 @@ ANONYMOUS_USER_ID = 1
 # Auth0 stuff
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID")
-AUTH0_SECRET = os.environ.get("AUTH0_SECRET")
-AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET")
-AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL")
-
-ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', ',')
 
 # Get service level accounts
 SERVICE_ACCOUNTS = environment.ENV_DICT('SERVICE_ACCOUNTS')
 
 ##### END AUTH CONFIG
+
+GUARDIAN_GET_INIT_ANONYMOUS_USER = 'filemaster.models.get_anonymous_user_instance'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
