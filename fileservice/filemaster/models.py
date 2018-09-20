@@ -178,10 +178,6 @@ class ArchiveFile(models.Model):
         )
 
 
-class HealthCheck(models.Model):
-    message = models.CharField(max_length=255)
-
-
 def get_anonymous_user_instance(User):
     return User(username='',
                 email='AnonymousUser',

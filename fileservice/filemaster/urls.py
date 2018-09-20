@@ -1,11 +1,10 @@
 from django.conf.urls import include, url
-from .views import HealthCheckList,GroupList,GroupDetail,UserList,token
+from .views import GroupList,GroupDetail,UserList,token
 from .files import ArchiveFileList
 from rest_framework.routers import DefaultRouter
 
 
 router = DefaultRouter()
-router.register(r'healthcheck', HealthCheckList)
 router.register(r'file', ArchiveFileList)
 
 urlpatterns = [

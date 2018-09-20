@@ -1,20 +1,21 @@
 from django.contrib import admin
-from .models import HealthCheck,CustomUser,Bucket,ArchiveFile
+from .models import CustomUser, Bucket, ArchiveFile
 from guardian.admin import GuardedModelAdmin
-from django.contrib.auth.models import User, Group, Permission
+from django.contrib.auth.models import Group
 from django.contrib.admin.sites import NotRegistered
 
-class HealthCheckAdmin(GuardedModelAdmin):
-    pass
 
 class CustomUserAdmin(GuardedModelAdmin):
     pass
 
+
 class BucketAdmin(GuardedModelAdmin):
     pass
 
+
 class ArchiveFileAdmin(GuardedModelAdmin):
     pass
+
 
 def patch_admin(model, admin_site=None):
     """
@@ -30,14 +31,15 @@ def patch_admin(model, admin_site=None):
         raise NotRegistered, "The model %r has not been registered with the admin site." % model
     # Unregister existing admin class.
     admin_site.unregister(model)
+
     # Register patched admin class.
     class PatchedModelAdmin(GuardedModelAdmin, ModelAdmin): # Remove VersionAdmin, if you don't use reversion.
         pass
     admin_site.register(model, PatchedModelAdmin)
     
-admin.site.register(HealthCheck,HealthCheckAdmin)
-admin.site.register(CustomUser,CustomUserAdmin)
-admin.site.register(Bucket,BucketAdmin)
-admin.site.register(ArchiveFile,ArchiveFileAdmin)
+
+admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Bucket, BucketAdmin)
+admin.site.register(ArchiveFile, ArchiveFileAdmin)
 patch_admin(Group)
 

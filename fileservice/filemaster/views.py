@@ -1,7 +1,7 @@
 from django.http import Http404, HttpResponseForbidden
 from django.contrib.auth.models import User, Group
 
-from rest_framework import status,filters,viewsets
+from rest_framework import status
 from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,9 +11,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
-from .models import HealthCheck,GROUPTYPES,Bucket
+from .models import GROUPTYPES,Bucket
 from .authenticate import Auth0Authentication, ServiceAuthentication
-from .serializers import HealthCheckSerializer,SpecialGroupSerializer,TokenSerializer
+from .serializers import SpecialGroupSerializer,TokenSerializer
 
 from guardian.shortcuts import assign_perm,get_objects_for_group
 from django.contrib.auth import get_user_model
@@ -28,15 +28,6 @@ User = get_user_model()
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
-
-
-class HealthCheckList(viewsets.ModelViewSet):
-    queryset = HealthCheck.objects.all()
-    serializer_class = HealthCheckSerializer
-    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication)
-    permission_classes = (IsAuthenticated,)
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('message', 'id')
 
     
 def serializeGroup(user,group=None):

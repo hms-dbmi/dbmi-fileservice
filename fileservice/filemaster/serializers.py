@@ -1,11 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 from rest_framework.authtoken.models import Token
-import json, ast
-from taggit_serializer.serializers import (TagListSerializerField,
-                                           TaggitSerializer)
+import json
+import ast
+from taggit_serializer.serializers import (TagListSerializerField, TaggitSerializer)
 
-from .models import HealthCheck,ArchiveFile,FileLocation
+from .models import ArchiveFile, FileLocation
 
 
 class WritableField(serializers.Field):
@@ -61,15 +61,7 @@ class SpecialGroupSerializer(serializers.Serializer):
     buckets = BucketSerializer(required=False)
 
     class Meta:
-        fields = ('id','name','users','buckets',)    
-
-
-class HealthCheckSerializer(serializers.ModelSerializer):
-    message = serializers.CharField()    
-    
-    class Meta:
-        model = HealthCheck
-        fields = ('id', 'message')
+        fields = ('id','name','users','buckets',)
 
 
 class JSONFieldSerializer(WritableField):
