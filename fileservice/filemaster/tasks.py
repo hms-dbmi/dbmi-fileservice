@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 
 from celery import shared_task
 
@@ -51,8 +51,8 @@ def glacierLifecycleMove(locationstring,pid):
     lifecycle.append(rule)
     try:
         status = bucket.configure_lifecycle(lifecycle)
-    except Exception,e:
-        print "Glacier Error %s" % e
+    except Exception as e:
+        print("Glacier Error %s" % e)
         
 
     #if status:
@@ -74,8 +74,8 @@ def glacierVaultMove(locationstring,id):
     path = path.lstrip("/")
     bucket, path = path.split("/", 1)
 
-    aws_key=settings.BUCKETS[bucket]["AWS_KEY_ID"]
-    aws_secret=settings.BUCKETS[bucket]["AWS_SECRET"]
+    aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
+    aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
     
     c = S3Connection(aws_key, aws_secret, is_secure=True)
     bucket = c.get_bucket(bucket,validate=False)

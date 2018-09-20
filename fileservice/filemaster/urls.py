@@ -1,23 +1,16 @@
-from django.conf.urls import patterns, include, url
-from django.contrib.auth import views
-from rest_framework.urlpatterns import format_suffix_patterns
-from .views import HealthCheckList,GroupList,GroupDetail,ArchiveFileList,SearchViewSet,UserList
+from django.conf.urls import include, url
+from .views import GroupList,GroupDetail,UserList,token
+from .files import ArchiveFileList
 from rest_framework.routers import DefaultRouter
-from rest_framework import renderers
 
 
 router = DefaultRouter()
-router.register(r'healthcheck', HealthCheckList)
 router.register(r'file', ArchiveFileList)
-router.register(r'search', SearchViewSet, base_name='search')
 
-
-urlpatterns = patterns(
-                       'filemaster.views',
-                       url(r'^groups/$', GroupList.as_view()),
-                       url(r'^user/$', UserList.as_view()),
-                       url(r'^groups/(?P<pk>[^/]+)/$', GroupDetail.as_view()),
-                       url(r'^token/$', 'token'),                                              
-                       url(r'^api/', include(router.urls)),
-
-)
+urlpatterns = [
+    url(r'^groups/$', GroupList.as_view()),
+    url(r'^user/$', UserList.as_view()),
+    url(r'^groups/(?P<pk>[^/]+)/$', GroupDetail.as_view()),
+    url(r'^token/$', token),
+    url(r'^api/', include(router.urls)),
+]

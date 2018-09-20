@@ -1,4 +1,4 @@
-import ConfigParser, os,logging,json
+import configparser, os,logging,json
 import requests
 
 
@@ -17,17 +17,17 @@ def parseConfig(configfile):
     udnfields=["udntoken","udnurl"]
     configoptions = {}
     
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     try:
         config.read([configfile])
-    except Exception,e:
+    except Exception as e:
         log.info("Error reading conf file: %s" % e)
         return None
     
     try:
         for f in configfields:
             configoptions[f] = config.get("fileservice", f)
-    except Exception,e:
+    except Exception as e:
         log.info("Error in conf file: %s" % e)
         return None
 
@@ -35,14 +35,14 @@ def parseConfig(configfile):
         try:
             for f in tokenfields:
                 configoptions[f] = config.get("fileservice", f)
-        except Exception,e:
+        except Exception as e:
             log.info("Error in conf file token auth: %s" % e)
             return None
     elif configoptions["authtype"]=="hmssaml":
         try:
             for f in auth0hmsfields:
                 configoptions[f] = config.get("fileservice", f)
-        except Exception,e:
+        except Exception as e:
             log.info("Error in conf file hmssaml auth: %s" % e)
             return None
     

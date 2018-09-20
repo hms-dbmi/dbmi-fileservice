@@ -1,22 +1,33 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User, Group, Permission
+from django.contrib.auth.models import User, Group
 from rest_framework.authtoken.models import Token
-# from drf_compound_fields.fields import ListField,DictField,ListOrItemField
-from rest_framework import relations
-from rest_framework.exceptions import ParseError
-import json,ast
+import json
+import ast
+from taggit_serializer.serializers import (TagListSerializerField, TaggitSerializer)
 
-from .models import HealthCheck,ArchiveFile,FileLocation
+from .models import ArchiveFile, FileLocation
+
+
+class WritableField(serializers.Field):
+    def to_representation(self, value):
+        return self.to_native(value)
+
+    def to_internal_value(self, data):
+        print('WARNING: This has not been implemented as it doesn\'t seem like it was used')
+        return self.to_native(data)
+
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ('id', 'name')
 
+
 class FileLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileLocation
         fields = ('id', 'url','uploadComplete','storagetype','filesize')
+
 
 class TokenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,9 +41,11 @@ class UserSerializer(serializers.Serializer):
     class Meta:
         fields = ('email',)
 
+
 class UserModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
+
 
 class BucketSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
@@ -48,43 +61,40 @@ class SpecialGroupSerializer(serializers.Serializer):
     buckets = BucketSerializer(required=False)
 
     class Meta:
-        fields = ('id','name','users','buckets',)    
-       
-class HealthCheckSerializer(serializers.ModelSerializer):
-    message = serializers.CharField()    
-    
-    class Meta:
-        model = HealthCheck
-        fields = ('id', 'message')
+        fields = ('id','name','users','buckets',)
 
-class JSONFieldSerializer(serializers.WritableField):
+
+class JSONFieldSerializer(WritableField):
     def to_native(self, obj):
         return obj
-        
-class ArchiveFileSerializer(serializers.ModelSerializer):
-    tags = serializers.Field(source='get_tags_display')
+
+
+class ArchiveFileSerializer(TaggitSerializer, serializers.ModelSerializer):
+    tags = TagListSerializerField(required=False)
     metadata = JSONFieldSerializer(required=False)
     owner = UserSerializer(required=False)
-    locations = FileLocationSerializer(required=False)
-    permissions = serializers.Field(source='get_permissions_display')
+    locations = FileLocationSerializer(read_only=True, required=False, many=True)
+    permissions = serializers.ListField(read_only=True, source='get_permissions_display')
     expirationdate = serializers.DateField(required=False)
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
         fields = ('id','uuid','description','metadata','tags','owner','filename','locations','permissions','creationdate','modifydate','expirationdate')
 
-class JSONSearchField(serializers.WritableField):
+
+class JSONSearchField(WritableField):
     
     def to_native(self, value):
         con_value = ast.literal_eval(value)
         return json.dumps(con_value)
 
-class TagSearchField(serializers.WritableField):
+
+class TagSearchField(WritableField):
     def to_native(self, value):
         return value
 
         
-class SearchSerializer(serializers.Serializer):
+class SearchSerializer(TaggitSerializer, serializers.Serializer):
     #text = serializers.CharField()
     #creationdate = serializers.DateTimeField(source="creationdate")
     #modifydate = serializers.DateTimeField(source="modifydate")
@@ -92,6 +102,6 @@ class SearchSerializer(serializers.Serializer):
     filename = serializers.CharField(source="filename")
     uuid = serializers.CharField(source="uuid")
     owner = serializers.CharField(source="owner")
-    tags = TagSearchField(source='tags')
+    tags = TagListSerializerField()
     #metadata = MetadataSearchSerializer(source='metadata')
     metadata = JSONSearchField(source='metadata')

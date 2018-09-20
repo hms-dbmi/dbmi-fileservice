@@ -27,10 +27,10 @@ class ArchiveFileIndex(CelerySearchIndex, indexes.Indexable):
         try:
             lit = ast.literal_eval(self.prepared_data['metadata'])
             jsonmd = json.loads(json.dumps(lit))
-            for key in jsonmd.keys():
+            for key in list(jsonmd.keys()):
                 self.prepared_data['md_'+key]=jsonmd[key]
-        except Exception,e:
-            print "Prepare Index error %s" % e
+        except Exception as e:
+            print("Prepare Index error %s" % e)
         return self.prepared_data
 
     def prepare_tags(self, obj):

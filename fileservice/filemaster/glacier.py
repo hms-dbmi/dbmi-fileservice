@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 
 import os
 
@@ -32,5 +32,5 @@ for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__
             bucket,path = af.locations.all()[0].get_bucket()
             if bucket and settings.BUCKETS[bucket]["glaciertype"]=="vault":
                 glacierVaultMove.delay(af.locations.all()[0].url,af.id)
-    except Exception,e:
-        print e
+    except Exception as e:
+        print(e)

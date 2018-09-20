@@ -5,14 +5,11 @@ from django.contrib.auth.models import User, Group, Permission
 from rest_framework.authtoken.models import Token
 from django.test import Client
 from django.test.utils import override_settings
-import haystack 
 from django.core.management import call_command
-import json,uuid,requests,urllib
+import json,uuid,requests,urllib.request,urllib.parse,urllib.error
 from guardian.shortcuts import get_objects_for_user
 from boto.s3.connection import S3Connection
 from django.conf import settings
-
-
 
 User = get_user_model()        
 
@@ -21,17 +18,7 @@ userlistemail=['rootuser@thebeatles.com','poweruser@thebeatles.com','regularuser
 groups_for_regular=['udntest__DOWNLOADERS','udntest__UPLOADERS','udntest__READERS','udntest__WRITERS']
 fileuuid = None
 
-TEST_INDEX = {
-    'default': {
-        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
-        'URL': 'http://127.0.0.1:9200/',
-        'INDEX_NAME': 'haystack',
-    },
-}
 
-
-
-@override_settings(HAYSTACK_CONNECTIONS=TEST_INDEX)
 class ArchiveFileTest(TestCase):
     fileuuid=None
     aws_key=settings.TEST_AWS_KEY
@@ -39,14 +26,13 @@ class ArchiveFileTest(TestCase):
     c = Client()
 
     def setUp(self):
-        print "setup"
-        haystack.connections.reload('default')
+        print("setup")
         super(ArchiveFileTest, self).setUp()
         User = get_user_model()
-        rootuser = User.objects.create_superuser('rootuser', 'rootuser@thebeatles.com', 'password')        
+        User.objects.create_superuser('rootuser', 'rootuser@thebeatles.com', 'password')
         poweruser = User.objects.create_user('poweruser', 'poweruser@thebeatles.com', 'password')
-        regularuser = User.objects.create_user('regularuser', 'regularuser@thebeatles.com', 'password')
-        denyuser = User.objects.create_user('denyuser', 'denyuser@thebeatles.com', 'password')
+        User.objects.create_user('regularuser', 'regularuser@thebeatles.com', 'password')
+        User.objects.create_user('denyuser', 'denyuser@thebeatles.com', 'password')
         add_group_permission = Permission.objects.get(codename='add_group')
         bucket=Bucket(name="cbmi-fileservice-test")
         bucket.save()
@@ -134,7 +120,7 @@ class ArchiveFileTest(TestCase):
         res = self.c.post('/filemaster/api/file/', data='{"expirationdate":"2020-10-5","permissions":["udntest"],"description":"this is a long description","metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2","tag3"]}',content_type='application/json')
         j = json.loads(res.content)["uuid"]
         
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]
@@ -143,7 +129,7 @@ class ArchiveFileTest(TestCase):
         res = requests.put(url,data=open('test2.txt'))
         
         self.assertEqual(res.status_code, 200)
-        url = '/filemaster/api/file/%s/uploadcomplete/?location=%s&aws_key=%s&aws_secret=%s' % (j,locationid,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/uploadcomplete/?location=%s&aws_key=%s&aws_secret=%s' % (j,locationid,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
 
         url = '/filemaster/api/file/%s/' % (j)
@@ -152,7 +138,7 @@ class ArchiveFileTest(TestCase):
         #get link and upload file
         
         #then download
-        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
 
@@ -168,7 +154,7 @@ class ArchiveFileTest(TestCase):
         j = json.loads(res.content)["uuid"]
         call_command('rebuild_index', interactive=False, verbosity=1)
         
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]
@@ -176,7 +162,7 @@ class ArchiveFileTest(TestCase):
         t = get_token('denyuser@thebeatles.com')
         self.c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
 
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 403)
         cleanup_bucket(self.aws_key, self.aws_secret)
@@ -210,55 +196,9 @@ class ArchiveFileTest(TestCase):
         res = self.c.get(url,{"filename":"asdfasdfdsafdsafas.txt"},content_type='application/json')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.content,"[]")
-
-    def test_h_searchfile(self):
-        t = get_token('regularuser@thebeatles.com')
-
-        self.c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
-        res = self.c.post('/filemaster/api/file/', data='{"permissions":["udntest"],"description":"this is a long description","metadata":{"filesize":"26","coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag6"]}',content_type='application/json')
-        self.assertEqual(res.status_code, 201)
-        call_command('rebuild_index', interactive=False, verbosity=1)
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"test2","fields":"filename"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res,"test2.txt",status_code=200)
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"description","fields":"description"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res,"test2.txt",status_code=200)
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"descr","fields":"description"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res,"test2.txt",status_code=200)
-        self.assertContains(res,"tag6",status_code=200)
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"test2"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res,"test2.txt",status_code=200)
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"tag1"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res,"test2.txt",status_code=200)
-
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"test2","fields":"uuid"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.content,"[]")
-
-        url = '/filemaster/api/search/' % ()
-        res = self.c.get(url,{"q":"asweoiu","fields":"filename"},content_type='application/json')
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.content,"[]")
     
     def tearDown(self):
-        print "Tear Down"
-        haystack.connections['default'].get_backend().clear()
+        print("Tear Down")
         #call_command('clear_index', interactive=False, verbosity=1)
         
 def cleanup_bucket(aws_key,aws_secret):

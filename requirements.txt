@@ -1,33 +1,46 @@
-Django == 1.7.7
-django-guardian
-django-extensions
-boto
-django-social-auth
-django-bootstrap3
-markdown
-django-filter == 0.11.0
-django-debug-toolbar == 1.4
-django-encrypted-fields
-PyJWT
-jsonfield
-django-taggit
-django-uuidfield
-cfn-pyplates
-mysql-python
-requests
-#django-haystack == 2.3.1
--e git+https://github.com/toastdriven/django-haystack.git@master#egg=django-haystack
-elasticsearch
-django-celery == 3.1.17
--e git+https://github.com/bradleyayers/django-celery-transactions.git#egg=django-celery-transactions
-celery_haystack
-djangorestframework == 2.4.4
-drf-extensions
-django-kombu == 0.9.4
-kombu == 3.0.37
-drf-compound-fields
-django-nose
-django-health-check == 1.0.2
-#-e git+https://github.com/davidbernick/django-health-check.git#egg=django-health-check
-django-axes == 1.7.0
-celery == 3.1.25
+django-health-check==2.4.0
+django-guardian==1.4.9
+django-nose==1.4.5
+Django==1.11.15
+mysqlclient==1.3.13
+djangorestframework==3.8.2
+django-filter==1.1.0
+django-taggit-serializer==0.1.7
+django-bootstrap3==11.0.0
+requests==2.19.1
+PyYAML==3.13
+django-taggit==0.20.1
+urllib3==1.23
+boto3==1.9.6
+boto==2.49.0
+botocore==1.12.6
+django-haystack==2.8.1
+elasticsearch>=6.0.0,<7.0.0
+django-axes==4.0.2
+docopt==0.6.2
+drf-compound-fields==1.0.0
+drf-extensions==0.4.0
+httplib2==0.11.3
+jsonfield==2.0.2
+jwcrypto==0.5.0
+pycrypto==2.6.1
+PyJWT==1.6.4
+Markdown==2.6.11
+nose==1.3.7
+oauth2==1.9.0.post1
+ordereddict==1.1
+pbr==4.2.0
+pyasn1==0.4.4
+schema==0.6.8
+six==1.11.0
+sqlparse==0.2.4
+celery==4.2.1
+celery-haystack==0.10
+kombu==4.2.1
+vine==1.1.4
+billiard==3.5.0.4
+amqp==2.3.2
+
+# Used only for testing
+# django-celery-transactions==0.3.6
+# django-celery==3.2.2

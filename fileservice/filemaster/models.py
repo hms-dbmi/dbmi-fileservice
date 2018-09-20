@@ -1,6 +1,9 @@
-from __future__ import unicode_literals
-import re,urllib,json
-from datetime import timedelta,date,datetime
+
+
+import uuid
+import datetime
+import re,urllib.request,urllib.parse,urllib.error
+from datetime import timedelta,date
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
 from django.core.mail import send_mail
@@ -8,13 +11,9 @@ from django.core import validators
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
-from django.dispatch import receiver
-from django.contrib.auth import get_user_model
-from django.db.models.signals import post_save,post_syncdb
-#from uuidfield import UUIDField
-from django_extensions.db.fields import UUIDField
+from django.db.models import UUIDField
 from jsonfield import JSONField
-from django.contrib.auth.models import User,Group
+from django.contrib.auth.models import Group
 
 
 from guardian.shortcuts import assign_perm,remove_perm,get_groups_with_perms
@@ -80,7 +79,7 @@ class Bucket(models.Model):
  
  
 class ArchiveFile(models.Model):
-    uuid = UUIDField()
+    uuid = UUIDField(default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=255,blank=True,null=True,default='')
     filename = models.TextField()
     metadata=JSONField(blank=True,null=True)
@@ -117,8 +116,8 @@ class ArchiveFile(models.Model):
                 assign_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
-        except Exception,e:
-            print "ERROR setperms %s %s %s" % (e,group,types)
+        except Exception as e:
+            print("ERROR setperms %s %s %s" % (e,group,types))
             return         
 
     def removeDefaultPerms(self,group,types):
@@ -140,14 +139,13 @@ class ArchiveFile(models.Model):
                 remove_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":
                 remove_perm('download_archivefile', g, self)
-        except Exception,e:
-            print "ERROR %s" % e
+        except Exception as e:
+            print("ERROR %s" % e)
             return         
 
-            
-    def setPerms(self,permissions):
+    def setPerms(self, permissions):
             for types in GROUPTYPES:
-                self.setDefaultPerms(permissions,types)
+                self.setDefaultPerms(permissions, types)
 
     def killPerms(self):
         for groupname in self.get_permissions_display():
@@ -166,7 +164,7 @@ class ArchiveFile(models.Model):
                 if groupname not in grouplist:
                     grouplist.append(groupname)
             except:
-                print "Error with %s" % g.name
+                print("Error with %s" % g.name)
         return grouplist
 
 
@@ -180,8 +178,14 @@ class ArchiveFile(models.Model):
         )
 
 
-class HealthCheck(models.Model):
-    message = models.CharField(max_length=255)
+def get_anonymous_user_instance(User):
+    return User(username='',
+                email='AnonymousUser',
+                password='!k1IjmeTmhVLJsfPIQ5l1ojH1U1PzgI0IjGvqm0Cd',
+                is_active=True,
+                last_login=datetime.date(1970, 1, 1),
+                date_joined=datetime.date(1970, 1, 1),)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(_('username'), max_length=30, unique=True,
@@ -220,7 +224,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             super(CustomUser, self).save(*args, **kwargs)  
 
     def get_absolute_url(self):
-        return "/users/%s/" % urllib.quote(self.username)
+        return "/users/%s/" % urllib.parse.quote(self.username)
 
     def get_full_name(self):
         """
