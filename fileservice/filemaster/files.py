@@ -70,8 +70,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
             try:
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()
-            except Exception, e:
-                print "ERROR tags: %s " % e
+            except Exception as e:
+                print("ERROR tags: %s " % e)
 
         if removePerms:
             try:
@@ -84,8 +84,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 try:
                     af = ArchiveFile.objects.get(uuid=obj.uuid)
                     af.setPerms(p)
-                except Exception, e:
-                    print "ERROR permissions: %s " % e
+                except Exception as e:
+                    print("ERROR permissions: %s " % e)
 
     def list(self, request, *args, **kwargs):
         log.debug("[files][ArchiveFileList][list] - Listing Files.")

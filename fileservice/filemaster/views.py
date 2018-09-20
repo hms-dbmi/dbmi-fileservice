@@ -84,8 +84,8 @@ class GroupList(APIView):
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
-                except Exception,e:
-                    print "ERROR: %s" % e
+                except Exception as e:
+                    print("ERROR: %s" % e)
             
             for user in group.user_set.all():
                 userstructure.append({"email":user.email})
@@ -121,8 +121,8 @@ class GroupDetail(APIView):
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
-                except Exception,e:
-                    print "ERROR: %s" % e
+                except Exception as e:
+                    print("ERROR: %s" % e)
         except:
             pass
     
@@ -132,8 +132,8 @@ class GroupDetail(APIView):
                 try:
                     bucket = Bucket.objects.get(name=u["name"])
                     assign_perm('filemaster.write_bucket', group, bucket)
-                except Exception,e:
-                    print "ERROR: %s" % e
+                except Exception as e:
+                    print("ERROR: %s" % e)
         except:
             pass
 
@@ -188,8 +188,8 @@ class UserList(APIView):
             try:
                 user = get_user_model().objects.create_user(id_generator(16),email=u,password=id_generator(16))
                 userstructure.append(user.email)
-            except Exception,e:
-                print "ERROR: %s" % e
+            except Exception as e:
+                print("ERROR: %s" % e)
         
         sdata.append({"users":userstructure}) 
         

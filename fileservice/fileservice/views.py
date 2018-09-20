@@ -43,8 +43,8 @@ def callback(request):
     try:
         User = get_user_model()
         User.objects.create_user(id_generator(16), email=user_info["email"], password=id_generator(16))
-    except Exception,e:
-        print "ERROR %s" % e
+    except Exception as e:
+        print("ERROR %s" % e)
         pass
     
     #response = HttpResponse(json.dumps(user_info), content_type="application/json")

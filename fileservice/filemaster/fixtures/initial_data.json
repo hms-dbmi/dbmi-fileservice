@@ -1,9 +1,0 @@
-[
-	{
-	    "pk": 1000, 
-	    "model": "auth.group", 
-	    "fields": {
-	        "name": "powerusers"
-	    }
-	}
-]

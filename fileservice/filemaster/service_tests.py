@@ -4,7 +4,7 @@ from django.contrib.auth.models import User, Group
 from django.test import Client
 from filemaster.models import Bucket, ArchiveFile
 
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import json
 import requests
 import logging
@@ -90,7 +90,7 @@ class ServiceConnectionTest(TestCase):
         res = c.get('/filemaster/api/file/%s/' % self.file_uuid, content_type='application/json')
         self.assertEqual(res.status_code, 200)
 
-        url = '/filemaster/api/file/%s/upload/?bucket=dbmi-test&aws_key=%s&aws_secret=%s' % (self.file_uuid, settings.TEST_AWS_KEY, urllib.quote(settings.TEST_AWS_SECRET, ''))
+        url = '/filemaster/api/file/%s/upload/?bucket=dbmi-test&aws_key=%s&aws_secret=%s' % (self.file_uuid, settings.TEST_AWS_KEY, urllib.parse.quote(settings.TEST_AWS_SECRET, ''))
         res = c.get(url, content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]

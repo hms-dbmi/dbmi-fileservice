@@ -1,6 +1,6 @@
 import logging,json, os,jsonschema,importlib,uuid,requests,sys
-import cStringIO as StringIO
-import urllib2
+import io as StringIO
+import urllib.request, urllib.error, urllib.parse
 from boto.sts import STSConnection
 from boto.s3.connection import S3Connection
 from cliff.command import Command
@@ -155,7 +155,7 @@ class WriteFile(Command):
             schema = None
             try:
                 schema = json.load(open("data/schemas/files.json"))
-            except Exception,e:
+            except Exception as e:
                 self.log.error("Cannot decode schema file -- %s" % e)
                 return False
             

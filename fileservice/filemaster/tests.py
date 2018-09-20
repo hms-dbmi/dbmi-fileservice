@@ -6,7 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.test import Client
 from django.test.utils import override_settings
 from django.core.management import call_command
-import json,uuid,requests,urllib
+import json,uuid,requests,urllib.request,urllib.parse,urllib.error
 from guardian.shortcuts import get_objects_for_user
 from boto.s3.connection import S3Connection
 from django.conf import settings
@@ -26,7 +26,7 @@ class ArchiveFileTest(TestCase):
     c = Client()
 
     def setUp(self):
-        print "setup"
+        print("setup")
         super(ArchiveFileTest, self).setUp()
         User = get_user_model()
         User.objects.create_superuser('rootuser', 'rootuser@thebeatles.com', 'password')
@@ -120,7 +120,7 @@ class ArchiveFileTest(TestCase):
         res = self.c.post('/filemaster/api/file/', data='{"expirationdate":"2020-10-5","permissions":["udntest"],"description":"this is a long description","metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2","tag3"]}',content_type='application/json')
         j = json.loads(res.content)["uuid"]
         
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]
@@ -129,7 +129,7 @@ class ArchiveFileTest(TestCase):
         res = requests.put(url,data=open('test2.txt'))
         
         self.assertEqual(res.status_code, 200)
-        url = '/filemaster/api/file/%s/uploadcomplete/?location=%s&aws_key=%s&aws_secret=%s' % (j,locationid,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/uploadcomplete/?location=%s&aws_key=%s&aws_secret=%s' % (j,locationid,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
 
         url = '/filemaster/api/file/%s/' % (j)
@@ -138,7 +138,7 @@ class ArchiveFileTest(TestCase):
         #get link and upload file
         
         #then download
-        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/download/?aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
 
@@ -154,7 +154,7 @@ class ArchiveFileTest(TestCase):
         j = json.loads(res.content)["uuid"]
         call_command('rebuild_index', interactive=False, verbosity=1)
         
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 200)
         url = json.loads(res.content)["url"]
@@ -162,7 +162,7 @@ class ArchiveFileTest(TestCase):
         t = get_token('denyuser@thebeatles.com')
         self.c.defaults['HTTP_AUTHORIZATION'] = 'Token %s' % t
 
-        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.quote(self.aws_secret,''))
+        url = '/filemaster/api/file/%s/upload/?bucket=cbmi-fileservice-test&aws_key=%s&aws_secret=%s' % (j,self.aws_key,urllib.parse.quote(self.aws_secret,''))
         res = self.c.get(url,content_type='application/json')
         self.assertEqual(res.status_code, 403)
         cleanup_bucket(self.aws_key, self.aws_secret)
@@ -198,7 +198,7 @@ class ArchiveFileTest(TestCase):
         self.assertEqual(res.content,"[]")
     
     def tearDown(self):
-        print "Tear Down"
+        print("Tear Down")
         #call_command('clear_index', interactive=False, verbosity=1)
         
 def cleanup_bucket(aws_key,aws_secret):

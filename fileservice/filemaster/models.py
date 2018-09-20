@@ -1,8 +1,8 @@
-from __future__ import unicode_literals
+
 
 import uuid
 import datetime
-import re,urllib
+import re,urllib.request,urllib.parse,urllib.error
 from datetime import timedelta,date
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
@@ -116,8 +116,8 @@ class ArchiveFile(models.Model):
                 assign_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
-        except Exception,e:
-            print "ERROR setperms %s %s %s" % (e,group,types)
+        except Exception as e:
+            print("ERROR setperms %s %s %s" % (e,group,types))
             return         
 
     def removeDefaultPerms(self,group,types):
@@ -139,8 +139,8 @@ class ArchiveFile(models.Model):
                 remove_perm('upload_archivefile', g, self)                
             elif types=="DOWNLOADERS":
                 remove_perm('download_archivefile', g, self)
-        except Exception,e:
-            print "ERROR %s" % e
+        except Exception as e:
+            print("ERROR %s" % e)
             return         
 
     def setPerms(self, permissions):
@@ -164,7 +164,7 @@ class ArchiveFile(models.Model):
                 if groupname not in grouplist:
                     grouplist.append(groupname)
             except:
-                print "Error with %s" % g.name
+                print("Error with %s" % g.name)
         return grouplist
 
 
@@ -224,7 +224,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             super(CustomUser, self).save(*args, **kwargs)  
 
     def get_absolute_url(self):
-        return "/users/%s/" % urllib.quote(self.username)
+        return "/users/%s/" % urllib.parse.quote(self.username)
 
     def get_full_name(self):
         """

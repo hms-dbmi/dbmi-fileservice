@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 
 from celery import shared_task
 
@@ -51,8 +51,8 @@ def glacierLifecycleMove(locationstring,pid):
     lifecycle.append(rule)
     try:
         status = bucket.configure_lifecycle(lifecycle)
-    except Exception,e:
-        print "Glacier Error %s" % e
+    except Exception as e:
+        print("Glacier Error %s" % e)
         
 
     #if status:

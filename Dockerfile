@@ -29,9 +29,6 @@ ADD requirements.txt /requirements.txt
 # Install Python packages
 RUN pip install -r /requirements.txt
 
-# Add additional init scripts
-ADD /docker-entrypoint-init.d/* /docker-entrypoint-init.d/
-
 # Copy app source
 COPY /fileservice /app
 

@@ -77,8 +77,8 @@ def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None
                                          foldername=foldername)
             jsonoutput = awsTVMUpload(archiveFile=archiveFile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret,
                                       foldername=foldername)
-    except Exception, exc:
-        print "Error: %s" % exc
+    except Exception as exc:
+        print("Error: %s" % exc)
         return {}
 
     return {

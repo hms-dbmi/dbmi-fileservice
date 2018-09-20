@@ -68,7 +68,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
                 auth = authstring[4:]
             else:
                 return None
-        elif request.COOKIES.has_key( 'DBMI_JWT' ):
+        elif 'DBMI_JWT' in request.COOKIES:
             logger.debug("DBMI_JWT")
             auth = request.COOKIES[ 'DBMI_JWT' ]
         else:
@@ -107,8 +107,8 @@ class Auth0Authentication(authentication.BaseAuthentication):
                 user = User.objects.get(email=r.json()["email"])
         except User.DoesNotExist:
             raise exceptions.AuthenticationFailed('No such user')
-        except Exception, e:
-            print "error %s" % e
+        except Exception as e:
+            print("error %s" % e)
 
         return (user, None)   
 
@@ -130,7 +130,7 @@ class ServiceAuthentication(authentication.BaseAuthentication):
                 auth_token = auth_string[8:]
 
                 # Get the service accounts
-                for account, token in settings.SERVICE_ACCOUNTS.iteritems():
+                for account, token in settings.SERVICE_ACCOUNTS.items():
 
                     # Compare tokens
                     if token == auth_token:
@@ -141,7 +141,7 @@ class ServiceAuthentication(authentication.BaseAuthentication):
                             logger.debug("{} logged in.".format(account))
                             return service_user, None
 
-                        except Exception, e:
+                        except Exception as e:
                             logger.debug("Error fetching service user: {}".format(e))
 
                 logger.warning('Service account not found')

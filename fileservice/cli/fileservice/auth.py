@@ -1,6 +1,6 @@
-import ConfigParser, os,logging,json, base64, requests, sys
-from urlparse import urlparse,parse_qs
-from HTMLParser import HTMLParser
+import configparser, os,logging,json, base64, requests, sys
+from urllib.parse import urlparse,parse_qs
+from html.parser import HTMLParser
 
 
 class User:
@@ -28,7 +28,7 @@ class User:
             if self.configoptions['authtype']=="hmssaml":
                 self.ssotoken=self.hms_saml()
                 return True                
-        except Exception,e:
+        except Exception as e:
             log.info("error authenticating %s" % e)        
         return False
     
@@ -132,7 +132,7 @@ class MyHTMLParser(HTMLParser):
                 pass
             try:
                 self.fields[attrD['name']]=value
-            except Exception,e:
+            except Exception as e:
                 pass
     def get_fileids(self):
         return self.fileids
