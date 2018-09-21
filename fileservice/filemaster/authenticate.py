@@ -1,29 +1,18 @@
-from django.contrib.auth.models import User
+import jwt
+import requests
+import json
+import jwcrypto.jwk as jwk
+
 from rest_framework import authentication
 from rest_framework import exceptions
-import jwt,base64,requests,json
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from .models import CustomUser
+from filemaster.models import CustomUser
 
-import jwcrypto.jwk as jwk
+
 import logging
-logger = logging.getLogger(__name__)
-
-
-class ExampleAuthentication(authentication.BaseAuthentication):
-    def authenticate(self, request):
-        username = request.META.get('HTTP_X_USERNAME')
-        if not username:
-            return None
-        
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            raise exceptions.AuthenticationFailed('No such user')
-
-        return (user, None)
+log = logging.getLogger(__name__)
 
 
 def get_public_keys_from_auth0():
@@ -62,14 +51,14 @@ class Auth0Authentication(authentication.BaseAuthentication):
         User = get_user_model()
 
         if 'HTTP_AUTHORIZATION' in request.META:
-            logger.debug("HTTP_AUTHORIZATION Found in META.")
+            log.debug("HTTP_AUTHORIZATION Found in META.")
             authstring = request.META['HTTP_AUTHORIZATION']
             if authstring.startswith('JWT '):
                 auth = authstring[4:]
             else:
                 return None
         elif 'DBMI_JWT' in request.COOKIES:
-            logger.debug("DBMI_JWT")
+            log.debug("DBMI_JWT")
             auth = request.COOKIES[ 'DBMI_JWT' ]
         else:
             return None
@@ -85,15 +74,15 @@ class Auth0Authentication(authentication.BaseAuthentication):
                                  leeway=120,
                                  audience=settings.AUTH0_CLIENT_ID)
         except jwt.ExpiredSignature:
-            logger.debug("JWT Expired.")
+            log.debug("JWT Expired.")
             return None
         except jwt.DecodeError:
-            logger.debug("JWT DecodeError.")
+            log.debug("JWT DecodeError.")
             return None
         except Exception as e:
-            logger.debug("Other error %s" % e)
+            log.debug("Other error %s" % e)
 
-        logger.debug("JWT Valid.")
+        log.debug("JWT Valid.")
 
         try:
             try:
@@ -108,7 +97,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
         except User.DoesNotExist:
             raise exceptions.AuthenticationFailed('No such user')
         except Exception as e:
-            print("error %s" % e)
+            log.error("error %s" % e)
 
         return (user, None)   
 
@@ -116,15 +105,15 @@ class Auth0Authentication(authentication.BaseAuthentication):
 class ServiceAuthentication(authentication.BaseAuthentication):
 
     def authenticate(self, request):
-        logger.debug("Starting service auth")
+        log.debug("Starting service auth")
 
         if 'HTTP_AUTHORIZATION' in request.META:
-            logger.debug("HTTP_AUTHORIZATION.")
+            log.debug("HTTP_AUTHORIZATION.")
 
             # Get the token
             auth_string = request.META['HTTP_AUTHORIZATION']
             if auth_string.startswith('SERVICE '):
-                logger.debug('Service account...')
+                log.debug('Service account...')
 
                 # Get the token
                 auth_token = auth_string[8:]
@@ -134,17 +123,17 @@ class ServiceAuthentication(authentication.BaseAuthentication):
 
                     # Compare tokens
                     if token == auth_token:
-                        logger.debug("Service account matched: {}".format(account))
+                        log.debug("Service account matched: {}".format(account))
 
                         try:
                             service_user = CustomUser.objects.get(email=account)
-                            logger.debug("{} logged in.".format(account))
+                            log.debug("{} logged in.".format(account))
                             return service_user, None
 
                         except Exception as e:
-                            logger.debug("Error fetching service user: {}".format(e))
+                            log.debug("Error fetching service user: {}".format(e))
 
-                logger.warning('Service account not found')
+                log.warning('Service account not found')
                 return None
             else:
                 return None

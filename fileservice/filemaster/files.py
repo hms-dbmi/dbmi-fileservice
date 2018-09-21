@@ -1,38 +1,36 @@
-from rest_framework.decorators import detail_route, list_route, permission_classes, authentication_classes
+import sys
+from uuid import uuid4
+
+import boto3
+from boto.s3.connection import S3Connection
+from botocore.client import Config
+from rest_framework.decorators import detail_route
 from rest_framework import status, viewsets, filters
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from django_filters import rest_framework as rest_framework_filters
-from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from .models import ArchiveFile, FileLocation, Bucket
+from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
-from django.contrib.auth.models import User, Group, Permission
-
-from .serializers import ArchiveFileSerializer
-
-from .authenticate import Auth0Authentication, ServiceAuthentication
-
-from .permissions import DjangoObjectPermissionsAll,DjangoObjectPermissionsChange
-from .filters import ArchiveFileFilter
-
-from .aws import signedUrlUpload, signedUrlDownload
-
-from boto.s3.connection import S3Connection
-
-import sys
-from uuid import uuid4
-import boto3
-from botocore.client import Config
+from filemaster.models import ArchiveFile, FileLocation, Bucket
+from filemaster.serializers import ArchiveFileSerializer
+from filemaster.authenticate import Auth0Authentication, ServiceAuthentication
+from filemaster.permissions import DjangoObjectPermissionsAll, DjangoObjectPermissionsChange
+from filemaster.filters import ArchiveFileFilter
+from filemaster.aws import signedUrlUpload, signedUrlDownload
 
 import logging
 log = logging.getLogger(__name__)
 
-from django.contrib.auth import get_user_model
+# Get the current user model
 User = get_user_model()
 
+
+# TODO: Replace DetailRoutes here with the newer DRF whatever
 
 # Subclass IsAuthenticated to allow writes from un-authenticated users
 class IsAuthenticatedOrObjectPermissionsAll(BasePermission):
@@ -71,7 +69,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()
             except Exception as e:
-                print("ERROR tags: %s " % e)
+                log.error("ERROR tags: %s " % e)
 
         if removePerms:
             try:
@@ -85,7 +83,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     af = ArchiveFile.objects.get(uuid=obj.uuid)
                     af.setPerms(p)
                 except Exception as e:
-                    print("ERROR permissions: %s " % e)
+                    log.error("ERROR permissions: %s " % e)
 
     def list(self, request, *args, **kwargs):
         log.debug("[files][ArchiveFileList][list] - Listing Files.")

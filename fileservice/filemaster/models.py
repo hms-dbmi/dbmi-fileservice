@@ -1,11 +1,10 @@
-
-
 import uuid
 import datetime
-import re,urllib.request,urllib.parse,urllib.error
-from datetime import timedelta,date
-from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
-                                        UserManager)
+import re, urllib.request, urllib.parse, urllib.error
+import random,string
+from datetime import timedelta, date
+
+from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin, UserManager)
 from django.core.mail import send_mail
 from django.core import validators
 from django.db import models
@@ -14,27 +13,26 @@ from django.utils import timezone
 from django.db.models import UUIDField
 from jsonfield import JSONField
 from django.contrib.auth.models import Group
-
-
 from guardian.shortcuts import assign_perm,remove_perm,get_groups_with_perms
 from rest_framework.authtoken.models import Token
-import random,string
 from django.conf import settings
-
 from taggit.managers import TaggableManager
 from django.db.models.signals import m2m_changed
 
+import logging
+log = logging.getLogger(__name__)
 
 
 EXPIRATIONDATE = 60
 if settings.EXPIRATIONDATE:
     EXPIRATIONDATE = settings.EXPIRATIONDATE
 
-
 GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
+
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 class FileLocation(models.Model):
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
@@ -60,7 +58,6 @@ class FileLocation(models.Model):
             path = path.lstrip("/")
             bucket, path = path.split("/", 1)
         return bucket,path
-
 
 
 class Bucket(models.Model):
@@ -117,7 +114,7 @@ class ArchiveFile(models.Model):
             elif types=="DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
         except Exception as e:
-            print("ERROR setperms %s %s %s" % (e,group,types))
+            log.error("ERROR setperms %s %s %s" % (e,group,types))
             return         
 
     def removeDefaultPerms(self,group,types):
@@ -140,7 +137,7 @@ class ArchiveFile(models.Model):
             elif types=="DOWNLOADERS":
                 remove_perm('download_archivefile', g, self)
         except Exception as e:
-            print("ERROR %s" % e)
+            log.error("ERROR %s" % e)
             return         
 
     def setPerms(self, permissions):
@@ -164,7 +161,7 @@ class ArchiveFile(models.Model):
                 if groupname not in grouplist:
                     grouplist.append(groupname)
             except:
-                print("Error with %s" % g.name)
+                log.error("Error with %s" % g.name)
         return grouplist
 
 

@@ -1,28 +1,27 @@
+import string
+import random
+
 from django.http import Http404, HttpResponseForbidden
 from django.contrib.auth.models import User, Group
-
 from rest_framework import status
-from rest_framework.decorators import api_view,permission_classes,authentication_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from rest_framework.permissions import IsAuthenticated
-
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
-
-from .models import GROUPTYPES,Bucket
-from .authenticate import Auth0Authentication, ServiceAuthentication
-from .serializers import SpecialGroupSerializer,TokenSerializer
-
-from guardian.shortcuts import assign_perm,get_objects_for_group
+from guardian.shortcuts import assign_perm, get_objects_for_group
 from django.contrib.auth import get_user_model
-import string,random
 
+
+from filemaster.models import GROUPTYPES, Bucket
+from filemaster.authenticate import Auth0Authentication, ServiceAuthentication
+from filemaster.serializers import SpecialGroupSerializer, TokenSerializer
 
 import logging
 log = logging.getLogger(__name__)
 
+# Get the current user model
 User = get_user_model()
 
 
@@ -30,14 +29,14 @@ def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
     
-def serializeGroup(user,group=None):
+def serializeGroup(user, group=None):
     groupstructure=None
     if group:
         userstructure=[]
         if user.has_perm('auth.view_group', group):
             for u in group.user_set.all():
                 userstructure.append({"email":u.email})
-            groupstructure={"name":group.name,"id":group.id,"users":group.user_set.all(),"buckets":get_objects_for_group(group, 'filemaster.write_bucket')}
+            groupstructure={"name":group.name, "id":group.id, "users":group.user_set.all(), "buckets":get_objects_for_group(group, 'filemaster.write_bucket')}
     else:
         groupstructure=[]
         for group in Group.objects.all():
@@ -45,13 +44,13 @@ def serializeGroup(user,group=None):
             if user.has_perm('auth.view_group', group):
                 for u in group.user_set.all():
                     userstructure.append({"email":u.email})
-                groupstructure.append({"name":group.name,"id":group.id,"users":group.user_set.all(),"buckets":get_objects_for_group(group, 'filemaster.write_bucket')})
+                groupstructure.append({"name":group.name, "id":group.id, "users":group.user_set.all(), "buckets":get_objects_for_group(group, 'filemaster.write_bucket')})
     return groupstructure
 
 
 class GroupList(APIView):
-    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication, )
+    permission_classes = (IsAuthenticated, )
 
     """
     List all groups that user can see, or create a new group.
@@ -85,21 +84,22 @@ class GroupList(APIView):
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
                 except Exception as e:
-                    print("ERROR: %s" % e)
+                    log.error("ERROR: %s" % e)
             
             for user in group.user_set.all():
                 userstructure.append({"email":user.email})
 
-            sdata.append({"name":group.name,"id":group.id,"users":userstructure}) 
+            sdata.append({"name":group.name, "id":group.id, "users":userstructure})
         
         return Response(sdata, status=status.HTTP_201_CREATED)
+
 
 class GroupDetail(APIView):
     """
     Retrieve, update or delete a Group instance.
     """
-    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication)
+    permission_classes = (IsAuthenticated, )
 
     def get_object(self, pk):
         try:
@@ -111,33 +111,33 @@ class GroupDetail(APIView):
         group = self.get_object(pk)
         if not request.user.has_perm('auth.view_group', group):
             return HttpResponseForbidden()        
-        groupstructure = serializeGroup(request.user,group=group)
+        groupstructure = serializeGroup(request.user, group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
     
-    def getUsers(self,request,group):
+    def getUsers(self, request, group):
         try:
             for u in request.data['users']:
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
                 except Exception as e:
-                    print("ERROR: %s" % e)
+                    log.error("ERROR: %s" % e)
         except:
             pass
     
-    def getBuckets(self,request,group):
+    def getBuckets(self, request, group):
         try:
             for u in request.data['buckets']:
                 try:
                     bucket = Bucket.objects.get(name=u["name"])
                     assign_perm('filemaster.write_bucket', group, bucket)
                 except Exception as e:
-                    print("ERROR: %s" % e)
+                    log.error("ERROR: %s" % e)
         except:
             pass
 
-    def put(self, request, pk,format=None):
+    def put(self, request, pk, format=None):
         if pk.isdigit():
             group = self.get_object(pk)
         elif "__" in pk:
@@ -151,13 +151,12 @@ class GroupDetail(APIView):
         if not request.user.has_perm('auth.change_group', group):
             return HttpResponseForbidden()
         
-        self.getUsers(self.request,group)
-        self.getBuckets(self.request,group)        
+        self.getUsers(self.request, group)
+        self.getBuckets(self.request, group)
 
-        groupstructure = serializeGroup(request.user,group=group)
+        groupstructure = serializeGroup(request.user, group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
-
 
     def delete(self, request, pk, format=None):
         snippet = self.get_object(pk)
@@ -168,8 +167,8 @@ class GroupDetail(APIView):
 
 
 class UserList(APIView):
-    authentication_classes = (Auth0Authentication,TokenAuthentication,ServiceAuthentication)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication)
+    permission_classes = (IsAuthenticated, )
 
     """
     List all groups that user can see, or create a new group.
@@ -186,10 +185,10 @@ class UserList(APIView):
     
         for u in self.request.data['users']:
             try:
-                user = get_user_model().objects.create_user(id_generator(16),email=u,password=id_generator(16))
+                user = get_user_model().objects.create_user(id_generator(16), email=u, password=id_generator(16))
                 userstructure.append(user.email)
             except Exception as e:
-                print("ERROR: %s" % e)
+                log.error("ERROR: %s" % e)
         
         sdata.append({"users":userstructure}) 
         
@@ -197,8 +196,8 @@ class UserList(APIView):
 
 
 @api_view(['GET'])
-@authentication_classes((Auth0Authentication,TokenAuthentication,ServiceAuthentication))
-@permission_classes((IsAuthenticated,))
+@authentication_classes((Auth0Authentication, TokenAuthentication, ServiceAuthentication))
+@permission_classes((IsAuthenticated, ))
 def token(request):
     """
     Retrieve a token

@@ -1,14 +1,20 @@
+import requests
+import json
+import random
+import string
+
 from django.shortcuts import render_to_response
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 
-import requests,json
-import random,string
+import logging
+log = logging.getLogger(__name__)
 
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 def login(request):
     auth0info={
@@ -18,6 +24,7 @@ def login(request):
     }
     
     return render_to_response('rest_framework/login.html', {'auth0info': auth0info})
+
 
 #auth0 callback
 def callback(request):
@@ -44,7 +51,7 @@ def callback(request):
         User = get_user_model()
         User.objects.create_user(id_generator(16), email=user_info["email"], password=id_generator(16))
     except Exception as e:
-        print("ERROR %s" % e)
+        log.error("ERROR %s" % e)
         pass
     
     #response = HttpResponse(json.dumps(user_info), content_type="application/json")

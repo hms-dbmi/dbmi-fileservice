@@ -1,20 +1,22 @@
-
+import uuid
+from datetime import datetime
 
 from celery import shared_task
-
-from django.contrib.auth.models import User 
 from django.contrib.auth import get_user_model
 from django.conf import settings
-user = get_user_model()        
-
-from .models import ArchiveFile,FileLocation,Bucket
-import json,uuid,boto
-from datetime import date,datetime,timedelta
 from boto.s3.lifecycle import Lifecycle, Transition, Rule
 from boto.s3.connection import S3Connection
 
+from .models import ArchiveFile
+
+import logging
+log = logging.getLogger(__name__)
+
+user = get_user_model()
+
+
 @shared_task
-def glacierLifecycleMove(locationstring,pid):
+def glacierLifecycleMove(locationstring, pid):
     status = False
     af = ArchiveFile.objects.get(id=pid)
     url= locationstring
@@ -52,7 +54,7 @@ def glacierLifecycleMove(locationstring,pid):
     try:
         status = bucket.configure_lifecycle(lifecycle)
     except Exception as e:
-        print("Glacier Error %s" % e)
+        log.error("Glacier Error %s" % e)
         
 
     #if status:

@@ -1,8 +1,13 @@
-import datetime,json,ast
-from haystack import indexes
-from .models import ArchiveFile
+import datetime, json, ast
 
+from haystack import indexes
 from celery_haystack.indexes import CelerySearchIndex
+
+from filemaster.models import ArchiveFile
+
+import logging
+log = logging.getLogger(__name__)
+
 
 class ArchiveFileIndex(CelerySearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
@@ -30,7 +35,7 @@ class ArchiveFileIndex(CelerySearchIndex, indexes.Indexable):
             for key in list(jsonmd.keys()):
                 self.prepared_data['md_'+key]=jsonmd[key]
         except Exception as e:
-            print("Prepare Index error %s" % e)
+            log.error("Prepare Index error %s" % e)
         return self.prepared_data
 
     def prepare_tags(self, obj):

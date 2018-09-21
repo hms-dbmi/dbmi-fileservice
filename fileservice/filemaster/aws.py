@@ -1,11 +1,14 @@
+import json
+import uuid
+
 from boto.sts import STSConnection
 from boto.s3.connection import S3Connection
+from django.conf import settings
 
 from .models import FileLocation
 
-from django.conf import settings
-
-import json, uuid
+import logging
+log = logging.getLogger(__name__)
 
 
 def awsSignedURLUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, foldername=None):
@@ -78,7 +81,7 @@ def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None
             jsonoutput = awsTVMUpload(archiveFile=archiveFile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret,
                                       foldername=foldername)
     except Exception as exc:
-        print("Error: %s" % exc)
+        log.error("Error: %s" % exc)
         return {}
 
     return {
@@ -95,6 +98,8 @@ def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None
 
 
 def signedUrlDownload(archiveFile=None, aws_key=None, aws_secret=None):
+
+    # TODO: This chunk is looking particularly sketchy
     url = None
     for loc in archiveFile.locations.all():
         if not loc.storagetype:

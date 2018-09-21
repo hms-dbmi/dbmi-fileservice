@@ -1,29 +1,18 @@
+from datetime import date, timedelta
 
-
-import os
-
-from django.conf import settings
-
-import json,uuid
-from datetime import date,datetime,timedelta
-
-from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
-
-import os
-import sys
-
 from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
-
-User = get_user_model()
-
-today = date.today()
-daysago =  today - timedelta(days=10)
 
 from filemaster.tasks import *
 from filemaster.models import *
 
+import logging
+log = logging.getLogger(__name__)
+
+application = get_wsgi_application()
+User = get_user_model()
+today = date.today()
+daysago = today - timedelta(days=10)
 
 for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__lt=today):
     copysuccessful = False
@@ -33,4 +22,4 @@ for af in ArchiveFile.objects.filter(expirationdate__gt=daysago,expirationdate__
             if bucket and settings.BUCKETS[bucket]["glaciertype"]=="vault":
                 glacierVaultMove.delay(af.locations.all()[0].url,af.id)
     except Exception as e:
-        print(e)
+        log.error(e)
