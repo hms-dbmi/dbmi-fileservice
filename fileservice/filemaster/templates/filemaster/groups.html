@@ -1,0 +1,105 @@
+<div class="page-header">
+<h4>Creating Groups</h4>
+</div>
+<p>A "group" represents a dataset. For instance a project name might be a group, or some specific set of data like "breast cancer samples", "Pan-Cancer Study", or "Ebola samples". This is a logical group of data. Almost like a "folder" in a traditional file system. Permissions (read, write, etc) will be applied to those groups. Files can belong to multiple groups.</p>
+<p>Creates group called "udntest" with no users in it. The Power User executing this command needs to have "add_group" privileges.</p>
+<p>After the group is created, a bunch of roles are created -- ADMINS, DOWNLOADERS, READERS, WRITERS, UPLOADERS. You add users to those roles depending on what powers they should have. The User who created this group automatically has rights in all of the roles.</p>
+<p>Users are always identified by "email address".</p>
+<div class="input-group">
+<span class="input-group-btn">
+    <button class="btn btn-default">Enter your desired group name:</button>
+</span>
+<input id="group-name-input" class="form-control" placeholder="Group name" value="group">
+</div>
+<br />
+<pre><code id="command-group-create">$curl -k -v -X POST --header "Authorization: Token {{ token }}" \
+-H "Content-Type: application/json; charset=UTF-8" \
+-d '{"name":"<span class="group-name">group</span>","users":[]}' \
+"{{ fileservice_url }}filemaster/groups/"</code></pre>
+<button class="btn btn-primary pull-right clipboard-copy" data-clipboard-target="#command-group-create" data-toggle="tooltip">Copy command</button>
+<div class="clearfix"></div>
+<p>Response:</p>
+<pre><code>[
+  {
+    "users": [
+      {
+        "email": "{{ user.email }}"
+      }
+    ],
+    "name": "<span class="group-name">group</span>__ADMINS",
+    "id": 1
+  },
+  {
+    "users": [
+      {
+        "email": "{{ user.email }}"
+      }
+    ],
+    "name": "<span class="group-name">group</span>__DOWNLOADERS",
+    "id": 2
+  },
+  {
+    "users": [
+      {
+        "email": "{{ user.email }}"
+      }
+    ],
+    "name": "<span class="group-name">group</span>__READERS",
+    "id": 3
+  },
+  {
+    "users": [
+      {
+        "email": "{{ user.email }}"
+      }
+    ],
+    "name": "<span class="group-name">group</span>__WRITERS",
+    "id": 4
+  },
+  {
+    "users": [
+      {
+        "email": "{{ user.email }}"
+      }
+    ],
+    "name": "<span class="group-name">group</span>__UPLOADERS",
+    "id": 5
+  }
+]</code></pre>
+<div class="page-header">
+    <h4>Downloaders</h4>
+</div>
+<p>Alters group called <code><span class="group-name">group</span>__DOWNLOADERS</code> and puts users in it. The user's email must exist in the system.</p>
+<div class="input-group">
+<span class="input-group-btn">
+    <button class="btn btn-default">Enter a downloader's email:</button>
+</span>
+<input id="downloader-email-input" class="form-control" placeholder="Downloader email">
+</div>
+<br />
+<pre><code id="command-add-downloader">$curl -k -v -X PUT --header "Authorization: Token {{ token }}" \
+-H "Content-Type: application/json" \
+-d '{"users":[{"email":"<span class="downloader-email"></span>"}]}' \
+"{{ fileservice_url }}filemaster/groups/2/"</code></pre>
+<button class="btn btn-primary pull-right clipboard-copy" data-clipboard-target="#command-add-downloader" data-toggle="tooltip">Copy command</button>
+<div class="clearfix"></div>
+
+<div class="page-header">
+    <h4>Uploaders</h4>
+</div>
+
+<p>If a group needs Upload access to a specific bucket. Ususally to the <code><span class="group-name">group</span>__UPLOADER</code> group.</p>
+<p>Why do I need to do this if a user is a member of an "Upload" group? We want file uploaders to be able to specify different buckets for different needs, as FileService serves many buckets. For security reasons, Upload groups need access to specific buckets or else they could write to ALL buckets.</p>
+<div class="input-group">
+<span class="input-group-btn">
+    <button class="btn btn-default">Enter an uploader's email:</button>
+</span>
+<input id="uploader-email-input" class="form-control" placeholder="Uploader email">
+</div>
+<br />
+<pre><code id="command-add-uploader">$curl -k -v -X PUT --header "Authorization: Token {{ token }}" \
+-H "Content-Type: application/json" \
+-d '{"users":[{"email":"<span class="uploader-email"></span>"}]}' \
+"{{ fileservice_url }}filemaster/groups/5/"</code></pre>
+<button class="btn btn-primary pull-right clipboard-copy" data-clipboard-target="#command-add-uploader" data-toggle="tooltip">Copy command</button>
+<div class="clearfix"></div>

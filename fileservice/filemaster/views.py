@@ -1,21 +1,22 @@
 import string
 import random
+from furl import furl
 
+from django.shortcuts import render
 from django.http import Http404, HttpResponseForbidden
 from django.contrib.auth.models import User, Group
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from guardian.shortcuts import assign_perm, get_objects_for_group
 from django.contrib.auth import get_user_model
 
+from dbmi_client.authn import DBMIModelUser
+from dbmi_client.auth import dbmi_user
 
 from filemaster.models import GROUPTYPES, Bucket
-from filemaster.authenticate import Auth0Authentication, ServiceAuthentication
 from filemaster.serializers import SpecialGroupSerializer, TokenSerializer
 
 import logging
@@ -23,6 +24,30 @@ log = logging.getLogger(__name__)
 
 # Get the current user model
 User = get_user_model()
+
+
+@dbmi_user
+def index(request):
+
+    # Get the user
+    user = request.user
+
+    # Get their token
+    token = Token.objects.get_or_create(user=user)[0].key
+
+    # Get the URL
+    fileservice_url = furl(request.build_absolute_uri())
+    fileservice_url.path.segments.clear()
+    fileservice_url.query.params.clear()
+
+    # Set the context
+    context = {
+        'token': token,
+        'user': user,
+        'fileservice_url': fileservice_url.url,
+    }
+
+    return render(request, template_name='filemaster/index.html', context=context)
 
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
@@ -49,9 +74,6 @@ def serializeGroup(user, group=None):
 
 
 class GroupList(APIView):
-    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication, )
-    permission_classes = (IsAuthenticated, )
-
     """
     List all groups that user can see, or create a new group.
     """
@@ -98,8 +120,6 @@ class GroupDetail(APIView):
     """
     Retrieve, update or delete a Group instance.
     """
-    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication)
-    permission_classes = (IsAuthenticated, )
 
     def get_object(self, pk):
         try:
@@ -167,9 +187,6 @@ class GroupDetail(APIView):
 
 
 class UserList(APIView):
-    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication)
-    permission_classes = (IsAuthenticated, )
-
     """
     List all groups that user can see, or create a new group.
     """
@@ -196,8 +213,7 @@ class UserList(APIView):
 
 
 @api_view(['GET'])
-@authentication_classes((Auth0Authentication, TokenAuthentication, ServiceAuthentication))
-@permission_classes((IsAuthenticated, ))
+@authentication_classes((DBMIModelUser, ))
 def token(request):
     """
     Retrieve a token

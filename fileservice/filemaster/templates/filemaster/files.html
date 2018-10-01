@@ -1,0 +1,14 @@
+<div class="page-header">
+    <h4>Create Files</h4>
+</div>
+
+<p>Now put a file in.  Make sure you fill out "filename" and "permissions".  There are other fields you can fill out, such as Location. Feel free to add tags and as much metadata (in JSON format) as you want.</p>
+<br />
+
+<pre><code id="command-add-file">$curl -k -v -X POST --header "Authorization: Token {{ token }}" \
+ -H "Content-Type: application/json" \
+ -d '{"permissions":["udntest"],"metadata":{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},"filename":"test2.txt","tags":["tag1","tag2"]}' \
+ "{{ fileservice_url }}filemaster/api/file/"</code></pre>
+
+<button class="btn btn-primary pull-right clipboard-copy" data-clipboard-target="#command-add-file" data-toggle="tooltip">Copy command</button>
+<div class="clearfix"></div>

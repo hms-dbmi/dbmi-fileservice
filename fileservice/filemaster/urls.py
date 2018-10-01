@@ -1,5 +1,5 @@
 from django.conf.urls import include, url
-from .views import GroupList,GroupDetail,UserList,token
+from .views import GroupList,GroupDetail,UserList,token, index
 from .files import ArchiveFileList
 from rest_framework.routers import DefaultRouter
 
@@ -11,6 +11,7 @@ urlpatterns = [
     url(r'^groups/$', GroupList.as_view()),
     url(r'^user/$', UserList.as_view()),
     url(r'^groups/(?P<pk>[^/]+)/$', GroupDetail.as_view()),
-    url(r'^token/$', token),
+    url(r'^token/$', token, name="token"),
     url(r'^api/', include(router.urls)),
+    url(r'^$', index, name="index"),
 ]

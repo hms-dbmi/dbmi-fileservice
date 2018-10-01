@@ -21,6 +21,7 @@ django-guardian==1.4.9
 django-haystack==2.8.1
 django-health-check==3.7.0
 django-ipware==2.1.0
+django-markdownify==0.8.0
 django-nose==1.4.5
 django-taggit==0.20.1
 django-taggit-serializer==0.1.7
