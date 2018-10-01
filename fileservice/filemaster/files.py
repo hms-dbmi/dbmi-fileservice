@@ -6,8 +6,6 @@ from boto.s3.connection import S3Connection
 from botocore.client import Config
 from rest_framework.decorators import detail_route
 from rest_framework import status, viewsets, filters
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from django_filters import rest_framework as rest_framework_filters
 from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
@@ -18,8 +16,7 @@ from django.contrib.auth import get_user_model
 
 from filemaster.models import ArchiveFile, FileLocation, Bucket
 from filemaster.serializers import ArchiveFileSerializer
-from filemaster.authenticate import Auth0Authentication, ServiceAuthentication
-from filemaster.permissions import DjangoObjectPermissionsAll, DjangoObjectPermissionsChange
+from filemaster.permissions import DjangoObjectPermissionsAll
 from filemaster.filters import ArchiveFileFilter
 from filemaster.aws import signedUrlUpload, signedUrlDownload
 
@@ -31,27 +28,10 @@ User = get_user_model()
 
 
 # TODO: Replace DetailRoutes here with the newer DRF whatever
-
-# Subclass IsAuthenticated to allow writes from un-authenticated users
-class IsAuthenticatedOrObjectPermissionsAll(BasePermission):
-
-    def has_permission(self, request, view):
-        if not request.user.is_authenticated():
-            if view.action == 'list':
-                object_perms = DjangoObjectPermissionsAll()
-                return object_perms.has_permission(request, view)
-            else:
-                return False
-        else:
-            return True
-
-
 class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
-    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication,)
-    permission_classes = (IsAuthenticatedOrObjectPermissionsAll, DjangoObjectPermissionsChange,)
     filter_class = ArchiveFileFilter
     filter_backends = (rest_framework_filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
 
