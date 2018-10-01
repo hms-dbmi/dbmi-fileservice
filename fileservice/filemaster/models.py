@@ -4,6 +4,10 @@ import re, urllib.request, urllib.parse, urllib.error
 import random,string
 from datetime import timedelta, date
 
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin, UserManager)
 from django.core.mail import send_mail
 from django.core import validators
@@ -212,13 +216,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __unicode__(self):
         return self.email
-    
-    def save(self, *args, **kwargs):
-        if self.pk is None:
-            super(CustomUser, self).save(*args, **kwargs)
-            Token.objects.create(user=self)
-        else:
-            super(CustomUser, self).save(*args, **kwargs)  
 
     def get_absolute_url(self):
         return "/users/%s/" % urllib.parse.quote(self.username)
@@ -239,6 +236,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         Sends an email to this User.
         """
         send_mail(subject, message, from_email, [self.email])
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    """
+    Create a token for each created user
+    """
+    if created and instance.email is not 'AnonymousUser':
+        Token.objects.create(user=instance)
+
 
 def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
     # Do something
