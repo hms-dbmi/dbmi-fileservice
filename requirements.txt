@@ -16,12 +16,12 @@ Django==1.11.15
 django-appconf==1.0.2
 django-axes==4.0.2
 django-bootstrap3==11.0.0
+git+git://github.com/hms-dbmi/django-dbmi-client.git@development#egg=django-dbmi-client
 django-filter==2.0.0
 django-guardian==1.4.9
 django-haystack==2.8.1
 django-health-check==3.7.0
 django-ipware==2.1.0
-django-markdownify==0.8.0
 django-nose==1.4.5
 django-taggit==0.20.1
 django-taggit-serializer==0.1.7

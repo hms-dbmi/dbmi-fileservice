@@ -17,7 +17,7 @@ RUN pip install -r /requirements.txt
 FROM hmsdbmitc/dbmisvc:3.6-alpine
 
 RUN apk add --no-cache --update \
-    mariadb-connector-c git libffi-dev \
+    mariadb-connector-c git libffi-dev git \
   && rm -rf /var/cache/apk/*
 
 # Copy pip packages from builder

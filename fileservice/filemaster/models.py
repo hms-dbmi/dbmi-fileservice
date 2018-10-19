@@ -244,7 +244,7 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
     Create a token for each created user
     """
     if created and instance.email is not 'AnonymousUser':
-        Token.objects.create(user=instance)
+        Token.objects.get_or_create(user=instance)
 
 
 def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
