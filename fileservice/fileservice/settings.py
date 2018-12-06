@@ -45,8 +45,8 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_NAME'),
-        'USER': os.environ.get('MYSQL_USER'),
+        'NAME': os.environ.get('MYSQL_NAME', 'fileservice'),
+        'USER': os.environ.get('MYSQL_USER', 'fileservice'),
         'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
         'HOST': os.environ.get('MYSQL_HOST'),
         'PORT': os.environ.get('MYSQL_PORT', '3306'),
