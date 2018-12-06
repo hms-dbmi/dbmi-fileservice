@@ -155,7 +155,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'dbmi_client.authn.DBMIAuthenticationMiddleware',
+    'dbmi_client.middleware.DBMIJWTAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -234,7 +234,7 @@ DBMI_CLIENT_CONFIG = {
     'AUTHN_ICON_URL': None,
 
     # AuthZ groups/roles/permissions
-    'AUTHZ_ADMIN_GROUP': 'dbmifileservice-admin',
+    'AUTHZ_ADMIN_GROUP': 'dbmifileservice-admins',
     'AUTHZ_ADMIN_PERMISSION': 'ADMIN',
 
     # Login redirect
