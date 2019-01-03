@@ -300,6 +300,42 @@ class ArchiveFileList(viewsets.ModelViewSet):
         fl.save()
         return Response({'message': "upload complete", "filename": archivefile.filename, "uuid": archivefile.uuid})
 
+    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def filehash(self, request, uuid=None):
+
+        # Get location
+        location = self.request.query_params.get('location', None)
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Check for missing location.
+            if not location and archivefile.locations.first():
+                location = archivefile.locations.first().id
+        except:
+            return HttpResponseNotFound()
+
+        if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
+            return HttpResponseForbidden()
+
+        if not location:
+            return HttpResponseForbidden()
+
+        fl = FileLocation.objects.get(id=location)
+        bucket, path = fl.get_bucket()
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
+        if not aws_key:
+            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
+        if not aws_secret:
+            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
+
+        conn = S3Connection(aws_key, aws_secret, is_secure=True)
+        b = conn.get_bucket(bucket)
+        k = b.get_key(path)
+
+        return Response(k.md5)
+
     @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def register(self, request, uuid=None):
         log.debug("[files][ArchiveFileList][register] - Registering file.")

@@ -143,8 +143,8 @@ class GroupDetail(APIView):
                     user.groups.add(group)
                 except Exception as e:
                     log.error("ERROR: %s" % e)
-        except:
-            pass
+        except Exception as e:
+            log.error('Could not add user to group: {}'.format(e))
     
     def getBuckets(self, request, group):
         try:
