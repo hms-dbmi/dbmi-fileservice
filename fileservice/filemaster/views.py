@@ -2,7 +2,7 @@ import string
 import random
 from furl import furl
 
-from django.shortcuts import render
+from django.shortcuts import render, reverse
 from django.http import Http404, HttpResponseForbidden
 from django.contrib.auth.models import User, Group
 from rest_framework import status
@@ -15,6 +15,7 @@ from django.contrib.auth import get_user_model
 
 from dbmi_client.authn import DBMIModelUser
 from dbmi_client.auth import dbmi_user
+from dbmi_client.authn import logout_redirect
 
 from filemaster.models import GROUPTYPES, Bucket
 from filemaster.serializers import SpecialGroupSerializer, TokenSerializer
@@ -24,6 +25,16 @@ log = logging.getLogger(__name__)
 
 # Get the current user model
 User = get_user_model()
+
+
+@dbmi_user
+def logout(request):
+
+    # Send them back to index should they log in again
+    next_url = request.build_absolute_uri(reverse('filemaster:index'))
+
+    # Log them out
+    return logout_redirect(request, next_url)
 
 
 @dbmi_user

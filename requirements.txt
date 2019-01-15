@@ -16,7 +16,7 @@ Django==1.11.18
 django-appconf==1.0.2
 django-axes==4.0.2
 django-bootstrap3==11.0.0
-django-dbmi-client==0.1.4
+django-dbmi-client==0.1.7
 django-filter==2.0.0
 django-guardian==1.4.9
 django-haystack==2.8.1
