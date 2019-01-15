@@ -196,6 +196,9 @@ LOCAL_APPS = (
     'dbmi_client.login',
 )
 
+# Fixes duplicate errors in MYSQL
+TAGGIT_CASE_INSENSITIVE = True
+
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 ########## END APP CONFIGURATION
