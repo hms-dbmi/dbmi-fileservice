@@ -1,5 +1,6 @@
 import sys
 from urllib.parse import urlparse
+import urllib
 from uuid import uuid4
 from datetime import datetime
 
@@ -458,9 +459,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
             # Prepare the parts
             protocol = urlparse(url).scheme
+            path = urllib.parse.quote_plus(url.replace(protocol + '://', ''))
 
             # Build the remote proxy URL
-            proxy_url = '/proxy/' + protocol + '/' + url.replace(protocol + '://', '')
+            proxy_url = '/proxy/' + protocol + '/' + path
 
             # Add the entry
             body += f'- {location.filesize} {proxy_url} {archivefile.filename}\n'
@@ -504,9 +506,14 @@ class ArchiveFileList(viewsets.ModelViewSet):
         # Prepare the parts
         protocol = urlparse(url).scheme
 
+        # Get the remainder
+        path = url.replace(protocol + '://', '')
+
         # Let NGINX handle it
         response = HttpResponse()
-        response['X-Accel-Redirect'] = '/proxy/' + protocol + '/' + url.replace(protocol + '://', '')
+        response['X-Accel-Redirect'] = '/proxy/' + protocol + '/' + urllib.parse.quote_plus(path)
+
+        # Set the filename and ensure it is URL encoded
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(archivefile.filename)
 
         log.debug(f'Sending user to S3 proxy: {response["X-Accel-Redirect"]}')
