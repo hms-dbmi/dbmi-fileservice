@@ -362,10 +362,11 @@ class ArchiveFileList(viewsets.ModelViewSet):
         k = b.get_key(path)
 
         # Check for etag
-        if k.etag and len(k.etag) < 2:
-            log.error('ETag is invalid: {}'.format(k.etag))
+        if not k.etag or len(k.etag) < 2:
+            log.error('ETag is missing or invalid: {}'.format(k.etag))
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+        # Return etag, stripping quotes
         return Response(k.etag[1:-1])
 
     @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
