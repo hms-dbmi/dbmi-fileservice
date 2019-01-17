@@ -14,10 +14,10 @@ ADD requirements.txt /requirements.txt
 # Install Python packages
 RUN pip install -r /requirements.txt
 
-FROM hmsdbmitc/dbmisvc:3.6-alpine
+FROM hmsdbmitc/dbmisvc:3.6-alpine-zip
 
 RUN apk add --no-cache --update \
-    mariadb-connector-c git libffi-dev \
+    mariadb-connector-c git libffi-dev git \
   && rm -rf /var/cache/apk/*
 
 # Copy pip packages from builder
@@ -56,3 +56,5 @@ ENV DBMI_LB=true
 ENV DBMI_SSL=true
 ENV DBMI_CREATE_SSL=true
 ENV DBMI_HEALTHCHECK=true
+ENV DBMI_FILE_PROXY=true
+ENV DBMI_FILE_PROXY_PATH=/proxy

@@ -30,9 +30,10 @@ class FileLocationSerializer(serializers.ModelSerializer):
 
 
 class TokenSerializer(serializers.ModelSerializer):
+    token = serializers.ReadOnlyField(source='key')
     class Meta:
         model = Token
-        fields = ('key',)
+        fields = ('token',)
 
 
 class UserSerializer(serializers.Serializer):

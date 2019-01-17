@@ -1,11 +1,14 @@
-
-
 import uuid
 import datetime
-import re,urllib.request,urllib.parse,urllib.error
-from datetime import timedelta,date
-from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
-                                        UserManager)
+import re, urllib.request, urllib.parse, urllib.error
+import random,string
+from datetime import timedelta, date
+
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
+from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin, UserManager)
 from django.core.mail import send_mail
 from django.core import validators
 from django.db import models
@@ -14,27 +17,26 @@ from django.utils import timezone
 from django.db.models import UUIDField
 from jsonfield import JSONField
 from django.contrib.auth.models import Group
-
-
 from guardian.shortcuts import assign_perm,remove_perm,get_groups_with_perms
 from rest_framework.authtoken.models import Token
-import random,string
 from django.conf import settings
-
 from taggit.managers import TaggableManager
 from django.db.models.signals import m2m_changed
 
+import logging
+log = logging.getLogger(__name__)
 
 
 EXPIRATIONDATE = 60
 if settings.EXPIRATIONDATE:
     EXPIRATIONDATE = settings.EXPIRATIONDATE
 
-
 GROUPTYPES=["ADMINS","DOWNLOADERS","READERS","WRITERS","UPLOADERS"]
+
 
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 class FileLocation(models.Model):
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
@@ -60,7 +62,6 @@ class FileLocation(models.Model):
             path = path.lstrip("/")
             bucket, path = path.split("/", 1)
         return bucket,path
-
 
 
 class Bucket(models.Model):
@@ -117,7 +118,7 @@ class ArchiveFile(models.Model):
             elif types=="DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
         except Exception as e:
-            print("ERROR setperms %s %s %s" % (e,group,types))
+            log.error("ERROR setperms %s %s %s" % (e,group,types))
             return         
 
     def removeDefaultPerms(self,group,types):
@@ -140,7 +141,7 @@ class ArchiveFile(models.Model):
             elif types=="DOWNLOADERS":
                 remove_perm('download_archivefile', g, self)
         except Exception as e:
-            print("ERROR %s" % e)
+            log.error("ERROR %s" % e)
             return         
 
     def setPerms(self, permissions):
@@ -164,7 +165,7 @@ class ArchiveFile(models.Model):
                 if groupname not in grouplist:
                     grouplist.append(groupname)
             except:
-                print("Error with %s" % g.name)
+                log.error("Error with %s" % g.name)
         return grouplist
 
 
@@ -188,11 +189,11 @@ def get_anonymous_user_instance(User):
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(_('username'), max_length=30, unique=True,
-        help_text=_('Required. 30 characters or fewer. Letters, numbers and '
-                    '@/./+/-/_ characters'),
+    username = models.CharField(_('username'), max_length=191, unique=True,
+        help_text=_('Required. 191 characters or fewer. Letters, numbers and '
+                    '@/./+/-/_/| characters'),
         validators=[
-            validators.RegexValidator(re.compile('^[\w.@+-]+$'), _('Enter a valid username.'), 'invalid')
+            validators.RegexValidator(re.compile('^[\w.@+-|]+$'), _('Enter a valid username.'), 'invalid')
         ])
     first_name = models.CharField(_('first name'), max_length=254, blank=True)
     last_name = models.CharField(_('last name'), max_length=254, blank=True)
@@ -215,13 +216,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __unicode__(self):
         return self.email
-    
-    def save(self, *args, **kwargs):
-        if self.pk is None:
-            super(CustomUser, self).save(*args, **kwargs)
-            Token.objects.create(user=self)
-        else:
-            super(CustomUser, self).save(*args, **kwargs)  
 
     def get_absolute_url(self):
         return "/users/%s/" % urllib.parse.quote(self.username)
@@ -242,6 +236,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         Sends an email to this User.
         """
         send_mail(subject, message, from_email, [self.email])
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    """
+    Create a token for each created user
+    """
+    if created and instance.email is not 'AnonymousUser':
+        Token.objects.get_or_create(user=instance)
+
 
 def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
     # Do something

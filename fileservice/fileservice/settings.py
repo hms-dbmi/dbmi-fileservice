@@ -31,13 +31,6 @@ DEBUG = True
 ########## END DEBUG CONFIGURATION
 
 
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST')
-EMAIL_USER = os.environ.get('EMAIL_USER')
-EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-EMAIL_PORT = os.environ.get('EMAIL_PORT', '25')
-EMAIL_SSL = os.environ.get('EMAIL_SSL', False)
-
 ########## MANAGER CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = ()
@@ -52,8 +45,8 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_NAME'),
-        'USER': os.environ.get('MYSQL_USER'),
+        'NAME': os.environ.get('MYSQL_NAME', 'fileservice'),
+        'USER': os.environ.get('MYSQL_USER', 'fileservice'),
         'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
         'HOST': os.environ.get('MYSQL_HOST'),
         'PORT': os.environ.get('MYSQL_PORT', '3306'),
@@ -162,7 +155,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'dbmi_client.middleware.DBMIJWTAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -177,20 +170,13 @@ ROOT_URLCONF = '%s.urls' % SITE_NAME
 
 ########## APP CONFIGURATION
 DJANGO_APPS = (
-    # Default Django apps:
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Useful template tags:
-    # 'django.contrib.humanize',
-
-    # Admin panel and documentation:
     'django.contrib.admin',
-    # 'django.contrib.admindocs',
 )
 
 # Apps specific for this project go here.
@@ -206,11 +192,100 @@ LOCAL_APPS = (
     'axes',
     'health_check',
     'health_check.db',
+    'dbmi_client',
+    'dbmi_client.login',
 )
+
+# Fixes duplicate errors in MYSQL
+TAGGIT_CASE_INSENSITIVE = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 ########## END APP CONFIGURATION
+
+
+######## AUTH CONFIG
+AUTHENTICATION_BACKENDS = (
+    'dbmi_client.authn.DBMIModelAuthenticationBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
+
+# Custom user model
+AUTH_USER_MODEL = 'filemaster.CustomUser'
+
+# Guardian user settings
+GUARDIAN_GET_INIT_ANONYMOUS_USER = 'filemaster.models.get_anonymous_user_instance'
+ANONYMOUS_USER_ID = 1
+##### END AUTH CONFIG
+
+
+######## DBMI CLIENT CONFIG
+DBMI_CLIENT_CONFIG = {
+    'CLIENT': 'dbmifileservice',
+
+    # Auth0 account details
+    'AUTH0_CLIENT_ID': environment.ENV_STR('DBMI_AUTH0_CLIENT_ID'),
+    'AUTH0_SECRET': environment.ENV_STR('DBMI_AUTH0_SECRET'),
+    'AUTH0_TENANT': environment.ENV_STR('DBMI_AUTH0_TENANT'),
+    'JWT_AUTHZ_NAMESPACE': environment.ENV_STR('DBMI_JWT_AUTHZ_NAMESPACE'),
+
+    # Optionally disable logging
+    'ENABLE_LOGGING': True,
+
+    # Universal login screen branding
+    'AUTHN_TITLE': 'DBMI Fileservice',
+    'AUTHN_ICON_URL': None,
+
+    # AuthZ groups/roles/permissions
+    'AUTHZ_ADMIN_GROUP': 'dbmifileservice-admins',
+    'AUTHZ_ADMIN_PERMISSION': 'ADMIN',
+
+    # Login redirect
+    'LOGIN_REDIRECT_URL': environment.ENV_STR('DBMI_LOGIN_REDIRECT_URL'),
+
+    # JWT bits
+    'JWT_COOKIE_DOMAIN': environment.ENV_STR('DBMI_JWT_COOKIE_DOMAIN'),
+
+    # Autocreate users
+    'USER_MODEL_AUTOCREATE': True,
+}
+######## END DBMI CLIENT CONFIG
+
+
+######## DJANGO REST FRAMEWORK CONFIG
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'TEST_REQUEST_RENDERER_CLASSES': (
+        'rest_framework.renderers.MultiPartRenderer',
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.YAMLRenderer'
+    )
+}
+######## END DJANGO REST FRAMEWORK CONFIG
+
+
+########## AWS S3 CONFIGURATION
+S3_UPLOAD_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET', 'dbmi')
+AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID', '')
+AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY', '')
+
+BUCKETS = {
+    S3_UPLOAD_BUCKET: {
+        "type": "s3",
+        "glaciertype": "lifecycle",
+        "AWS_KEY_ID": AWS_STS_ACCESS_KEY_ID,
+        "AWS_SECRET": AWS_STS_SECRET_ACCESS_KEY
+    },
+    "Glacier": {
+        "type": "glacier",
+    }
+}
+########## END AWS S3 CONFIGURATION
 
 
 ########## LOGGING CONFIGURATION
@@ -255,70 +330,10 @@ LOGGING = {
 }
 ########## END LOGGING CONFIGURATION
 
-######## AUTH CONFIG
-AUTHENTICATION_BACKENDS = (
-    # 'social_auth.backends.twitter.TwitterBackend',
-    # 'social_auth.backends.facebook.FacebookBackend',
-    # 'social_auth.backends.google.GoogleOAuth2Backend',
-    # 'social_auth.backends.contrib.linkedin.LinkedinBackend',
-    # 'social_auth.backends.OpenIDBackend',
-    'django.contrib.auth.backends.ModelBackend', # default
-    'guardian.backends.ObjectPermissionBackend',
-)
 
-SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
-LOGIN_ERROR_URL = '/'
-ANONYMOUS_USER_ID = 1
-
-# Auth0 stuff
-AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID")
-
-# Get service level accounts
-SERVICE_ACCOUNTS = environment.ENV_DICT('SERVICE_ACCOUNTS')
-
-##### END AUTH CONFIG
-
-GUARDIAN_GET_INIT_ANONYMOUS_USER = 'filemaster.models.get_anonymous_user_instance'
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
-        'filemaster.authenticate.Auth0Authentication'
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'TEST_REQUEST_RENDERER_CLASSES': (
-        'rest_framework.renderers.MultiPartRenderer',
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.YAMLRenderer'
-    )                                    
-}
-
-AUTH_USER_MODEL = 'filemaster.CustomUser'
+########## TEST CONFIGURATION
 TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'AKIAxxxxx')
 TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')
 EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-
-S3_UPLOAD_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET', 'dbmi')
-AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID', '')
-AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY', '')
-
-BUCKETS = {
-    S3_UPLOAD_BUCKET: {
-        "type": "s3",
-        "glaciertype": "lifecycle",
-        "AWS_KEY_ID": AWS_STS_ACCESS_KEY_ID,
-        "AWS_SECRET": AWS_STS_SECRET_ACCESS_KEY
-    },
-    "Glacier": {
-        "type": "glacier",
-    }
-}
-
-HYPATIO_FILESERVICE_TOKEN = os.environ.get("HYPATIO_FILESERVICE_TOKEN", "")
-
+########## END TEST CONFIGURATION

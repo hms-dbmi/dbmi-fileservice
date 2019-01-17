@@ -1,59 +1,41 @@
-from rest_framework.decorators import detail_route, list_route, permission_classes, authentication_classes
+import sys
+from urllib.parse import urlparse
+import urllib
+from uuid import uuid4
+from datetime import datetime
+
+import boto3
+from boto.s3.connection import S3Connection
+from botocore.client import Config
+from rest_framework.decorators import detail_route, list_route
 from rest_framework import status, viewsets, filters
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from django_filters import rest_framework as rest_framework_filters
-from django.http import Http404,HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseServerError, HttpResponse,HttpResponseNotFound, HttpResponseRedirect
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from .models import ArchiveFile, FileLocation, Bucket
+from django.contrib.auth.models import User
+from django.http import HttpResponse
+from django.contrib.auth import get_user_model
 
-from django.contrib.auth.models import User, Group, Permission
-
-from .serializers import ArchiveFileSerializer
-
-from .authenticate import Auth0Authentication, ServiceAuthentication
-
-from .permissions import DjangoObjectPermissionsAll,DjangoObjectPermissionsChange
-from .filters import ArchiveFileFilter
-
-from .aws import signedUrlUpload, signedUrlDownload
-
-from boto.s3.connection import S3Connection
-
-import sys
-from uuid import uuid4
-import boto3
-from botocore.client import Config
+from filemaster.models import ArchiveFile, FileLocation, Bucket
+from filemaster.serializers import ArchiveFileSerializer
+from filemaster.permissions import DjangoObjectPermissionsAll
+from filemaster.filters import ArchiveFileFilter
+from filemaster.aws import signedUrlUpload, signedUrlDownload
 
 import logging
 log = logging.getLogger(__name__)
 
-from django.contrib.auth import get_user_model
+# Get the current user model
 User = get_user_model()
 
 
-# Subclass IsAuthenticated to allow writes from un-authenticated users
-class IsAuthenticatedOrObjectPermissionsAll(BasePermission):
-
-    def has_permission(self, request, view):
-        if not request.user.is_authenticated():
-            if view.action == 'list':
-                object_perms = DjangoObjectPermissionsAll()
-                return object_perms.has_permission(request, view)
-            else:
-                return False
-        else:
-            return True
-
-
+# TODO: Replace DetailRoutes here with the newer DRF whatever
 class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
-    authentication_classes = (Auth0Authentication, TokenAuthentication, ServiceAuthentication,)
-    permission_classes = (IsAuthenticatedOrObjectPermissionsAll, DjangoObjectPermissionsChange,)
     filter_class = ArchiveFileFilter
     filter_backends = (rest_framework_filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
 
@@ -71,7 +53,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af = ArchiveFile.objects.get(uuid=obj.uuid)
                 af.tags.clear()
             except Exception as e:
-                print("ERROR tags: %s " % e)
+                log.error("ERROR tags: %s " % e)
 
         if removePerms:
             try:
@@ -85,7 +67,31 @@ class ArchiveFileList(viewsets.ModelViewSet):
                     af = ArchiveFile.objects.get(uuid=obj.uuid)
                     af.setPerms(p)
                 except Exception as e:
-                    print("ERROR permissions: %s " % e)
+                    log.error("ERROR permissions: %s " % e)
+
+    def retrieve(self, request, *args, **kwargs):
+        log.debug("[files][ArchiveFileList][list] - Retrieving File: {}".format(kwargs.get('uuid')))
+
+        # Get the UUIDs from the request data.
+        uuid = kwargs.get('uuid')
+        if uuid is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Fetch the files
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+
+        # Check for an empty set and quit early.
+        if not request.user.has_perm('filemaster.view_archivefile', archivefile):
+            return HttpResponseForbidden()
+
+        # Serialize them.
+        serializer = ArchiveFileSerializer(archivefile, many=False)
+
+        # Return them
+        return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
         log.debug("[files][ArchiveFileList][list] - Listing Files.")
@@ -322,6 +328,48 @@ class ArchiveFileList(viewsets.ModelViewSet):
         fl.save()
         return Response({'message': "upload complete", "filename": archivefile.filename, "uuid": archivefile.uuid})
 
+    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def filehash(self, request, uuid=None):
+
+        # Get location
+        location = self.request.query_params.get('location', None)
+
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Check for missing location.
+            if not location and archivefile.locations.first():
+                location = archivefile.locations.first().id
+        except:
+            return HttpResponseNotFound()
+
+        if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
+            return HttpResponseForbidden()
+
+        if not location:
+            return HttpResponseForbidden()
+
+        fl = FileLocation.objects.get(id=location)
+        bucket, path = fl.get_bucket()
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
+        if not aws_key:
+            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
+        if not aws_secret:
+            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
+
+        conn = S3Connection(aws_key, aws_secret, is_secure=True)
+        b = conn.get_bucket(bucket)
+        k = b.get_key(path)
+
+        # Check for etag
+        if not k.etag or len(k.etag) < 2:
+            log.error('ETag is missing or invalid: {}'.format(k.etag))
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Return etag, stripping quotes
+        return Response(k.etag[1:-1])
+
     @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def register(self, request, uuid=None):
         log.debug("[files][ArchiveFileList][register] - Registering file.")
@@ -366,3 +414,108 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # get presigned url
         return Response({'message': message})
+
+    @list_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def archive(self, request):
+        log.debug("[files][ArchiveFileList][archive] - Archiving Files: {}".format(request.query_params.get('uuids')))
+
+        # Get the UUIDs from the request data.
+        uuids_string = self.request.query_params.get('uuids', None)
+        if uuids_string is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        # Break them apart.
+        uuids = uuids_string.split(',')
+        if len(uuids) == 0:
+            return HttpResponseBadRequest()
+
+        try:
+            # Fetch the files
+            archivefiles = ArchiveFile.objects.filter(uuid__in=uuids)
+        except:
+            return HttpResponseNotFound()
+
+        # Filter out files the user doesn't have permissions for
+        archivefiles_allowed = [archivefile for archivefile in archivefiles
+                                if request.user.has_perm('filemaster.view_archivefile', archivefile)]
+
+        # Check for an empty set and quit early.
+        if len(archivefiles_allowed) == 0:
+            return HttpResponseForbidden()
+
+        # Set credentials
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
+
+        # get presigned urls and prepare response body
+        body = ''
+        for archivefile in archivefiles_allowed:
+
+            # Get tje location
+            location = archivefile.locations.first()
+
+            # Get the URL
+            url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+
+            # Prepare the parts
+            protocol = urlparse(url).scheme
+            path = urllib.parse.quote_plus(url.replace(protocol + '://', ''))
+
+            # Build the remote proxy URL
+            proxy_url = '/proxy/' + protocol + '/' + path
+
+            # Add the entry
+            body += f'- {location.filesize} {proxy_url} {archivefile.filename}\n'
+
+        # Forward it on
+        log.debug('Archive request: \n\n{}\n\n'.format(body))
+
+        # Check for specified filename
+        if request.query_params.get('filename'):
+            archive_filename = request.query_params.get('filename')
+        else:
+            # Set the name of the output
+            archive_filename = f'archive.{datetime.now().isoformat().replace(":", "")}.zip'
+
+        # Let NGINX handle it
+        response = HttpResponse(body)
+        response['X-Archive-Files'] = 'zip'
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(archive_filename)
+
+        log.debug(f'Sending user to archive proxy: {response}')
+
+        return response
+
+    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def proxy(self, request, uuid=None):
+        url = None
+        archivefile = None
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+
+        if not request.user.has_perm('filemaster.download_archivefile', archivefile):
+            return HttpResponseForbidden()
+        # get presigned url
+        aws_key = self.request.query_params.get('aws_key', None)
+        aws_secret = self.request.query_params.get('aws_secret', None)
+
+        url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+
+        # Prepare the parts
+        protocol = urlparse(url).scheme
+
+        # Get the remainder
+        path = url.replace(protocol + '://', '')
+
+        # Let NGINX handle it
+        response = HttpResponse()
+        response['X-Accel-Redirect'] = '/proxy/' + protocol + '/' + urllib.parse.quote_plus(path)
+
+        # Set the filename and ensure it is URL encoded
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(archivefile.filename)
+
+        log.debug(f'Sending user to S3 proxy: {response["X-Accel-Redirect"]}')
+
+        return response
