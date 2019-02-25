@@ -237,7 +237,7 @@ DBMI_CLIENT_CONFIG = {
     'AUTHN_ICON_URL': None,
 
     # AuthZ groups/roles/permissions
-    'AUTHZ_ADMIN_GROUP': 'dbmifileservice',
+    'AUTHZ_ADMIN_GROUP': 'DBMI',
     'AUTHZ_ADMIN_PERMISSION': 'ADMIN',
 
     # Login redirect
