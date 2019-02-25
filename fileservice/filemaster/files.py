@@ -200,7 +200,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Pull request parameters
         expires = int(self.request.query_params.get('expires', '10'))
-        bucket = self.request.query_params.get('bucket', settings.S3_UPLOAD_BUCKET)
+        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
 
         # Generate a folder name
         folder_name = str(uuid4())
@@ -259,7 +259,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseForbidden()
 
         cloud = self.request.query_params.get('cloud', "aws")
-        bucket = self.request.query_params.get('bucket', settings.S3_UPLOAD_BUCKET)
+        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
         sys.stderr.write("bucket %s\n" % bucket)
         bucketobj = Bucket.objects.get(name=bucket)
         if not request.user.has_perm('filemaster.write_bucket', bucketobj):

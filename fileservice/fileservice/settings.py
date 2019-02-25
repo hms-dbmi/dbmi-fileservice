@@ -6,7 +6,7 @@ from sys import path
 import os, sys
 from django.utils.crypto import get_random_string
 
-from fileservice import environment
+from dbmi_client import environment
 
 ########## PATH CONFIGURATION
 # Absolute filesystem path to the Django project directory:
@@ -45,11 +45,11 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_NAME', 'fileservice'),
-        'USER': os.environ.get('MYSQL_USER', 'fileservice'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
-        'HOST': os.environ.get('MYSQL_HOST'),
-        'PORT': os.environ.get('MYSQL_PORT', '3306'),
+        'NAME': environment.get_str('MYSQL_NAME', 'fileservice'),
+        'USER': environment.get_str('MYSQL_USER', 'fileservice'),
+        'PASSWORD': environment.get_str('MYSQL_PASSWORD'),
+        'HOST': environment.get_str('MYSQL_HOST'),
+        'PORT': environment.get_str('MYSQL_PORT', '3306'),
     }
 }
 ########## END DATABASE CONFIGURATION
@@ -108,14 +108,14 @@ STATICFILES_FINDERS = (
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 # Note: This key should only be used for development and testing.
 chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = os.environ.get("SECRET_KEY", get_random_string(50, chars))
+SECRET_KEY = environment.get_str("SECRET_KEY", get_random_string(50, chars))
 ########## END SECRET CONFIGURATION
 
 
 ########## SITE CONFIGURATION
 # Hosts/domain names that are valid for this site
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = environment.ENV_LIST("ALLOWED_HOSTS")
+ALLOWED_HOSTS = environment.get_list("ALLOWED_HOSTS")
 ########## END SITE CONFIGURATION
 
 
@@ -206,7 +206,7 @@ INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 
 ######## AUTH CONFIG
 AUTHENTICATION_BACKENDS = (
-    'dbmi_client.authn.DBMIModelAuthenticationBackend',
+    'dbmi_client.authn.DBMIUsersModelAuthenticationBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
@@ -224,10 +224,10 @@ DBMI_CLIENT_CONFIG = {
     'CLIENT': 'dbmifileservice',
 
     # Auth0 account details
-    'AUTH0_CLIENT_ID': environment.ENV_STR('DBMI_AUTH0_CLIENT_ID'),
-    'AUTH0_SECRET': environment.ENV_STR('DBMI_AUTH0_SECRET'),
-    'AUTH0_TENANT': environment.ENV_STR('DBMI_AUTH0_TENANT'),
-    'JWT_AUTHZ_NAMESPACE': environment.ENV_STR('DBMI_JWT_AUTHZ_NAMESPACE'),
+    'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID'),
+    'AUTH0_SECRET': environment.get_str('DBMI_AUTH0_SECRET'),
+    'AUTH0_TENANT': environment.get_str('DBMI_AUTH0_TENANT'),
+    'JWT_AUTHZ_NAMESPACE': environment.get_str('DBMI_JWT_AUTHZ_NAMESPACE'),
 
     # Optionally disable logging
     'ENABLE_LOGGING': True,
@@ -237,14 +237,14 @@ DBMI_CLIENT_CONFIG = {
     'AUTHN_ICON_URL': None,
 
     # AuthZ groups/roles/permissions
-    'AUTHZ_ADMIN_GROUP': 'dbmifileservice-admins',
+    'AUTHZ_ADMIN_GROUP': 'dbmifileservice',
     'AUTHZ_ADMIN_PERMISSION': 'ADMIN',
 
     # Login redirect
-    'LOGIN_REDIRECT_URL': environment.ENV_STR('DBMI_LOGIN_REDIRECT_URL'),
+    'LOGIN_REDIRECT_URL': environment.get_str('DBMI_LOGIN_REDIRECT_URL'),
 
     # JWT bits
-    'JWT_COOKIE_DOMAIN': environment.ENV_STR('DBMI_JWT_COOKIE_DOMAIN'),
+    'JWT_COOKIE_DOMAIN': environment.get_str('DBMI_JWT_COOKIE_DOMAIN'),
 
     # Autocreate users
     'USER_MODEL_AUTOCREATE': True,
@@ -270,21 +270,39 @@ REST_FRAMEWORK = {
 
 
 ########## AWS S3 CONFIGURATION
-S3_UPLOAD_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET', 'dbmi')
-AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID', '')
-AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY', '')
+
+# Set the default S3 bucket to use when not specified
+S3_DEFAULT_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET')
+AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID')
+AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY')
 
 BUCKETS = {
-    S3_UPLOAD_BUCKET: {
-        "type": "s3",
-        "glaciertype": "lifecycle",
-        "AWS_KEY_ID": AWS_STS_ACCESS_KEY_ID,
-        "AWS_SECRET": AWS_STS_SECRET_ACCESS_KEY
-    },
-    "Glacier": {
-        "type": "glacier",
+    S3_DEFAULT_BUCKET: {
+        'type': 's3',
+        'glaciertype': 'lifecycle',
+        'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
+        'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
     }
 }
+
+# Include all additional buckets and AWS credentials like follows:
+# Bucket specification format:
+# <S3 bucket name>: {
+#   "AWS_KEY_ID": <AWS STS key id>,
+#   "AWS_SECRET": <AWS STS secret key>
+# },
+BUCKETS.update({
+    bucket: {
+        'type': 's3',
+        'glaciertype': 'lifecycle',
+        'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
+        'AWS_SECRET': credentials.get('AWS_SECRET'),
+    } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
+})
+
+# Add glacier
+BUCKETS["Glacier"] = {"type": "glacier"}
+
 ########## END AWS S3 CONFIGURATION
 
 
@@ -332,8 +350,8 @@ LOGGING = {
 
 
 ########## TEST CONFIGURATION
-TEST_AWS_KEY = os.environ.get('TEST_AWS_KEY', 'AKIAxxxxx')
-TEST_AWS_SECRET = os.environ.get('TEST_AWS_SECRET', 'asdfadsfadsf')
+TEST_AWS_KEY = environment.get_str('TEST_AWS_KEY', 'AKIAxxxxx')
+TEST_AWS_SECRET = environment.get_str('TEST_AWS_SECRET', 'asdfadsfadsf')
 EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 ########## END TEST CONFIGURATION
