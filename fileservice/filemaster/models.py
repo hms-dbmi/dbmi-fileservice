@@ -61,7 +61,7 @@ class FileLocation(models.Model):
             _, path = self.url.split(":", 1)
             path = path.lstrip("/")
             bucket, path = path.split("/", 1)
-        return bucket,path
+        return bucket, path
 
 
 class Bucket(models.Model):
@@ -168,6 +168,20 @@ class ArchiveFile(models.Model):
                 log.error("Error with %s" % g.name)
         return grouplist
 
+    def get_location(self, bucket):
+
+        # If only one location, return it
+        if not len(self.locations.all()) == 1:
+            return next(iter(self.locations.all()))
+
+        # Walk through locations and match bucket
+        for location in self.locations.all():
+
+            # Check bucket
+            if location.get_bucket()[0].lower() == bucket.lower():
+                return location
+
+        return None
 
     def __unicode__(self):
         return "%s" % (self.uuid)

@@ -30,9 +30,9 @@ def awsSignedURLUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=N
 
 def awsTVMUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, foldername=None):
     if not aws_key:
-        aws_key = settings.AWS_STS_ACCESS_KEY_ID
+        aws_key = settings.BUCKETS[settings.S3_DEFAULT_BUCKET]['AWS_KEY_ID']
     if not aws_secret:
-        aws_secret = settings.AWS_STS_SECRET_ACCESS_KEY
+        aws_secret = settings.BUCKETS[settings.S3_DEFAULT_BUCKET]['AWS_SECRET']
 
     stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
@@ -68,7 +68,7 @@ def awsTVMUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, f
 
 def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, cloud="aws"):
     if not bucket:
-        bucket = settings.S3_UPLOAD_BUCKET
+        bucket = settings.S3_DEFAULT_BUCKET
 
     url = None
     fl = None
@@ -80,21 +80,22 @@ def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None
                                          foldername=foldername)
             jsonoutput = awsTVMUpload(archiveFile=archiveFile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret,
                                       foldername=foldername)
+
+        return {
+            "url": url,
+            "location": "s3://" + bucket + "/" + foldername + "/" + archiveFile.filename,
+            "locationid": fl.id,
+            "bucket": bucket,
+            "foldername": foldername,
+            "filename": archiveFile.filename,
+            "secretkey": jsonoutput["SecretAccessKey"],
+            "accesskey": jsonoutput["AccessKeyId"],
+            "sessiontoken": jsonoutput["SessionToken"]
+        }
+
     except Exception as exc:
         log.error("Error: %s" % exc)
         return {}
-
-    return {
-        "url": url,
-        "location": "s3://" + bucket + "/" + foldername + "/" + archiveFile.filename,
-        "locationid": fl.id,
-        "bucket": bucket,
-        "foldername": foldername,
-        "filename": archiveFile.filename,
-        "secretkey": jsonoutput["SecretAccessKey"],
-        "accesskey": jsonoutput["AccessKeyId"],
-        "sessiontoken": jsonoutput["SessionToken"]
-    }
 
 
 def signedUrlDownload(archiveFile=None, aws_key=None, aws_secret=None):
