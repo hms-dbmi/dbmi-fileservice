@@ -182,6 +182,7 @@ DJANGO_APPS = (
 # Apps specific for this project go here.
 LOCAL_APPS = (
     'guardian',
+    'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
     'filemaster',
@@ -256,6 +257,7 @@ DBMI_CLIENT_CONFIG = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
+        'dbmi_client.authn.DBMIModelUser',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
