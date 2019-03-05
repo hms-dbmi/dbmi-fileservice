@@ -1,20 +1,28 @@
 from django.contrib import admin
-from .models import CustomUser, Bucket, ArchiveFile
+from .models import CustomUser, Bucket, ArchiveFile, FileLocation
 from guardian.admin import GuardedModelAdmin
 from django.contrib.auth.models import Group
 from django.contrib.admin.sites import NotRegistered
 
 
-class CustomUserAdmin(GuardedModelAdmin):
-    pass
+class CustomUserAdmin(admin.ModelAdmin):
+    fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'groups', )
+    list_display = ('username', 'email', 'is_staff')
 
 
-class BucketAdmin(GuardedModelAdmin):
-    pass
+class BucketAdmin(admin.ModelAdmin):
+    fields = ('name', 'permissions', )
+    list_display = ('name', )
 
 
-class ArchiveFileAdmin(GuardedModelAdmin):
-    pass
+class ArchiveFileAdmin(admin.ModelAdmin):
+    fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', )
+    list_display = ('filename', 'uuid', 'creationdate', 'owner')
+
+
+class FileLocationAdmin(admin.ModelAdmin):
+    fields = ('creationdate', 'url', 'uploadComplete', 'storagetype', 'filesize', )
+    list_display = ('url', 'filesize', 'creationdate', 'storagetype')
 
 
 def patch_admin(model, admin_site=None):
@@ -41,5 +49,6 @@ def patch_admin(model, admin_site=None):
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Bucket, BucketAdmin)
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
+admin.site.register(FileLocation, FileLocationAdmin)
 patch_admin(Group)
 

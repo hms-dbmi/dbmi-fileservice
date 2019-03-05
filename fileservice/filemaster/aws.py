@@ -1,5 +1,6 @@
 import json
 import uuid
+import boto3
 
 from boto.sts import STSConnection
 from boto.s3.connection import S3Connection
@@ -30,9 +31,9 @@ def awsSignedURLUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=N
 
 def awsTVMUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, foldername=None):
     if not aws_key:
-        aws_key = settings.AWS_STS_ACCESS_KEY_ID
+        aws_key = settings.BUCKETS[settings.S3_DEFAULT_BUCKET]['AWS_KEY_ID']
     if not aws_secret:
-        aws_secret = settings.AWS_STS_SECRET_ACCESS_KEY
+        aws_secret = settings.BUCKETS[settings.S3_DEFAULT_BUCKET]['AWS_SECRET']
 
     stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
@@ -68,7 +69,7 @@ def awsTVMUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, f
 
 def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, cloud="aws"):
     if not bucket:
-        bucket = settings.S3_UPLOAD_BUCKET
+        bucket = settings.S3_DEFAULT_BUCKET
 
     url = None
     fl = None
@@ -80,21 +81,22 @@ def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None
                                          foldername=foldername)
             jsonoutput = awsTVMUpload(archiveFile=archiveFile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret,
                                       foldername=foldername)
+
+        return {
+            "url": url,
+            "location": "s3://" + bucket + "/" + foldername + "/" + archiveFile.filename,
+            "locationid": fl.id,
+            "bucket": bucket,
+            "foldername": foldername,
+            "filename": archiveFile.filename,
+            "secretkey": jsonoutput["SecretAccessKey"],
+            "accesskey": jsonoutput["AccessKeyId"],
+            "sessiontoken": jsonoutput["SessionToken"]
+        }
+
     except Exception as exc:
         log.error("Error: %s" % exc)
         return {}
-
-    return {
-        "url": url,
-        "location": "s3://" + bucket + "/" + foldername + "/" + archiveFile.filename,
-        "locationid": fl.id,
-        "bucket": bucket,
-        "foldername": foldername,
-        "filename": archiveFile.filename,
-        "secretkey": jsonoutput["SecretAccessKey"],
-        "accesskey": jsonoutput["AccessKeyId"],
-        "sessiontoken": jsonoutput["SessionToken"]
-    }
 
 
 def signedUrlDownload(archiveFile=None, aws_key=None, aws_secret=None):
@@ -139,3 +141,105 @@ def signedUrlDownload(archiveFile=None, aws_key=None, aws_secret=None):
         pass
 
     return conn.generate_url(3600 * 24, 'GET', bucket, path)
+
+
+def awsCopyFile(archive_file, destination, origin=None, aws_key=None, aws_secret=None):
+
+    # If not origin, assume default
+    if not origin:
+        origin = settings.S3_DEFAULT_BUCKET
+
+    # Get the location
+    location = archive_file.get_location(origin)
+    if not location:
+        log.error(f'No location found for file: {archive_file.uuid}')
+        return None
+
+    # Get the file key
+    key = location.get_bucket()[1]
+
+    # Trim the protocol from the S3 URL
+    log.debug(f'Copying file: s3://{origin.lower()}/{key} -> s3://{destination.lower()}/{key}')
+
+    # Get credentials
+    if not aws_key:
+        aws_key = settings.BUCKETS.get(destination, {}).get("AWS_KEY_ID")
+    if not aws_secret:
+        aws_secret = settings.BUCKETS.get(destination, {}).get('AWS_SECRET')
+
+    # Do the move
+    s3 = boto3.client('s3',
+                      aws_access_key_id=aws_key,
+                      aws_secret_access_key=aws_secret)
+    s3.copy_object(Bucket=destination, CopySource=f'{origin}/{key}', Key=f'{key}')
+
+    # Create the new location
+    new_location = FileLocation(url=f'S3://{destination.lower()}/{key}',
+                                storagetype=settings.BUCKETS[destination]['type'],
+                                uploadComplete=location.uploadComplete,
+                                filesize=location.filesize)
+    new_location.save()
+
+    # Add it
+    archive_file.locations.add(new_location)
+
+    return new_location
+
+
+def awsRemoveFile(archive_file, location, origin=None, aws_key=None, aws_secret=None):
+
+    # If not origin, assume default
+    if not origin:
+        origin = settings.S3_DEFAULT_BUCKET
+
+    # Ensure another location exists
+    if not len(archive_file.locations.all()) > 1:
+        log.error(f'Cannot delete location "{location}" for file "{archive_file.uuid}", no other locations')
+        return False
+
+    # Get the file key
+    key = location.get_bucket()[1]
+
+    # Trim the protocol from the S3 URL
+    log.debug(f'Removing file from bucket: {origin}')
+
+    # Get credentials
+    if not aws_key:
+        aws_key = settings.BUCKETS.get(origin, {}).get("AWS_KEY_ID")
+    if not aws_secret:
+        aws_secret = settings.BUCKETS.get(origin, {}).get('AWS_SECRET')
+
+    # Do the move
+    s3 = boto3.client('s3',
+                      aws_access_key_id=aws_key,
+                      aws_secret_access_key=aws_secret)
+    s3.delete_object(Bucket=origin, Key=f'{key}')
+
+    # Delete the location
+    archive_file.locations.remove(location)
+    location.delete()
+
+    return True
+
+
+def awsMoveFile(archive_file, destination, origin=None, aws_key=None, aws_secret=None):
+
+    # If not origin, assume default
+    if not origin:
+        origin = settings.S3_DEFAULT_BUCKET
+
+    # Get the current location
+    location = archive_file.get_location(origin)
+    if not location:
+        log.error(f'No location found for file: {archive_file.uuid}')
+        return False
+
+    # Call other methods
+    new_location = awsCopyFile(archive_file, destination, origin, aws_key, aws_secret)
+    if new_location:
+
+        # File was copied, remove from origin
+        if awsRemoveFile(archive_file, location, origin, aws_key, aws_secret):
+            return new_location
+
+    return False

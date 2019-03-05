@@ -1,5 +1,6 @@
 import sys
-from urllib.parse import urlparse
+from furl import furl
+from urllib.parse import urlparse, quote_plus
 import urllib
 from uuid import uuid4
 from datetime import datetime
@@ -11,7 +12,7 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework import status, viewsets, filters
 from rest_framework.response import Response
 from django_filters import rest_framework as rest_framework_filters
-from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound, HttpResponseServerError
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
@@ -22,7 +23,7 @@ from filemaster.models import ArchiveFile, FileLocation, Bucket
 from filemaster.serializers import ArchiveFileSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
 from filemaster.filters import ArchiveFileFilter
-from filemaster.aws import signedUrlUpload, signedUrlDownload
+from filemaster.aws import signedUrlUpload, signedUrlDownload, awsCopyFile, awsMoveFile
 
 import logging
 log = logging.getLogger(__name__)
@@ -95,21 +96,32 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         log.debug("[files][ArchiveFileList][list] - Listing Files.")
+
         # Get the UUIDs from the request data.
         uuids_string = self.request.query_params.get('uuids', None)
-        if uuids_string is None:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if uuids_string:
+            log.debug(f'Finding files for UUIDs: {uuids_string}')
 
-        # Break them apart.
-        uuids = uuids_string.split(',')
-        if len(uuids) == 0:
-            return HttpResponseBadRequest()
+            # Break them apart.
+            uuids = uuids_string.split(',')
+            if len(uuids) == 0:
+                return HttpResponseBadRequest()
 
-        try:
-            # Fetch the files
-            archivefiles = ArchiveFile.objects.filter(uuid__in=uuids)
-        except:
-            return HttpResponseNotFound()
+            try:
+                # Fetch the files
+                archivefiles = ArchiveFile.objects.filter(uuid__in=uuids)
+            except:
+                return HttpResponseNotFound()
+
+        else:
+            log.debug(f'Finding files for user: {request.user.username}')
+
+            # Get all files for the requesting user
+            try:
+                # Fetch the files
+                archivefiles = ArchiveFile.objects.filter(owner=request.user.id)
+            except:
+                return HttpResponseNotFound()
 
         # Filter out files the user doesn't have permissions for
         archivefiles_allowed = [archivefile for archivefile in archivefiles
@@ -118,6 +130,15 @@ class ArchiveFileList(viewsets.ModelViewSet):
         # Check for an empty set and quit early.
         if len(archivefiles_allowed) == 0:
             return HttpResponseForbidden()
+
+        # Check for bucket filter
+        bucket = request.query_params.get('bucket')
+        if bucket:
+            log.debug(f'Filtering files in S3 bucket: {bucket}')
+
+            # Iterate locations
+            archivefiles_allowed = [file for file in archivefiles if bucket in
+                                    [fl.get_bucket()[0] for fl in file.locations.all()]]
 
         # Serialize them.
         serializer = ArchiveFileSerializer(archivefiles_allowed, many=True)
@@ -168,6 +189,100 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'message': "file deleted", "uuid": uuid})
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def copy(self, request, uuid):
+
+        # Get bucket
+        destination = request.query_params.get('to')
+        origin = request.query_params.get('from', settings.S3_DEFAULT_BUCKET)
+
+        # Check request
+        if not uuid or not destination:
+            return HttpResponseBadRequest('File UUID and destination bucket are required')
+
+        # Ensure it exists
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+
+        # Check permissions on file
+        if not request.user.has_perm('filemaster.change_archivefile', archivefile):
+            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{uuid}\'')
+
+        # Get location
+        location = archivefile.get_location(origin)
+        if not location:
+            return HttpResponseBadRequest(f'File {uuid} has multiple locations, \'from\' must be specified')
+
+        # Check permissions
+        if not request.user.has_perm('filemaster.change_filelocation', location):
+            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{location}\'')
+
+        try:
+            # Perform the copy
+            new_location = awsCopyFile(archivefile, destination, origin)
+            if not new_location:
+                log.error(f'Could not copy file {archivefile.uuid}')
+                return HttpResponseServerError(f'Could not copy file {archivefile.uuid}')
+
+            return Response({'message': 'copied', 'url': new_location.url, 'uuid': uuid})
+
+        except Exception as e:
+            log.exception('File move error: {}'.format(e), exc_info=True, extra={
+                'archivefile': archivefile.id, 'uuid': uuid, 'location': location.id,
+                'origin': origin, 'destination': destination,
+            })
+
+            return HttpResponseServerError('Error copying file')
+
+    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    def move(self, request, uuid):
+
+        # Get bucket
+        destination = request.query_params.get('to')
+        origin = request.query_params.get('from', settings.S3_DEFAULT_BUCKET)
+
+        # Check request
+        if not uuid or not destination:
+            return HttpResponseBadRequest('File UUID and destination bucket are required')
+
+        # Ensure it exists
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+        except:
+            return HttpResponseNotFound()
+
+        # Check permissions on file
+        if not request.user.has_perm('filemaster.change_archivefile', archivefile):
+            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{uuid}\'')
+
+        # Get location
+        location = archivefile.get_location(origin)
+        if not location:
+            return HttpResponseBadRequest(f'File {uuid} has multiple locations, \'from\' must be specified')
+
+        # Check permissions
+        if not request.user.has_perm('filemaster.change_filelocation', location):
+            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{location}\'')
+
+        try:
+            # Perform the copy
+            new_location = awsMoveFile(archivefile, destination, origin)
+            if not new_location:
+                log.error(f'Could not move file {archivefile.uuid}')
+                return HttpResponseServerError(f'Could not copy file {archivefile.uuid}')
+
+            return Response({'message': 'moved', 'url': new_location.url, 'uuid': uuid})
+
+        except Exception as e:
+            log.exception('File move error: {}'.format(e), exc_info=True, extra={
+                'archivefile': archivefile.id, 'uuid': uuid, 'location': location.id,
+                'origin': origin, 'destination': destination
+            })
+
+            return HttpResponseServerError('Error moving file')
+
+    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def download(self, request, uuid=None):
         url = None
         archivefile = None
@@ -200,7 +315,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Pull request parameters
         expires = int(self.request.query_params.get('expires', '10'))
-        bucket = self.request.query_params.get('bucket', settings.S3_UPLOAD_BUCKET)
+        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
 
         # Generate a folder name
         folder_name = str(uuid4())
@@ -259,7 +374,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseForbidden()
 
         cloud = self.request.query_params.get('cloud', "aws")
-        bucket = self.request.query_params.get('bucket', settings.S3_UPLOAD_BUCKET)
+        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
         sys.stderr.write("bucket %s\n" % bucket)
         bucketobj = Bucket.objects.get(name=bucket)
         if not request.user.has_perm('filemaster.write_bucket', bucketobj):
