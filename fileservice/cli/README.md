@@ -3,6 +3,8 @@
 ## Install
 ```
 cd cli
+mkvirtualenv -p python3 dbmi-fileservice
+pip install -r requirements.txt
 python setup.py build
 python setup.py develop
 python setup.py install
@@ -107,7 +109,7 @@ fileservice -v upload --fileID f149cf5d-722e-4a3f-9767-89b856458ddb \
 	--bucket "udnarchive-ci"
 ```
 ### Download data from the cloud
-Downalods a file to local filesystems
+Downloads a file to local filesystems.
 ```
 curl `fileservice download --fileID f149cf5d-722e-4a3f-9767-89b856458ddb | jq -r .url` > ~/test.txt
 ```
