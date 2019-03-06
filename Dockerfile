@@ -32,14 +32,11 @@ RUN pip install -r /requirements.txt
 # Copy app source
 COPY /fileservice /app
 
-# Set the build env
+# Set app parameters. These can be overridden in the ECS Task Definition's container environment variables.
 ENV DBMI_ENV=prod
-
-# Set app parameters
 ENV DBMI_PARAMETER_STORE_PREFIX=dbmi.fileservice.${DBMI_ENV}
 ENV DBMI_PARAMETER_STORE_PRIORITY=true
 ENV DBMI_AWS_REGION=us-east-1
-
 ENV DBMI_APP_WSGI=fileservice
 ENV DBMI_APP_ROOT=/app
 ENV DBMI_APP_DB=true

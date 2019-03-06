@@ -62,6 +62,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af.killPerms()
             except:
                 pass
+
         if 'permissions' in self.request.data:
             for p in self.request.data['permissions']:
                 try:
@@ -391,16 +392,18 @@ class ArchiveFileList(viewsets.ModelViewSet):
         locationid = urlhash["locationid"]
 
         # get presigned url
-        return Response({'url': url,
-                         'message': message,
-                         'location': location,
-                         'locationid': locationid,
-                         'bucket': urlhash['bucket'],
-                         'foldername': urlhash['foldername'],
-                         'filename': urlhash['filename'],
-                         'secretkey': urlhash['secretkey'],
-                         'accesskey': urlhash['accesskey'],
-                         'sessiontoken': urlhash['sessiontoken']})
+        return Response({
+            'url': url,
+            'message': message,
+            'location': location,
+            'locationid': locationid,
+            'bucket': urlhash['bucket'],
+            'foldername': urlhash['foldername'],
+            'filename': urlhash['filename'],
+            'secretkey': urlhash['secretkey'],
+            'accesskey': urlhash['accesskey'],
+            'sessiontoken': urlhash['sessiontoken']
+        })
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def uploadcomplete(self, request, uuid=None):
@@ -437,10 +440,13 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         conn = S3Connection(aws_key, aws_secret, is_secure=True)
         b = conn.get_bucket(bucket)
+
+        # TODO FS-59: should try/catch here and return something like HttpResponseNotFound 404
         k = b.get_key(path)
         fl.filesize = k.size
         fl.uploadComplete = datetime.now()
         fl.save()
+
         return Response({'message': "upload complete", "filename": archivefile.filename, "uuid": archivefile.uuid})
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])

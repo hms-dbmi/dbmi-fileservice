@@ -19,21 +19,27 @@ def awsSignedURLUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=N
         aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
     conn = S3Connection(aws_key, aws_secret, is_secure=True)
-
     url = "S3://%s/%s" % (bucket, foldername + "/" + archiveFile.filename)
+
     # register file
     fl = FileLocation(url=url, storagetype=settings.BUCKETS[bucket]['type'])
     fl.save()
     archiveFile.locations.add(fl)
-    return conn.generate_url(3600 * 24 * 7, 'PUT', bucket=bucket, key=foldername + "/" + archiveFile.filename,
-                             force_http=False), fl
+
+    return conn.generate_url(
+        3600 * 24 * 7,
+        'PUT',
+        bucket=bucket,
+        key=foldername + "/" + archiveFile.filename,
+        force_http=False
+    ), fl
 
 
 def awsTVMUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, foldername=None):
     if not aws_key:
-        aws_key = settings.BUCKETS[settings.S3_DEFAULT_BUCKET]['AWS_KEY_ID']
+        aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     if not aws_secret:
-        aws_secret = settings.BUCKETS[settings.S3_DEFAULT_BUCKET]['AWS_SECRET']
+        aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
     stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
@@ -56,14 +62,17 @@ def awsTVMUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None, f
                 ],
                 "Effect": "Allow"
             }
-        ]}
+        ]
+    }
 
     policystring = json.dumps(policydict)
     ststoken = stsconn.get_federation_token("sys_upload", 24 * 3600, policystring)
+
     jsonoutput = {}
     jsonoutput["SecretAccessKey"] = ststoken.credentials.secret_key
     jsonoutput["AccessKeyId"] = ststoken.credentials.access_key
     jsonoutput["SessionToken"] = ststoken.credentials.session_token
+
     return jsonoutput
 
 
@@ -77,10 +86,22 @@ def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None
 
     try:
         if cloud == "aws":
-            url, fl = awsSignedURLUpload(archiveFile=archiveFile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret,
-                                         foldername=foldername)
-            jsonoutput = awsTVMUpload(archiveFile=archiveFile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret,
-                                      foldername=foldername)
+
+            url, fl = awsSignedURLUpload(
+                archiveFile=archiveFile,
+                bucket=bucket,
+                aws_key=aws_key,
+                aws_secret=aws_secret,
+                foldername=foldername
+            )
+
+            jsonoutput = awsTVMUpload(
+                archiveFile=archiveFile,
+                bucket=bucket,
+                aws_key=aws_key,
+                aws_secret=aws_secret,
+                foldername=foldername
+            )
 
         return {
             "url": url,
@@ -113,6 +134,7 @@ def signedUrlDownload(archiveFile=None, aws_key=None, aws_secret=None):
             url = loc.url
             break
 
+    # TODO FS-74: loc may be undefined if no archivefile locations
     bucket, path = loc.get_bucket()
 
     if not aws_key:
