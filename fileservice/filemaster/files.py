@@ -194,7 +194,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 else:
                     log.debug(f'ArchiveFile {archivefile.uuid} has remaining locations, will not delete')
 
-                    return Response({'message': "file location deleted", "uuid": uuid, "location": path})
+                    return Response({'message': "file location deleted", "uuid": uuid, "location": fl.url})
 
         except Exception as e:
             log.exception(f'File delete error: {e}', exc_info=True, extra={
