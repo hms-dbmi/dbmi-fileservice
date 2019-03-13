@@ -1,16 +1,16 @@
 version: 0.2
 
 phases:
-  install: 
-    commands:
+  # install: 
+    # commands:
       # Install python packages before running tests
-      - pip install -r requirements.txt
+      # - pip install -r requirements.txt
 
   pre_build:
     commands:
-      - echo Running all unit tests...
-      - cd fileservice
-      - python manage.py test --settings fileservice.test_settings
+      # - echo Running all unit tests...
+      # - cd fileservice
+      # - python manage.py test --settings fileservice.test_settings
       - echo Logging in to Amazon ECR...
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
 
