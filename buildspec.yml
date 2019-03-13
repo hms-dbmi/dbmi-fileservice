@@ -10,7 +10,8 @@ phases:
   build:
     commands:
       - echo Running all unit tests...
-      - python fileservice/manage.py test
+      - cd fileservice
+      - python manage.py test --settings fileservice.test_settings
       - echo Building docker image...
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - echo Tagging new docker image...
