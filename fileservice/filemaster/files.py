@@ -23,7 +23,7 @@ from filemaster.models import ArchiveFile, FileLocation, Bucket
 from filemaster.serializers import ArchiveFileSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
 from filemaster.filters import ArchiveFileFilter
-from filemaster.aws import signedUrlUpload, signedUrlDownload, awsCopyFile, awsMoveFile
+from filemaster.aws import signedUrlUpload, signedUrlDownload, awsCopyFile, awsMoveFile, awsRemoveFile
 
 import logging
 log = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 af.killPerms()
             except:
                 pass
+
         if 'permissions' in self.request.data:
             for p in self.request.data['permissions']:
                 try:
@@ -159,36 +160,50 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Fetch the file location
+            fl = FileLocation.objects.get(id=location)
         except:
             return HttpResponseNotFound()
 
         if not request.user.has_perm('filemaster.delete_archivefile', archivefile):
             return HttpResponseForbidden()
 
-        fl = FileLocation.objects.get(id=location)
-        bucket, path = fl.get_bucket()
+        # Get credentials, if passed
         aws_key = self.request.query_params.get('aws_key', None)
         aws_secret = self.request.query_params.get('aws_secret', None)
-        if not aws_key:
-            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-        if not aws_secret:
-            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-        conn = S3Connection(aws_key, aws_secret, is_secure=True)
-        b = conn.get_bucket(bucket)
-        k = b.get_key(path)
+        try:
+            # Delete it.
+            log.debug(f'Deleting S3 file: {fl.url}')
+            if awsRemoveFile(fl, aws_key, aws_secret):
 
-        # Delete it.
-        if k is not None:
-            k.delete()
+                # Remove everything.
+                log.debug(f'Deleting file location: {fl.id}')
+                fl.delete()
 
-        # Remove everything.
-        fl.delete()
-        archivefile.delete()
+                # If file has no remaining locations, delete it as well
+                if archivefile.locations.count() == 0:
+                    log.debug(f'ArchiveFile {archivefile.uuid} has no locations, deleting entirely')
 
-        return Response({'message': "file deleted", "uuid": uuid})
+                    # Delete the file
+                    archivefile.delete()
 
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+                    return Response({'message': "file deleted", "uuid": uuid})
+
+                else:
+                    log.debug(f'ArchiveFile {archivefile.uuid} has remaining locations, will not delete')
+
+                    return Response({'message': "file location deleted", "uuid": uuid, "location": fl.url})
+
+        except Exception as e:
+            log.exception(f'File delete error: {e}', exc_info=True, extra={
+                'file': archivefile.uuid, 'location': fl.url
+            })
+
+        return Response({'message': "file not deleted", "uuid": uuid}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def copy(self, request, uuid):
 
         # Get bucket
@@ -235,7 +250,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
             return HttpResponseServerError('Error copying file')
 
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def move(self, request, uuid):
 
         # Get bucket
@@ -270,7 +285,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             new_location = awsMoveFile(archivefile, destination, origin)
             if not new_location:
                 log.error(f'Could not move file {archivefile.uuid}')
-                return HttpResponseServerError(f'Could not copy file {archivefile.uuid}')
+                return HttpResponseServerError(f'Could not move file {archivefile.uuid}')
 
             return Response({'message': 'moved', 'url': new_location.url, 'uuid': uuid})
 
@@ -391,16 +406,18 @@ class ArchiveFileList(viewsets.ModelViewSet):
         locationid = urlhash["locationid"]
 
         # get presigned url
-        return Response({'url': url,
-                         'message': message,
-                         'location': location,
-                         'locationid': locationid,
-                         'bucket': urlhash['bucket'],
-                         'foldername': urlhash['foldername'],
-                         'filename': urlhash['filename'],
-                         'secretkey': urlhash['secretkey'],
-                         'accesskey': urlhash['accesskey'],
-                         'sessiontoken': urlhash['sessiontoken']})
+        return Response({
+            'url': url,
+            'message': message,
+            'location': location,
+            'locationid': locationid,
+            'bucket': urlhash['bucket'],
+            'foldername': urlhash['foldername'],
+            'filename': urlhash['filename'],
+            'secretkey': urlhash['secretkey'],
+            'accesskey': urlhash['accesskey'],
+            'sessiontoken': urlhash['sessiontoken']
+        })
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def uploadcomplete(self, request, uuid=None):
@@ -437,10 +454,13 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         conn = S3Connection(aws_key, aws_secret, is_secure=True)
         b = conn.get_bucket(bucket)
+
+        # TODO FS-59: should try/catch here and return something like HttpResponseNotFound 404
         k = b.get_key(path)
         fl.filesize = k.size
         fl.uploadComplete = datetime.now()
         fl.save()
+
         return Response({'message': "upload complete", "filename": archivefile.filename, "uuid": archivefile.uuid})
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])

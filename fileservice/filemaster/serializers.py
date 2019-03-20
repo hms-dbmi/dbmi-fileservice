@@ -54,15 +54,15 @@ class BucketSerializer(serializers.Serializer):
     class Meta:
         fields = ('name',)
 
-        
+
 class SpecialGroupSerializer(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
-    users = UserSerializer(required=False)
-    buckets = BucketSerializer(required=False)
+    users = UserSerializer(required=False, many=True)
+    buckets = BucketSerializer(required=False, many=True)
 
     class Meta:
-        fields = ('id','name','users','buckets',)
+        fields = ('id', 'name', 'users', 'buckets',)
 
 
 class JSONFieldSerializer(WritableField):

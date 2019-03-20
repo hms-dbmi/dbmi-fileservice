@@ -64,23 +64,27 @@ def index(request):
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
-    
-def serializeGroup(user, group=None):
-    groupstructure=None
+
+def serialize_group(user, group=None):
+    groupstructure = None
     if group:
-        userstructure=[]
         if user.has_perm('auth.view_group', group):
-            for u in group.user_set.all():
-                userstructure.append({"email":u.email})
-            groupstructure={"name":group.name, "id":group.id, "users":group.user_set.all(), "buckets":get_objects_for_group(group, 'filemaster.write_bucket')}
+            groupstructure = {
+                "name": group.name,
+                "id": group.id,
+                "users": group.user_set.all(),
+                "buckets": get_objects_for_group(group, 'filemaster.write_bucket')
+            }
     else:
-        groupstructure=[]
+        groupstructure = []
         for group in Group.objects.all():
-            userstructure=[]
             if user.has_perm('auth.view_group', group):
-                for u in group.user_set.all():
-                    userstructure.append({"email":u.email})
-                groupstructure.append({"name":group.name, "id":group.id, "users":group.user_set.all(), "buckets":get_objects_for_group(group, 'filemaster.write_bucket')})
+                groupstructure.append({
+                    "name": group.name,
+                    "id": group.id,
+                    "users": group.user_set.all(),
+                    "buckets": get_objects_for_group(group, 'filemaster.write_bucket')
+                })
     return groupstructure
 
 
@@ -92,7 +96,7 @@ class GroupList(APIView):
 
         log.debug("[views][GroupList][get]")
 
-        groupstructure = serializeGroup(request.user)
+        groupstructure = serialize_group(request.user)
         serializer = SpecialGroupSerializer(groupstructure, many=True)
         return Response(serializer.data)
 
@@ -142,11 +146,15 @@ class GroupDetail(APIView):
         group = self.get_object(pk)
         if not request.user.has_perm('auth.view_group', group):
             return HttpResponseForbidden()        
-        groupstructure = serializeGroup(request.user, group=group)
+        groupstructure = serialize_group(request.user, group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
-    
-    def getUsers(self, request, group):
+
+    def add_users_to_group(self, request, group):
+        """
+        Given a list of email addresses, grab each user and add them to the given group.
+        """
+
         try:
             for u in request.data['users']:
                 try:
@@ -154,12 +162,31 @@ class GroupDetail(APIView):
                     user.groups.add(group)
                 except Exception as e:
                     log.error("ERROR: %s" % e)
-        except Exception as e:
-            log.error('Could not add user to group: {}'.format(e))
-    
-    def getBuckets(self, request, group):
+        except:
+            pass
+
+    def remove_users_from_group(self, request, group):
+        """
+        Given a list of email addresses, grab each user and remove them from the group.
+        """
+
         try:
-            for u in request.data['buckets']:
+            for u in request.data['users']:
+                try:
+                    user = User.objects.get(email=u["email"])
+                    user.groups.remove(group)
+                except Exception as e:
+                    log.error("ERROR: %s" % e)
+        except:
+            pass
+
+    def add_write_perms_for_group_to_buckets(self,request,group):
+        """
+        Given a list of buckets, assign write bucket permissions to the group.
+        """
+
+        try:
+            for u in request.DATA['buckets']:
                 try:
                     bucket = Bucket.objects.get(name=u["name"])
                     assign_perm('filemaster.write_bucket', group, bucket)
@@ -169,32 +196,58 @@ class GroupDetail(APIView):
             pass
 
     def put(self, request, pk, format=None):
+        """
+        Given a list of email addresses and buckets, this endpoint will attempt to add each
+        user to the specified group, and it will also make sure the the group can access all
+        the given buckets.
+        """
+
         if pk.isdigit():
             group = self.get_object(pk)
         elif "__" in pk:
             group = Group.objects.get(name=pk)
         else:
             return HttpResponseForbidden()
-            
+
         if not group:
             return HttpResponseForbidden()
-            
+
         if not request.user.has_perm('auth.change_group', group):
             return HttpResponseForbidden()
-        
-        self.getUsers(self.request, group)
-        self.getBuckets(self.request, group)
 
-        groupstructure = serializeGroup(request.user, group=group)
+        self.add_users_to_group(self.request, group)
+        self.add_write_perms_for_group_to_buckets(self.request, group)
+
+        groupstructure = serialize_group(request.user, group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
+
         return Response(serializer.data)
 
     def delete(self, request, pk, format=None):
-        snippet = self.get_object(pk)
-        if not request.user.has_perm('auth.delete_group', snippet):
-            return HttpResponseForbidden()        
-        snippet.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        """
+        Given a list of email addresses, this endpoint will attempt to remove each user
+        from all their groups, effectively removing their permissions for everything.
+        """
+
+        if pk.isdigit():
+            group = self.get_object(pk)
+        elif "__" in pk:
+            group = Group.objects.get(name=pk)
+        else:
+            return HttpResponseForbidden()
+
+        if not group:
+            return HttpResponseForbidden()
+
+        if not request.user.has_perm('auth.change_group', group):
+            return HttpResponseForbidden()
+
+        self.remove_users_from_group(self.request, group)
+
+        groupstructure = serialize_group(request.user, group=group)
+        serializer = SpecialGroupSerializer(groupstructure, many=False)
+
+        return Response(serializer.data)
 
 
 class UserList(APIView):

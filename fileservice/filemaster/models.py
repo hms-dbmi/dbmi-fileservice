@@ -145,8 +145,8 @@ class ArchiveFile(models.Model):
             return         
 
     def setPerms(self, permissions):
-            for types in GROUPTYPES:
-                self.setDefaultPerms(permissions, types)
+        for types in GROUPTYPES:
+            self.setDefaultPerms(permissions, types)
 
     def killPerms(self):
         for groupname in self.get_permissions_display():

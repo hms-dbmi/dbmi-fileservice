@@ -2,12 +2,21 @@
 
 This is about the API. If you want the CLI, go to fileservice/cli  
 
-## Diagrams -- open in draw.io plugin  
+## Accessing the Django shell in an EC2 docker container
+1. First ssh into the EC2.
+2. Then bash into the docker container running the django app.
+3. Then run `ps -ef` to determine which PID is running the wsgi app as root user.
+4. Then run `. <(xargs -0 bash -c 'printf "export %q\n" "$@"' -- < /proc/{PID}/environ)` with the PID from the above step to copy environment variables into your session.
+5. Then run `python app/manage.py shell` to access the shell.
+
+## Old notes below, may need updates
+
+### Diagrams -- open in draw.io plugin  
 [Login](https://drive.google.com/file/d/0B9lnki7dueLpV1pKbWJMVGNaRTQ/view?usp=sharing)  
 [Upload](https://drive.google.com/file/d/0B9lnki7dueLpNFJfTHBfdEV5ZlU/view?usp=sharing)   
 [Download](https://drive.google.com/file/d/0B9lnki7dueLpTkRDOHg0N2hVRTQ/view?usp=sharing)    
 
-## Log in  
+### Log in  
 * HMS SAML via Auth0 -- alter first few lines of hms_saml_login.py and fill with your information. Then run it.  
 ```
 $python hms_saml_login.py
@@ -26,7 +35,7 @@ https://hms-dbmi.auth0.com/authorize?response_type=code&scope=openid%20profile&c
 * A plain old U/p -- Not desired, but can be used once added to fileservice database. Username will always be "email"
 * An API token -- Not desired for humans, but can be used by services. Will need to be requested from HMS.  
 
-## Create Permissions and Groups
+### Create Permissions and Groups
 
 A "group" represents a dataset. For instance a projectname might be a group, or some specific set of data like "breast cancer samples", "Pan-Cancer Study", or "Ebola samples". This is a logical group of data. Almost like a "folder" in a traditional file system. Permissions (read, write, etc) will be applied to those groups. Files can belong to multiple groups.  
 
@@ -115,7 +124,7 @@ $curl -k -v -X PUT --cookie "Authorization=$CBMI1" \
 ```
 
 
-## File management  
+### File management  
 
 Now put a file in.  Make sure you fill out "filename" and "permissions".  There are other fields you can fill out, such as Location. Feel free to add tags and as much metadata (in JSON format) as you want.  
 ```
@@ -146,7 +155,7 @@ $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
 }
 ```
 
-## Edit a file with a PATCH.  The following will add a tag ("test4444") to the list of tags.  
+### Edit a file with a PATCH.  The following will add a tag ("test4444") to the list of tags.  
 ```
 curl -v -X PATCH  --cookie "Authorization=$CBMI1" \
 -H "Content-Type: application/json" \
@@ -154,7 +163,7 @@ curl -v -X PATCH  --cookie "Authorization=$CBMI1" \
 "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/0c19072c-9a6f-4a96-88ec-a9bb4033c4d6/"
 ```
 
-## Register a local file location associated with this file.  
+### Register a local file location associated with this file.  
 ```
 $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
  -H "Content-Type: application/json" \
@@ -162,7 +171,7 @@ $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/0c19072c-9a6f-4a96-88ec-a9bb4033c4d6/register/"
 ```
 
-## Upload a local file to S3. This command also registers the file location to the FileService.  
+### Upload a local file to S3. This command also registers the file location to the FileService.  
 ```
 $curl -k -v -X GET --cookie "Authorization=$CBMI1" \
  -H "Content-Type: application/json" \
@@ -184,7 +193,7 @@ $curl -k -v -X POST --cookie "Authorization=$CBMI1" \
 ```
 
 
-## Download a file from S3.  
+### Download a file from S3.  
 ```
 $curl -k -v -X GET --cookie "Authorization=$CBMI1" \
  "https://fileservice-ci.dbmi.hms.harvard.edu/filemaster/api/file/0c19072c-9a6f-4a96-88ec-a9bb4033c4d6/download/"
@@ -194,7 +203,7 @@ $curl -k -v -X GET --cookie "Authorization=$CBMI1" \
 ```
 Use the returned URL to grab the file.  
 
-# Search for a file.  
+### Search for a file.  
 ```
 curl -X GET -H 'Accept: application/json;indent=4' -H 'Content-Type:application/json' \ 
 --cookie "Authorization=$CBMI1" \ 
@@ -220,7 +229,7 @@ curl -X GET -H 'Accept: application/json;indent=4' -H 'Content-Type:application/
 ]
 
 ```
-## Parameters  
+### Parameters  
 * q = content -- the keywords you're looking for. 
 * fields = field1,field2 -- to limit the search to certain fields. If you're looking for a field embedded in the regular metadata, try to start the field with md_ (md_permissions, md_coverage, etc).  
 * facets = facet1,facet2 -- implemented in indexing, but nothing visible to users now (http://django-haystack.readthedocs.org/en/latest/faceting.html) .  
