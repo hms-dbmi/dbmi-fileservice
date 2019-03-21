@@ -309,43 +309,56 @@ BUCKETS["Glacier"] = {"type": "glacier"}
 
 
 ########## LOGGING CONFIGURATION
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#logging
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error when DEBUG=False.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
-# Configure logging
+
+# Configure sentry
+if environment.get_str('RAVEN_URL', None):
+    RAVEN_CONFIG = {
+        'dsn': environment.get_str('RAVEN_URL'),
+        'site': 'fileservice',
+    }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'console': {
-            'format': '[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] - %(message)s',
+            'format': '[DBMI-Fileservice] - [%(asctime)s][%(levelname)s]'
+                      '[%(name)s.%(funcName)s:%(lineno)d] - %(message)s',
         },
     },
     'handlers': {
+        'sentry': {
+            'level': 'ERROR',  # To capture more than ERROR, change to WARNING, INFO, etc.
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+            'tags': {'custom-tag': 'x'},
+        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'console',
             'stream': sys.stdout,
-        },
+        }
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['console', 'sentry', ],
         'level': 'DEBUG',
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
-            'level': 'WARNING',
+            'handlers': ['console', ],
+            'level': 'ERROR',
             'propagate': True,
         },
-        'urllib3': {
+        'raven': {
+            'level': 'WARNING',
             'handlers': ['console'],
-            'level': 'WARNING'
-        }
+            'propagate': False,
+        },
+        'sentry.errors': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': False,
+        },
     },
 }
 ########## END LOGGING CONFIGURATION
