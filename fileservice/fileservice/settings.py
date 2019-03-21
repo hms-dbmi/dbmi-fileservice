@@ -26,7 +26,7 @@ path.append(DJANGO_ROOT)
 
 ########## DEBUG CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = True
+DEBUG = environment.get_bool("DJANGO_DEBUG", False)
 
 ########## END DEBUG CONFIGURATION
 
