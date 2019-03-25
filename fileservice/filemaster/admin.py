@@ -34,7 +34,7 @@ class FileLocationAdmin(admin.ModelAdmin):
 
 class DownloadLogAdmin(admin.ModelAdmin):
     fields = ('archivefile', 'download_requested_on', 'requesting_user', 'requesting_email')
-    readonly_fields = ('download_requested_on', )
+    # readonly_fields = ('download_requested_on', )
 
 
 def patch_admin(model, admin_site=None):
