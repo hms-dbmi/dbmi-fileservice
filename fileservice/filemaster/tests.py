@@ -20,7 +20,9 @@ from django.test import Client
 from django.test import override_settings
 from django.test import TestCase
 
+from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
+from filemaster.models import DownloadLog
 
 # The super user account represents an application (like UDN or Hypatio) that is
 # accessing fileservice and can do anything.
@@ -632,3 +634,37 @@ class FileserviceTests(TestCase):
         client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
         response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/download/')
         self.assertEqual(response.status_code, 403)
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    @override_settings(BUCKETS=BUCKETS_SETTING)
+    def test_download_request_creates_download_log(self, get_federation_token):
+
+        # First have a superuser upload the file
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.super_user_token}'
+
+        # Patch what get_federation_token() would return since we will not be calling any real AWS STS service.
+        get_federation_token.return_value = self.fake_federation_token
+
+        response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/upload/?bucket={ALLOWED_BUCKET_NAME}')
+        self.assertEqual(response.status_code, 200)
+
+        folder_name = json.loads(response.content)["foldername"]
+        file_name = json.loads(response.content)["filename"]
+
+        # Pretend to upload the file to S3.
+        file_content = io.StringIO()
+        file_content.write("abcdefghijklmnopqrst")
+        s3 = boto3.client('s3')
+        s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
+
+        # Then have a downloader user try to download it.
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.everything_but_admin_user_token}'
+        response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/download/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue("url" in json.loads(response.content))
+
+        # Then check to see if a download log was created.
+        archivefile = ArchiveFile.objects.get(uuid=self.accessible_file_uuid)
+        download_log = DownloadLog.objects.filter(archivefile=archivefile, requesting_user=self.everything_but_admin_user)
+        self.assertTrue(download_log.exists())
