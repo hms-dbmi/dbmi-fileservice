@@ -30,6 +30,7 @@ class ArchiveFileAdmin(admin.ModelAdmin):
 class FileLocationAdmin(admin.ModelAdmin):
     fields = ('creationdate', 'url', 'uploadComplete', 'storagetype', 'filesize', )
     list_display = ('url', 'filesize', 'creationdate', 'storagetype')
+    readonly_fields = ('creationdate', )
 
 
 class DownloadLogAdmin(admin.ModelAdmin):

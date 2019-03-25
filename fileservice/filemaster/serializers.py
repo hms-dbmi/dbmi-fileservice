@@ -26,7 +26,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class FileLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileLocation
-        fields = ('id', 'url','uploadComplete','storagetype','filesize')
+        fields = ('id', 'url', 'uploadComplete', 'storagetype', 'filesize')
 
 
 class TokenSerializer(serializers.ModelSerializer):
@@ -74,17 +74,22 @@ class ArchiveFileSerializer(TaggitSerializer, serializers.ModelSerializer):
     tags = TagListSerializerField(required=False)
     metadata = JSONFieldSerializer(required=False)
     owner = UserSerializer(required=False)
-    locations = FileLocationSerializer(read_only=True, required=False, many=True)
+    locations = serializers.SerializerMethodField('get_locations_list')
     permissions = serializers.ListField(read_only=True, source='get_permissions_display')
     expirationdate = serializers.DateField(required=False)
+
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id','uuid','description','metadata','tags','owner','filename','locations','permissions','creationdate','modifydate','expirationdate')
+        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename', 'locations', 'permissions', 'creationdate', 'modifydate', 'expirationdate')
+
+    def get_locations_list(self, instance):
+        locations = instance.locations.all().order_by('id')
+        return FileLocationSerializer(locations, many=True, context=self.context).data
 
 
 class JSONSearchField(WritableField):
-    
+
     def to_native(self, value):
         con_value = ast.literal_eval(value)
         return json.dumps(con_value)
