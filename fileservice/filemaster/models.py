@@ -87,7 +87,7 @@ class ArchiveFile(models.Model):
     description = models.CharField(max_length=255, blank=True, null=True, default='')
     filename = models.TextField()
     metadata = JSONField(blank=True, null=True)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.DO_NOTHING)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL)
     locations = models.ManyToManyField(FileLocation)
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
@@ -296,3 +296,14 @@ def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
                 pass
 
 m2m_changed.connect(location_changed, sender=ArchiveFile.locations.through)
+
+
+class DownloadLog(models.Model):
+    """
+    A model used to track when a user has requested a file download.
+    """
+
+    archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.PROTECT)
+    download_requested_on = models.DateTimeField(blank=False, null=False, auto_now_add=True)
+    requesting_user = models.ForeignKey(CustomUser, blank=False, null=False, on_delete=models.PROTECT)
+    requesting_email = models.EmailField(blank=True, null=True, help_text='Since the user might be a service account, this field helps track where the original request came from.')

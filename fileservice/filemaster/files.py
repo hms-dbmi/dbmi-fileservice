@@ -1,31 +1,43 @@
+from datetime import datetime
+import logging
 import sys
-from furl import furl
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse
 import urllib
 from uuid import uuid4
-from datetime import datetime
 
 import boto3
 from boto.s3.connection import S3Connection
 from botocore.client import Config
-from rest_framework.decorators import detail_route, list_route
-from rest_framework import status, viewsets, filters
+from rest_framework.decorators import detail_route
+from rest_framework.decorators import list_route
+from rest_framework import filters
+from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.response import Response
 from django_filters import rest_framework as rest_framework_filters
-from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound, HttpResponseServerError
+from django.http import HttpResponseBadRequest
+from django.http import HttpResponseForbidden
+from django.http import HttpResponseNotFound
+from django.http import HttpResponseServerError
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
 
-from filemaster.models import ArchiveFile, FileLocation, Bucket
+from filemaster.aws import awsCopyFile
+from filemaster.aws import awsMoveFile
+from filemaster.aws import awsRemoveFile
+from filemaster.aws import signedUrlDownload
+from filemaster.aws import signedUrlUpload
+from filemaster.filters import ArchiveFileFilter
+from filemaster.models import ArchiveFile
+from filemaster.models import Bucket
+from filemaster.models import DownloadLog
+from filemaster.models import FileLocation
 from filemaster.serializers import ArchiveFileSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
-from filemaster.filters import ArchiveFileFilter
-from filemaster.aws import signedUrlUpload, signedUrlDownload, awsCopyFile, awsMoveFile, awsRemoveFile
 
-import logging
 log = logging.getLogger(__name__)
 
 # Get the current user model
@@ -308,11 +320,15 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         if not request.user.has_perm('filemaster.download_archivefile', archivefile):
             return HttpResponseForbidden()
-        # get presigned url
+
+        # Get presigned url
         aws_key = self.request.query_params.get('aws_key', None)
         aws_secret = self.request.query_params.get('aws_secret', None)
-
         url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+
+        # Save a download log
+        DownloadLog.objects.create(archivefile=archivefile, requesting_user=request.user)
+
         return Response({'url': url})
 
     @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
@@ -637,6 +653,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         aws_secret = self.request.query_params.get('aws_secret', None)
 
         url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+
+        # Save a download log
+        DownloadLog.objects.create(archivefile=archivefile, requesting_user=request.user)
 
         # Prepare the parts
         protocol = urlparse(url).scheme
