@@ -65,6 +65,6 @@ admin.site.register(ArchiveFile, ArchiveFileAdmin)
 admin.site.register(Bucket, BucketAdmin)
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(DownloadLog, DownloadLogAdmin)
-admin.site.register(FileLocation, DownloadLogAdmin)
+admin.site.register(FileLocation, FileLocationAdmin)
 
 patch_admin(Group)
