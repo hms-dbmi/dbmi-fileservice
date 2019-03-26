@@ -306,4 +306,3 @@ class DownloadLog(models.Model):
     archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.PROTECT)
     download_requested_on = models.DateTimeField(blank=False, null=False, auto_now_add=True)
     requesting_user = models.ForeignKey(CustomUser, blank=False, null=False, on_delete=models.PROTECT)
-    requesting_email = models.EmailField(blank=True, null=True, help_text='Since the user might be a service account, this field helps track where the original request came from.')
