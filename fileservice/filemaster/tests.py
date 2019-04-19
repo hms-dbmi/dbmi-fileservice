@@ -2,6 +2,8 @@ import json
 import boto3
 import botocore
 import io
+from datetime import datetime
+from datetime import timedelta
 
 from mock import patch
 from moto import mock_s3
@@ -216,6 +218,33 @@ class FileserviceTests(TestCase):
         fake_sts_credentials = FakeStsCredentials(access_key=FAKE_AWS_KEY_ID, secret_key=FAKE_AWS_SECRET, session_token='abcdefghikjlmnop')
         self.fake_federation_token = FakeStsFederationToken(credentials=fake_sts_credentials)
 
+    @override_settings(BUCKETS=BUCKETS_SETTING)
+    def superuser_uploads_and_downloads_file(self, get_federation_token):
+        """
+        A helper method to quickly have a superuser upload and download a file.
+        """
+
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.super_user_token}'
+
+        # Patch what get_federation_token() would return since we will not be calling any real AWS STS service.
+        get_federation_token.return_value = self.fake_federation_token
+
+        response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/upload/?bucket={ALLOWED_BUCKET_NAME}')
+        self.assertEqual(response.status_code, 200)
+
+        folder_name = json.loads(response.content)["foldername"]
+        file_name = json.loads(response.content)["filename"]
+
+        # Pretend to upload the file to S3.
+        file_content = io.StringIO()
+        file_content.write("abcdefghijklmnopqrst")
+
+        s3 = boto3.client('s3')
+        s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
+
+        response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/download/')
+
     def test_groups_have_valid_bucket_permissions(self):
 
         # Confirm that the permissions added during test setUp applied.
@@ -349,16 +378,16 @@ class FileserviceTests(TestCase):
 
     def test_readonly_user_cannot_get_file_outside_group(self):
         client = Client()
-
         client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
         response = client.get(f'/filemaster/api/file/{self.inaccessible_file_uuid}/')
         self.assertEqual(response.status_code, 403)
 
 
     def test_readonly_user_can_get_someone_elses_file(self):
         client = Client()
-
         client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
         response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/')
         self.assertEqual(response.status_code, 200)
 
@@ -668,3 +697,193 @@ class FileserviceTests(TestCase):
         archivefile = ArchiveFile.objects.get(uuid=self.accessible_file_uuid)
         download_log = DownloadLog.objects.filter(archivefile=archivefile, requesting_user=self.everything_but_admin_user)
         self.assertTrue(download_log.exists())
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_without_permissions_cannot_access_download_log(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user without any permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.noperms_user_token}'
+
+        response = client.get(f'/filemaster/api/logs/')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there were no results returned.
+        self.assertTrue(response_json['count'] == 0)
+        self.assertTrue(response_json['results'] == [])
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_with_permissions_can_access_download_log(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user with permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
+        response = client.get(f'/filemaster/api/logs/')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 1)
+
+        # Ensure that the download log contained some expected values.
+        self.assertTrue(response_json['results'][0]['archivefile']['uuid'] == self.accessible_file_uuid)
+        self.assertTrue(response_json['results'][0]['requesting_user']['email'] == SUPERUSER_EMAIL)
+        self.assertTrue("download_requested_on" in response_json['results'][0])
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_gets_download_logs_with_user_email_param(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user with permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
+        response = client.get(f'/filemaster/api/logs/?user_email={SUPERUSER_EMAIL}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 1)
+
+        # Ensure that the download log contained some expected values.
+        self.assertTrue(response_json['results'][0]['archivefile']['uuid'] == self.accessible_file_uuid)
+        self.assertTrue(response_json['results'][0]['requesting_user']['email'] == SUPERUSER_EMAIL)
+        self.assertTrue("download_requested_on" in response_json['results'][0])
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_gets_download_logs_with_uuid_param(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user with permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
+        response = client.get(f'/filemaster/api/logs/?uuid={self.accessible_file_uuid}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 1)
+
+        # Ensure that the download log contained some expected values.
+        self.assertTrue(response_json['results'][0]['archivefile']['uuid'] == self.accessible_file_uuid)
+        self.assertTrue(response_json['results'][0]['requesting_user']['email'] == SUPERUSER_EMAIL)
+        self.assertTrue("download_requested_on" in response_json['results'][0])
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_gets_download_logs_with_filename_param(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user with permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
+        response = client.get(f'/filemaster/api/logs/?filename={ACCESSIBLE_FILE_NAME}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 1)
+
+        # Ensure that the download log contained some expected values.
+        self.assertTrue(response_json['results'][0]['archivefile']['uuid'] == self.accessible_file_uuid)
+        self.assertTrue(response_json['results'][0]['requesting_user']['email'] == SUPERUSER_EMAIL)
+        self.assertTrue("download_requested_on" in response_json['results'][0])
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_gets_download_logs_with_download_date_gte_param(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user with permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
+        # Search for files uploaded after yesterday. Should return one.
+        yesterdays_date = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d')
+        response = client.get(f'/filemaster/api/logs/?download_date_gte={yesterdays_date}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 1)
+
+        # Ensure that the download log contained some expected values.
+        self.assertTrue(response_json['results'][0]['archivefile']['uuid'] == self.accessible_file_uuid)
+        self.assertTrue(response_json['results'][0]['requesting_user']['email'] == SUPERUSER_EMAIL)
+        self.assertTrue("download_requested_on" in response_json['results'][0])
+
+        # Search for files uploaded after today. Should return none.
+        tomorrows_date = datetime.strftime(datetime.now() - timedelta(-1), '%Y-%m-%d')
+        response = client.get(f'/filemaster/api/logs/?download_date_gte={tomorrows_date}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 0)
+
+    @patch('boto.sts.connection.STSConnection.get_federation_token')
+    def test_user_gets_download_logs_with_download_date_lte_param(self, get_federation_token):
+
+        # Have a superuser upload and download the file.
+        self.superuser_uploads_and_downloads_file(get_federation_token)
+
+        # Now have a user with permissions to that file try to get the download logs.
+        client = Client()
+        client.defaults['HTTP_AUTHORIZATION'] = f'Token {self.readonly_user_token}'
+
+        # Search for files uploaded after yesterday. Should return one.
+        tomorrows_date = datetime.strftime(datetime.now() - timedelta(-1), '%Y-%m-%d')
+        response = client.get(f'/filemaster/api/logs/?download_date_lte={tomorrows_date}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 1)
+
+        # Ensure that the download log contained some expected values.
+        self.assertTrue(response_json['results'][0]['archivefile']['uuid'] == self.accessible_file_uuid)
+        self.assertTrue(response_json['results'][0]['requesting_user']['email'] == SUPERUSER_EMAIL)
+        self.assertTrue("download_requested_on" in response_json['results'][0])
+
+        # Search for files uploaded before yesterday. Should return none.
+        yesterdays_date = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d')
+        response = client.get(f'/filemaster/api/logs/?download_date_lte={yesterdays_date}')
+        response_json = json.loads(response.content)
+
+        # Ensure that the json response is paginated.
+        self.assertTrue("count" in response_json)
+
+        # Ensure that there one result was returned.
+        self.assertTrue(response_json['count'] == 0)

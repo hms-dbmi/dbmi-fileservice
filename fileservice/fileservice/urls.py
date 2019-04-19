@@ -14,4 +14,3 @@ urlpatterns = [
     url(r'^dbmi-auth/', include('dbmi_client.login.urls')),
     url(r'^$', lambda r: redirect(reverse('filemaster:index'))),
 ]
-

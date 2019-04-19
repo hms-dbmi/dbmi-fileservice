@@ -108,6 +108,7 @@ fileservice -v upload --fileID f149cf5d-722e-4a3f-9767-89b856458ddb \
 	--localFile /Users/db165/etl.retry \
 	--bucket "udnarchive-ci"
 ```
+
 ### Download data from the cloud
 Downloads a file to local filesystems.
 ```

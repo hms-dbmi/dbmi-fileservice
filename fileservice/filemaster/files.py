@@ -13,6 +13,8 @@ from rest_framework.decorators import list_route
 from rest_framework import filters
 from rest_framework import status
 from rest_framework import viewsets
+from rest_framework import generics
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from django_filters import rest_framework as rest_framework_filters
 from django.http import HttpResponseBadRequest
@@ -36,6 +38,7 @@ from filemaster.models import Bucket
 from filemaster.models import DownloadLog
 from filemaster.models import FileLocation
 from filemaster.serializers import ArchiveFileSerializer
+from filemaster.serializers import DownloadLogSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
 
 log = logging.getLogger(__name__)
@@ -673,3 +676,39 @@ class ArchiveFileList(viewsets.ModelViewSet):
         log.debug(f'Sending user to S3 proxy: {response["X-Accel-Redirect"]}')
 
         return response
+
+
+class DownloadLogList(generics.ListAPIView):
+    """
+    A read-only endpoint for retreiving download logs.
+    """
+
+    serializer_class = DownloadLogSerializer
+
+    def get_queryset(self):
+        queryset = DownloadLog.objects.all()
+
+        user_email = self.request.query_params.get('user_email', None)
+        if user_email is not None:
+            queryset = queryset.filter(requesting_user__email=user_email)
+
+        uuid = self.request.query_params.get('uuid', None)
+        if uuid is not None:
+            queryset = queryset.filter(archivefile__uuid=uuid)
+
+        filename = self.request.query_params.get('filename', None)
+        if filename is not None:
+            queryset = queryset.filter(archivefile__filename=filename)
+
+        download_date_gte = self.request.query_params.get('download_date_gte', None)
+        if download_date_gte is not None:
+            queryset = queryset.filter(download_requested_on__gte=download_date_gte)
+
+        download_date_lte = self.request.query_params.get('download_date_lte', None)
+        if download_date_lte is not None:
+            queryset = queryset.filter(download_requested_on__lte=download_date_lte)
+
+        # Filter out files the user doesn't have permissions for.
+        queryset = [log for log in queryset if self.request.user.has_perm('filemaster.view_archivefile', log.archivefile)]
+
+        return queryset
