@@ -317,7 +317,7 @@ class ReadCallbackStream(object):
         percent = self.readsofar * 1e2 / self.totalsize
         sys.stderr.write("\r{percent:3.0f}%".format(percent=percent))            
         return chunk
-    
+
 class DownloadFile(Command):
     "Download a file"
     log = logging.getLogger(__name__)
@@ -330,7 +330,7 @@ class DownloadFile(Command):
                             required=True)
 
         return parser
-    
+
     def take_action(self, parsed_args):
         self.log.debug(parsed_args)
         self.log.debug("Logged in -- "+self.app.user.ssotoken)

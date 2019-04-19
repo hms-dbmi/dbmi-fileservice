@@ -1,11 +1,19 @@
-from rest_framework import serializers
-from django.contrib.auth.models import User, Group
-from rest_framework.authtoken.models import Token
 import json
 import ast
-from taggit_serializer.serializers import (TagListSerializerField, TaggitSerializer)
 
-from .models import ArchiveFile, FileLocation
+from rest_framework import serializers
+from rest_framework.authtoken.models import Token
+
+from taggit_serializer.serializers import TagListSerializerField
+from taggit_serializer.serializers import TaggitSerializer
+
+from django.contrib.auth.models import User
+from django.contrib.auth.models import Group
+
+from .models import ArchiveFile
+from .models import CustomUser
+from .models import DownloadLog
+from .models import FileLocation
 
 
 class WritableField(serializers.Field):
@@ -99,7 +107,7 @@ class TagSearchField(WritableField):
     def to_native(self, value):
         return value
 
-        
+
 class SearchSerializer(TaggitSerializer, serializers.Serializer):
     #text = serializers.CharField()
     #creationdate = serializers.DateTimeField(source="creationdate")
@@ -111,3 +119,34 @@ class SearchSerializer(TaggitSerializer, serializers.Serializer):
     tags = TagListSerializerField()
     #metadata = MetadataSearchSerializer(source='metadata')
     metadata = JSONSearchField(source='metadata')
+
+
+class DownloadLogArchiveFileSerializer(serializers.ModelSerializer):
+    """
+    This serializer hides some ArchiveFile fields that are not needed in DownloadLog results.
+    """
+
+    class Meta:
+        model = ArchiveFile
+        lookup_field = 'uuid'
+        fields = ('id', 'uuid', 'description', 'owner', 'filename', 'creationdate')
+
+
+class DownloadLogRequestingUserSerializer(serializers.ModelSerializer):
+    """
+    This serializer only needs to return the user's email address.
+    """
+
+    class Meta:
+        model = CustomUser
+        fields = ('email', )
+
+
+class DownloadLogSerializer(serializers.ModelSerializer):
+    requesting_user = DownloadLogRequestingUserSerializer()
+    archivefile = DownloadLogArchiveFileSerializer()
+
+    class Meta:
+        model = DownloadLog
+        fields = ('archivefile', 'download_requested_on', 'requesting_user')
+        depth = 1
