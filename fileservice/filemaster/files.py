@@ -1,13 +1,14 @@
-from datetime import datetime
+import boto3
 import logging
 import sys
-from urllib.parse import urlparse
 import urllib
-from uuid import uuid4
 
-import boto3
 from boto.s3.connection import S3Connection
 from botocore.client import Config
+from datetime import datetime
+from uuid import uuid4
+from urllib.parse import urlparse
+
 from rest_framework.decorators import detail_route
 from rest_framework.decorators import list_route
 from rest_framework import filters
@@ -16,7 +17,10 @@ from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
+
 from django_filters import rest_framework as rest_framework_filters
+from guardian.shortcuts import get_objects_for_user
+
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotFound
@@ -686,7 +690,12 @@ class DownloadLogList(generics.ListAPIView):
     serializer_class = DownloadLogSerializer
 
     def get_queryset(self):
-        queryset = DownloadLog.objects.all()
+
+        # Get all the archivefiles that the user has access to.
+        archivefiles = get_objects_for_user(self.request.user, 'filemaster.view_archivefile')
+
+        # Then establish a queryset of DownloadLogs relevant only to those archivefiles.
+        queryset = DownloadLog.objects.filter(archivefile__in=archivefiles)
 
         user_email = self.request.query_params.get('user_email', None)
         if user_email is not None:
@@ -707,8 +716,5 @@ class DownloadLogList(generics.ListAPIView):
         download_date_lte = self.request.query_params.get('download_date_lte', None)
         if download_date_lte is not None:
             queryset = queryset.filter(download_requested_on__lte=download_date_lte)
-
-        # Filter out files the user doesn't have permissions for.
-        queryset = [log for log in queryset if self.request.user.has_perm('filemaster.view_archivefile', log.archivefile)]
 
         return queryset

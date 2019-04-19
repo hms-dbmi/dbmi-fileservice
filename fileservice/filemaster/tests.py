@@ -1,6 +1,5 @@
 import json
 import boto3
-import botocore
 import io
 from datetime import datetime
 from datetime import timedelta
@@ -10,9 +9,7 @@ from moto import mock_s3
 from moto import mock_s3_deprecated # Needed until boto library is removed
 
 from guardian.shortcuts import assign_perm
-from guardian.shortcuts import get_objects_for_user
 from guardian.shortcuts import get_perms
-from guardian.shortcuts import get_group_perms
 
 from rest_framework.authtoken.models import Token
 
