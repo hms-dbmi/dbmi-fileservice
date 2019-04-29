@@ -1,4 +1,11 @@
-import logging,json, os,jsonschema,importlib,uuid,requests,sys
+import logging
+import json
+import os
+import jsonschema
+import importlib
+import uuid
+import requests
+import sys
 import io as StringIO
 import urllib.request, urllib.error, urllib.parse
 from boto.sts import STSConnection
