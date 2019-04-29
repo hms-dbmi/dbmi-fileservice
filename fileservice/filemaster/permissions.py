@@ -1,5 +1,3 @@
-
-
 from django.contrib.auth.models import Group
 
 from rest_framework import permissions
@@ -21,8 +19,8 @@ class DjangoObjectPermissionsAll(permissions.DjangoObjectPermissions):
 
     def has_permission(self, request, view):
         return True
-    
-    
+
+
 class DjangoObjectPermissionsChange(permissions.DjangoObjectPermissions):
     """
     Similar to `DjangoObjectPermissions`, but adding 'view' permissions.
@@ -48,8 +46,6 @@ class DjangoObjectPermissionsChange(permissions.DjangoObjectPermissions):
         return True
 
 
-    
-    
 class DjangoModelPermissionsAll(permissions.DjangoModelPermissions):
     """
     The request is authenticated using `django.contrib.auth` permissions.
