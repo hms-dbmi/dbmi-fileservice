@@ -28,6 +28,7 @@ PyJWT==1.6.4
 pyyaml==5.1b3
 raven==6.9.0
 requests==2.21.0
+sqlparse==0.2.4
 
 # Used only for testing
 # django-celery-transactions==0.3.6
