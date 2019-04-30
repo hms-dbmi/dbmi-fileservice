@@ -1,6 +1,8 @@
 import boto3
 import logging
 import sys
+import base64
+import json
 import urllib
 
 from boto.s3.connection import S3Connection
@@ -355,6 +357,22 @@ class ArchiveFileList(viewsets.ModelViewSet):
         expires = int(self.request.query_params.get('expires', '10'))
         bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
 
+        # Check for extra conditions
+        conditions = []
+        try:
+            conditions_b64 = self.request.query_params.get('conditions')
+            if conditions_b64:
+
+                # Decode and load
+                conditions = json.loads(base64.b64decode(conditions_b64.encode()).decode())
+
+                log.debug('Extra conditions: {}'.format(conditions))
+
+        except Exception as e:
+            log.exception('Conditions error: {}'.format(e), exc_info=True, extra={
+                'conditions': self.request.query_params.get('conditions'),
+            })
+
         # Generate a folder name
         folder_name = str(uuid4())
         log.debug('Folder: {}'.format(folder_name))
@@ -381,6 +399,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             Bucket=bucket,
             Key=key,
             ExpiresIn=expires,
+            Conditions=conditions,
         )
 
         # Form the URL to the file
