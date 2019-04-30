@@ -1,8 +1,32 @@
-# FileService is an API that handles permissions, authentication, upload/download sigining to clouds, metadata handling, searching and archiving of files.  
+# FileService API
 
-This is about the API. If you want the CLI, go to fileservice/cli  
+Fileserivce is an API that takes care of a variety of needs when it comes to managing files uploaded to AWS S3 buckets, including: permissions, authentication, upload/download signing, metadata handling, searching and archiving of files.
 
-## Accessing the Django shell in an EC2 docker container
+This is about the API. If you want information on the command line interface (CLI), go to fileservice/cli.
+
+## API Documentation
+
+### DownloadLogs
+
+This endpoint returns data about file downloads, limited by just the ArchiveFiles that requesting user has view_archivefile permissions on.
+
+URL: `/filemaster/api/logs`.
+
+Accepted GET parameters:
+1. `user_email` - the user who requested the download.
+2. `uuid` - the uuid of the archivefile.
+3. `filename` - the filename as specified in the ArchiveFile.Filename field.
+4. `download_date_gte` - download dates greater than or equal to.
+4. `download_date_lte` - download dates less than or equal to.
+
+Return data:
+1. `archivefile` - a json of some information about the downloaded ArchiveFile, include uuid, description, filename, and creation date.
+2. `download_requested_on` - datetime the user requested a download URL.
+3. `requesting_user` - a json of {'email': '{email}'} of who requested the download.
+
+## Developer notes
+
+### Accessing the Django shell in an EC2 docker container
 1. First ssh into the EC2.
 2. Then bash into the docker container running the django app.
 3. Then run `ps -ef` to determine which PID is running the wsgi app as root user.
