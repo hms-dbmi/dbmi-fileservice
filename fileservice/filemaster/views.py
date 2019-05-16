@@ -2,23 +2,33 @@ import string
 import random
 from furl import furl
 
-from django.shortcuts import render, reverse
-from django.http import Http404, HttpResponseForbidden
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
+from django.http import HttpResponseForbidden
+from django.shortcuts import render
+from django.shortcuts import reverse
+
 from rest_framework import status
-from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import api_view
+from rest_framework.decorators import authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.authtoken.models import Token
-from guardian.shortcuts import assign_perm, get_objects_for_group
-from django.contrib.auth import get_user_model
 
-from dbmi_client.authn import DBMIModelUser
+from guardian.shortcuts import assign_perm
+from guardian.shortcuts import get_objects_for_group
+
 from dbmi_client.auth import dbmi_user
+from dbmi_client.authn import DBMIModelUser
 from dbmi_client.authn import logout_redirect
 
-from filemaster.models import GROUPTYPES, Bucket
-from filemaster.serializers import SpecialGroupSerializer, TokenSerializer
+from filemaster.models import Bucket
+from filemaster.models import GROUPTYPES
+from filemaster.serializers import SpecialGroupSerializer
+from filemaster.serializers import TokenSerializer
 
 import logging
 log = logging.getLogger(__name__)
@@ -261,18 +271,21 @@ class UserList(APIView):
         if not request.user.has_perm('filemaster.add_customuser'):
             return HttpResponseForbidden()
 
-        sdata=[]
-        userstructure=[]
-    
-        for u in self.request.data['users']:
+        sdata = []
+        userstructure = []
+
+        for user_email in self.request.data['users']:
             try:
-                user = get_user_model().objects.create_user(id_generator(16), email=u, password=id_generator(16))
-                userstructure.append(user.email)
-            except Exception as e:
-                log.error("ERROR: %s" % e)
-        
-        sdata.append({"users":userstructure}) 
-        
+                user = get_user_model().objects.get(email=user_email)
+            except ObjectDoesNotExist:
+                try:
+                    user = get_user_model().objects.create_user(id_generator(16), email=user_email, password=id_generator(16))
+                    userstructure.append(user.email)
+                except Exception as e:
+                    log.error("ERROR: %s" % e)
+
+        sdata.append({"users":userstructure})
+
         return Response(sdata, status=status.HTTP_201_CREATED)
 
 
