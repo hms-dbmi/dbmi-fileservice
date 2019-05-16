@@ -185,6 +185,8 @@ class GroupDetail(APIView):
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.remove(group)
+                except ObjectDoesNotExist:
+                    continue
                 except Exception as e:
                     log.error("ERROR: %s" % e)
         except:
