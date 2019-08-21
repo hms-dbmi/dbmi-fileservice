@@ -125,19 +125,19 @@ class GroupList(APIView):
             assign_perm('delete_group', self.request.user, group)
 
             assign_perm('change_group', Group.objects.get(name="powerusers"), group)
-    
+
             for u in self.request.data['users']:
                 try:
                     user = User.objects.get(email=u["email"])
                     user.groups.add(group)
                 except Exception as e:
                     log.error("ERROR: %s" % e)
-            
+
             for user in group.user_set.all():
                 userstructure.append({"email":user.email})
 
             sdata.append({"name":group.name, "id":group.id, "users":userstructure})
-        
+
         return Response(sdata, status=status.HTTP_201_CREATED)
 
 
@@ -270,6 +270,11 @@ class UserList(APIView):
         return Response([])
 
     def post(self, request, format=None):
+
+        # NOTE This permission check does not work because Guardian does not support custom user models
+        # that inherit the AbstractBaseUser class (instead of AbstractUser). Solution for now is to set
+        # is_superuser to True and add to DBMIAuthZ a item = "DBMI", permission = "ADMIN" record for the
+        # user that you want to be able to add other users. This way, all permissions are granted.
         if not request.user.has_perm('filemaster.add_customuser'):
             return HttpResponseForbidden()
 

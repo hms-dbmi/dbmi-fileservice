@@ -33,6 +33,11 @@ Return data:
 4. Then run `. <(xargs -0 bash -c 'printf "export %q\n" "$@"' -- < /proc/{PID}/environ)` with the PID from the above step to copy environment variables into your session.
 5. Then run `python app/manage.py shell` to access the shell.
 
+### Running unit tests
+1. First make sure you are in a virtualenvironment with the pip requirements installed.
+2. CD to the directory where manage.py is stored.
+3. Run `python manage.py test --settings fileservice.test_settings`.
+
 ## Old notes below, may need updates
 
 ### Diagrams -- open in draw.io plugin  
