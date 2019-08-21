@@ -18,7 +18,6 @@ class CustomUserAdmin(admin.ModelAdmin):
 
 
 class BucketAdmin(admin.ModelAdmin):
-    fields = ('name', 'permissions', )
     list_display = ('name', )
 
 
