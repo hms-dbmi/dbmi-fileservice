@@ -14,6 +14,7 @@ from guardian.admin import GuardedModelAdmin
 class CustomUserAdmin(admin.ModelAdmin):
     fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'groups', )
     list_display = ('username', 'email', 'is_staff')
+    search_fields = ('email', 'first_name', 'last_name',)
 
 
 class BucketAdmin(admin.ModelAdmin):
