@@ -15,37 +15,39 @@ except IOError:
 setup(
     name=PROJECT,
     version=VERSION,
-
     description='FileServiceCLI',
     long_description=long_description,
-
-    author='David Bernick',
-    author_email='david_bernick@hms.harvard.edu',
-
-    url='https://github.com/hms-dbmi/fileservice',
-
-    classifiers=['Development Status :: 3 - Alpha',
-                 'License :: OSI Approved :: Apache Software License',
-                 'Programming Language :: Python',
-                 'Programming Language :: Python :: 2',
-                 'Programming Language :: Python :: 2.7',
-                 'Programming Language :: Python :: 3',
-                 'Programming Language :: Python :: 3.2',
-                 'Intended Audience :: Developers',
-                 'Environment :: Console',
-                 ],
-
+    author='Daniel Traviglia',
+    author_email='daniel_traviglia@hms.harvard.edu',
+    url='https://github.com/hms-dbmi/dbmi-fileservice',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.2',
+        'Intended Audience :: Developers',
+        'Environment :: Console',
+    ],
     platforms=['Any'],
-
     scripts=[],
-
     provides=[],
-    install_requires=['pyparsing','cliff','requests','jsonschema','boto','nose','coverage','python-magic','libmagic','filechunkio'],
-
+    install_requires=[
+        'pyparsing',
+        'cliff',
+        'requests',
+        'jsonschema',
+        'boto',
+        'coverage',
+        'python-magic',
+        'libmagic',
+        'filechunkio'
+    ],
     namespace_packages=[],
     packages=find_packages(),
     include_package_data=True,
-
     entry_points={
         'console_scripts': [
             'fileservice = fileservice.main:main'
@@ -60,6 +62,5 @@ setup(
             'udn = fileservice.udn:RegisterFile',
         ],
     },
-
     zip_safe=False,
 )

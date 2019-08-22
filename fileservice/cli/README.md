@@ -4,10 +4,7 @@
 ```
 cd cli
 mkvirtualenv -p python3 dbmi-fileservice
-pip install -r requirements.txt
-python setup.py build
-python setup.py develop
-python setup.py install
+pip install .
 ```
 Copy the fileservice.cfg.example file to ~/.fileservice.cfg and alter it for your own settings.  
 I recommend getting a token from the sysadmin rather than using the SAML process, but that works too. 
@@ -60,13 +57,12 @@ Prepare a file with your metadata.
 
 ```
 [
-	{
-		"metadata":
-			{"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},
-		"filename":"test.txt",
-		"description":
-		"test","permissions":["udntest"]
-	}
+  {
+    "metadata": {"coverage":"30","patientid":"1234-123-123-123","otherinfo":"info"},
+    "filename": "test.txt",
+    "description": "test",
+    "permissions":["udntest"]
+  }
 ]
 ```
 And run to write that data.  
