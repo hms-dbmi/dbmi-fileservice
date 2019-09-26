@@ -198,7 +198,7 @@ class GroupDetail(APIView):
         """
 
         try:
-            for u in request.DATA['buckets']:
+            for u in request.data['buckets']:
                 try:
                     bucket = Bucket.objects.get(name=u["name"])
                     assign_perm('filemaster.write_bucket', group, bucket)
