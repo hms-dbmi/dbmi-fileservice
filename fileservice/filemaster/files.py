@@ -250,10 +250,6 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not location:
             return HttpResponseBadRequest(f'File {uuid} has multiple locations, \'from\' must be specified')
 
-        # Check permissions
-        if not request.user.has_perm('filemaster.change_filelocation', location):
-            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{location}\'')
-
         try:
             # Perform the copy
             new_location = awsCopyFile(archivefile, destination, origin)
@@ -296,10 +292,6 @@ class ArchiveFileList(viewsets.ModelViewSet):
         location = archivefile.get_location(origin)
         if not location:
             return HttpResponseBadRequest(f'File {uuid} has multiple locations, \'from\' must be specified')
-
-        # Check permissions
-        if not request.user.has_perm('filemaster.change_filelocation', location):
-            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{location}\'')
 
         try:
             # Perform the copy
