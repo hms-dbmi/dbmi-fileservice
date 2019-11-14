@@ -209,6 +209,7 @@ INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 AUTHENTICATION_BACKENDS = (
     'dbmi_client.authn.DBMIUsersModelAuthenticationBackend',
     'guardian.backends.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
 )
 
 # Custom user model
