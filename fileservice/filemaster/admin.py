@@ -17,8 +17,14 @@ class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ('email', 'first_name', 'last_name',)
 
 
+admin.site.register(CustomUser, CustomUserAdmin)
+
+
 class BucketAdmin(admin.ModelAdmin):
     list_display = ('name', )
+
+
+admin.site.register(Bucket, BucketAdmin)
 
 
 class ArchiveFileAdmin(admin.ModelAdmin):
@@ -27,15 +33,25 @@ class ArchiveFileAdmin(admin.ModelAdmin):
     readonly_fields = ('uuid', 'creationdate')
 
 
+admin.site.register(ArchiveFile, ArchiveFileAdmin)
+
+
 class FileLocationAdmin(admin.ModelAdmin):
     fields = ('creationdate', 'url', 'uploadComplete', 'storagetype', 'filesize', )
     list_display = ('url', 'filesize', 'creationdate', 'storagetype')
     readonly_fields = ('creationdate', )
+    search_fields = ('id', 'url')
+
+
+admin.site.register(FileLocation, FileLocationAdmin)
 
 
 class DownloadLogAdmin(admin.ModelAdmin):
     fields = ('archivefile', 'download_requested_on', 'requesting_user', 'requesting_email')
     readonly_fields = ('download_requested_on', )
+
+
+admin.site.register(DownloadLog, DownloadLogAdmin)
 
 
 def patch_admin(model, admin_site=None):
@@ -61,11 +77,5 @@ def patch_admin(model, admin_site=None):
 
     admin_site.register(model, PatchedModelAdmin)
 
-
-admin.site.register(ArchiveFile, ArchiveFileAdmin)
-admin.site.register(Bucket, BucketAdmin)
-admin.site.register(CustomUser, CustomUserAdmin)
-admin.site.register(DownloadLog, DownloadLogAdmin)
-admin.site.register(FileLocation, FileLocationAdmin)
 
 patch_admin(Group)
