@@ -38,7 +38,7 @@ admin.site.register(ArchiveFile, ArchiveFileAdmin)
 
 class FileLocationAdmin(admin.ModelAdmin):
     fields = ('creationdate', 'url', 'uploadComplete', 'storagetype', 'filesize', )
-    list_display = ('url', 'filesize', 'creationdate', 'storagetype')
+    list_display = ('id', 'url', 'filesize', 'creationdate', 'storagetype')
     readonly_fields = ('creationdate', )
     search_fields = ('id', 'url')
 
