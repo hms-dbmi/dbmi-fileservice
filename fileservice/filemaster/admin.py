@@ -28,7 +28,7 @@ admin.site.register(Bucket, BucketAdmin)
 
 
 class ArchiveFileAdmin(admin.ModelAdmin):
-    fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', )
+    fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', 'locations')
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
 
