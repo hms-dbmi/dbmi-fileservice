@@ -18,7 +18,7 @@ def awsSignedURLUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=N
     if not aws_secret:
         aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-    conn = S3Connection(aws_key, aws_secret, is_secure=True)
+    conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
     url = "S3://%s/%s" % (bucket, foldername + "/" + archiveFile.filename)
 
     # register file
@@ -142,7 +142,7 @@ def signedUrlDownload(archiveFile=None, aws_key=None, aws_secret=None):
     if not aws_secret:
         aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-    conn = S3Connection(aws_key, aws_secret, is_secure=True)
+    conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
 
     # check for glacier move
     b = conn.get_bucket(bucket)

@@ -36,7 +36,7 @@ def glacierLifecycleMove(locationstring, pid):
     if not AWS_KEY_ID:
         return False
     
-    c = S3Connection(AWS_KEY_ID, AWS_SECRET, is_secure=True)
+    c = S3Connection(AWS_KEY_ID, AWS_SECRET, is_secure=True, host=S3Connection.DefaultHost)
     bucket = c.get_bucket(bucket,validate=False)
 
     to_glacier = Transition(date=datetime.combine(af.expirationdate,datetime.min.time()).isoformat(), storage_class='GLACIER')
@@ -79,7 +79,7 @@ def glacierVaultMove(locationstring,id):
     aws_key=settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
     aws_secret=settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
     
-    c = S3Connection(aws_key, aws_secret, is_secure=True)
+    c = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
     bucket = c.get_bucket(bucket,validate=False)
 
 

@@ -250,7 +250,7 @@ class UploadFile(Command):
             conn = S3Connection(aws_access_key_id=r.json()["accesskey"], 
                                 aws_secret_access_key=r.json()["secretkey"],
                                 security_token=r.json()['sessiontoken'],
-                                is_secure=True)
+                                is_secure=True, host=S3Connection.DefaultHost)
             
             b = conn.get_bucket(r.json()['bucket'],validate=False)
             

@@ -486,7 +486,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not aws_secret:
             aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-        conn = S3Connection(aws_key, aws_secret, is_secure=True)
+        conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
         b = conn.get_bucket(bucket)
 
         # TODO FS-59: should try/catch here and return something like HttpResponseNotFound 404
@@ -527,7 +527,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not aws_secret:
             aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-        conn = S3Connection(aws_key, aws_secret, is_secure=True)
+        conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
         b = conn.get_bucket(bucket)
         k = b.get_key(path)
 
