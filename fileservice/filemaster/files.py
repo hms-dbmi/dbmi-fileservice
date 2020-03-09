@@ -229,17 +229,36 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Get bucket
         destination = request.query_params.get('to')
-        origin = request.query_params.get('from', settings.S3_DEFAULT_BUCKET)
-
-        # Check request
-        if not uuid or not destination:
-            return HttpResponseBadRequest('File UUID and destination bucket are required')
+        origin = request.query_params.get('from')
 
         # Ensure it exists
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Get the location
+            if not origin:
+                origin, path = next(archivefile.locations).get_bucket()
+                log.debug(f'Origin not provided, using "{origin}"')
         except:
             return HttpResponseNotFound()
+
+        # Check request
+        if not uuid or not destination or not origin:
+            return HttpResponseBadRequest('File UUID, origin and destination bucket are required')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=origin)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{origin}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{origin}" does not exist in Fileservice')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=destination)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{destination}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{destination}" does not exist in Fileservice')
 
         # Check permissions on file
         if not request.user.has_perm('filemaster.change_archivefile', archivefile):
@@ -272,17 +291,42 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Get bucket
         destination = request.query_params.get('to')
-        origin = request.query_params.get('from', settings.S3_DEFAULT_BUCKET)
-
-        # Check request
-        if not uuid or not destination:
-            return HttpResponseBadRequest('File UUID and destination bucket are required')
+        origin = request.query_params.get('from')
 
         # Ensure it exists
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
+
+            # Get the location
+            if not origin and archivefile.locations.first():
+                origin, path = archivefile.locations.first().get_bucket()
+                log.debug(f'Origin not provided, using "{origin}"')
+        except ArchiveFile.DoesNotExist:
+            return HttpResponseNotFound(f'ArchiveFile \'{uuid}\' could not be found')
+
+        except Exception as e:
+            log.exception(f'Move error: {e}', exc_info=True, extra={
+                'request': request, 'uuid': uuid,
+            })
+            return HttpResponseNotFound(f'Location for ArchiveFile \'{uuid}\' could not be found')
+
+        # Check request
+        if not uuid or not destination or not origin:
+            return HttpResponseBadRequest('File UUID, "from" and "to" bucket are required')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=origin)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{origin}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{origin}" does not exist in Fileservice')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=destination)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{destination}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{destination}" does not exist in Fileservice')
 
         # Check permissions on file
         if not request.user.has_perm('filemaster.change_archivefile', archivefile):
@@ -347,7 +391,23 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Pull request parameters
         expires = int(self.request.query_params.get('expires', '10'))
-        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
+        bucket = self.request.query_params.get('bucket')
+
+        # If no bucket specified, default to first created
+        if not bucket:
+            try:
+                bucket = Bucket.objects.get(default=True).name
+            except Exception as e:
+                log.exception(f'Error finding default bucket: {e}', exc_info=True, extra={'request': request})
+                return HttpResponseBadRequest(f'No default bucket has been configured for Fileservice, must specify'
+                                              f'bucket in request')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=bucket)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{bucket}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{bucket}" does not exist in Fileservice')
 
         # Check for extra conditions
         conditions = []
@@ -399,7 +459,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         log.debug('Url: {}'.format(url))
 
         # Register file
-        file_location = FileLocation(url=url, storagetype=settings.BUCKETS[bucket]['type'])
+        file_location = FileLocation(url=url, storagetype='s3')
         file_location.save()
         archive_file.locations.add(file_location)
 

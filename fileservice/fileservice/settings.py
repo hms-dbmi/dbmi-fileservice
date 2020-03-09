@@ -276,37 +276,12 @@ REST_FRAMEWORK = {
 
 ########## AWS S3 CONFIGURATION
 
-# Set the default S3 bucket to use when not specified
-S3_DEFAULT_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET')
-AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID')
-AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY')
+# Set the S3 bucket(s) to enable
+BUCKETS = environment.get_list('AWS_S3_BUCKETS', default=[])
+if not BUCKETS:
 
-BUCKETS = {
-    S3_DEFAULT_BUCKET: {
-        'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
-        'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
-    }
-}
-
-# Include all additional buckets and AWS credentials like follows:
-# Bucket specification format:
-# <S3 bucket name>: {
-#   "AWS_KEY_ID": <AWS STS key id>,
-#   "AWS_SECRET": <AWS STS secret key>
-# },
-BUCKETS.update({
-    bucket: {
-        'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
-        'AWS_SECRET': credentials.get('AWS_SECRET'),
-    } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
-})
-
-# Add glacier
-BUCKETS["Glacier"] = {"type": "glacier"}
+    # The old configuration had bucke names as keys (credentials as values that are no longer needed)
+    BUCKETS += environment.get_dict('AWS_S3_BUCKETS', default={}).keys()
 
 ########## END AWS S3 CONFIGURATION
 
@@ -361,6 +336,21 @@ LOGGING = {
             'level': 'WARNING',
             'handlers': ['console'],
             'propagate': False,
+        },
+        'botocore': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'boto3': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        's3transfer': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
         },
     },
 }

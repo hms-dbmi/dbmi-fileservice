@@ -29,6 +29,7 @@ from filemaster.models import Bucket
 from filemaster.models import GROUPTYPES
 from filemaster.serializers import SpecialGroupSerializer
 from filemaster.serializers import TokenSerializer
+from filemaster.serializers import BucketSerializer
 
 import logging
 log = logging.getLogger(__name__)
@@ -308,3 +309,56 @@ def token(request):
         t = Token.objects.get(user=u)
         serializer = TokenSerializer(t)
         return Response(serializer.data)
+
+
+class BucketList(APIView):
+    """
+    List all buckets, or create a new bucket.
+    """
+    def get(self, request, format=None):
+        buckets = Bucket.objects.all()
+        serializer = BucketSerializer(buckets, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = BucketSerializer(data=request.data)
+        if serializer.is_valid():
+
+            # Check the bucket
+            bucket = serializer.data['name']
+            if not Bucket.check_bucket(bucket=bucket):
+                return Response({'error': f'Bucket "{bucket}" does not exist or Fileservice does not have '
+                                          f'needed permissions'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BucketDetail(APIView):
+    """
+    Retrieve, update or delete a bucket instance.
+    """
+    def get_object(self, pk):
+        try:
+            return Bucket.objects.get(pk=pk)
+        except Bucket.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        bucket = self.get_object(pk)
+        serializer = BucketSerializer(bucket)
+        return Response(serializer.data)
+
+    def put(self, request, pk, format=None):
+        bucket = self.get_object(pk)
+        serializer = BucketSerializer(bucket, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        bucket = self.get_object(pk)
+        bucket.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

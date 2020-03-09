@@ -10,6 +10,7 @@ from taggit_serializer.serializers import TaggitSerializer
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
 
+from .models import Bucket
 from .models import ArchiveFile
 from .models import CustomUser
 from .models import DownloadLog
@@ -21,8 +22,17 @@ class WritableField(serializers.Field):
         return self.to_native(value)
 
     def to_internal_value(self, data):
-        print('WARNING: This has not been implemented as it doesn\'t seem like it was used')
         return self.to_native(data)
+
+    def to_native(self, data):
+        """
+        Transform the *incoming* primitive data into a native value.
+        """
+        raise NotImplementedError(
+            '{cls}.to_internal_value() must be implemented.'.format(
+                cls=self.__class__.__name__
+            )
+        )
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -56,11 +66,11 @@ class UserModelSerializer(serializers.ModelSerializer):
         model = User
 
 
-class BucketSerializer(serializers.Serializer):
-    name = serializers.CharField(required=False)
-
+class BucketSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('name',)
+        model = Bucket
+        fields = '__all__'
+        read_only_fields = ['modifydate', 'creationdate', ]
 
 
 class SpecialGroupSerializer(serializers.Serializer):
