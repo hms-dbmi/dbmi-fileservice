@@ -3,7 +3,7 @@
 PROJECT = 'fileservice'
 
 # Change docs/sphinx/conf.py too!
-VERSION = '0.1'
+VERSION = '0.2'
 
 from setuptools import setup, find_packages
 
@@ -43,7 +43,9 @@ setup(
         'coverage',
         'python-magic',
         'libmagic',
-        'filechunkio'
+        'requests',
+        'requests-toolbelt',
+        'furl',
     ],
     namespace_packages=[],
     packages=find_packages(),

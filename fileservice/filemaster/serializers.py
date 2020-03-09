@@ -21,8 +21,17 @@ class WritableField(serializers.Field):
         return self.to_native(value)
 
     def to_internal_value(self, data):
-        print('WARNING: This has not been implemented as it doesn\'t seem like it was used')
         return self.to_native(data)
+
+    def to_native(self, data):
+        """
+        Transform the *incoming* primitive data into a native value.
+        """
+        raise NotImplementedError(
+            '{cls}.to_internal_value() must be implemented.'.format(
+                cls=self.__class__.__name__
+            )
+        )
 
 
 class GroupSerializer(serializers.ModelSerializer):

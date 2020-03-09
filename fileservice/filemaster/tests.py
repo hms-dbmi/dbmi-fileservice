@@ -88,15 +88,9 @@ FAKE_AWS_SECRET = 'yyy'
 BUCKETS_SETTING = {
     ALLOWED_BUCKET_NAME: {
         'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': FAKE_AWS_KEY_ID,
-        'AWS_SECRET': FAKE_AWS_SECRET
     }, 
     BLOCKED_BUCKET_NAME: {
         'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': FAKE_AWS_KEY_ID,
-        'AWS_SECRET': FAKE_AWS_SECRET
     }
 }
 
