@@ -46,5 +46,20 @@ LOGGING = {
             'handlers': ['console'],
             'propagate': False,
         },
+        'botocore': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'boto3': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        's3transfer': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
     },
 }

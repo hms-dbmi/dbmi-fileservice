@@ -1,26 +1,24 @@
 import boto3
 import logging
-import sys
 import base64
 import json
 import urllib
 
-from boto.s3.connection import S3Connection
+from botocore.exceptions import ClientError
 from botocore.client import Config
 from datetime import datetime
 from uuid import uuid4
 from urllib.parse import urlparse
 
-from rest_framework.decorators import detail_route
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 from rest_framework import filters
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework import generics
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from django_filters import rest_framework as rest_framework_filters
+from rest_framework_guardian.filters import DjangoObjectPermissionsFilter
 from guardian.shortcuts import get_objects_for_user
 
 from django.http import HttpResponseBadRequest
@@ -37,7 +35,6 @@ from filemaster.aws import awsCopyFile
 from filemaster.aws import awsMoveFile
 from filemaster.aws import awsRemoveFile
 from filemaster.aws import signedUrlDownload
-from filemaster.aws import signedUrlUpload
 from filemaster.filters import ArchiveFileFilter
 from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
@@ -53,13 +50,12 @@ log = logging.getLogger(__name__)
 User = get_user_model()
 
 
-# TODO: Replace DetailRoutes here with the newer DRF whatever
 class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
     filter_class = ArchiveFileFilter
-    filter_backends = (rest_framework_filters.DjangoFilterBackend, filters.DjangoObjectPermissionsFilter,)
+    filter_backends = (rest_framework_filters.DjangoFilterBackend, DjangoObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
         log.debug("[files][ArchiveFileList][pre_savepre_save] - Making user owner.")
@@ -190,14 +186,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
         if not request.user.has_perm('filemaster.delete_archivefile', archivefile):
             return HttpResponseForbidden()
 
-        # Get credentials, if passed
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
-
         try:
             # Delete it.
             log.debug(f'Deleting S3 file: {fl.url}')
-            if awsRemoveFile(fl, aws_key, aws_secret):
+            if awsRemoveFile(fl):
 
                 # Remove everything.
                 log.debug(f'Deleting file location: {fl.id}')
@@ -224,22 +216,41 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         return Response({'message': "file not deleted", "uuid": uuid}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def copy(self, request, uuid):
 
         # Get bucket
         destination = request.query_params.get('to')
-        origin = request.query_params.get('from', settings.S3_DEFAULT_BUCKET)
-
-        # Check request
-        if not uuid or not destination:
-            return HttpResponseBadRequest('File UUID and destination bucket are required')
+        origin = request.query_params.get('from')
 
         # Ensure it exists
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Get the location
+            if not origin:
+                origin, path = next(archivefile.locations).get_bucket()
+                log.debug(f'Origin not provided, using "{origin}"')
         except:
             return HttpResponseNotFound()
+
+        # Check request
+        if not uuid or not destination or not origin:
+            return HttpResponseBadRequest('File UUID, origin and destination bucket are required')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=origin)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{origin}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{origin}" does not exist in Fileservice')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=destination)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{destination}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{destination}" does not exist in Fileservice')
 
         # Check permissions on file
         if not request.user.has_perm('filemaster.change_archivefile', archivefile):
@@ -267,22 +278,47 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
             return HttpResponseServerError('Error copying file')
 
-    @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def move(self, request, uuid):
 
         # Get bucket
         destination = request.query_params.get('to')
-        origin = request.query_params.get('from', settings.S3_DEFAULT_BUCKET)
-
-        # Check request
-        if not uuid or not destination:
-            return HttpResponseBadRequest('File UUID and destination bucket are required')
+        origin = request.query_params.get('from')
 
         # Ensure it exists
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
+
+            # Get the location
+            if not origin and archivefile.locations.first():
+                origin, path = archivefile.locations.first().get_bucket()
+                log.debug(f'Origin not provided, using "{origin}"')
+        except ArchiveFile.DoesNotExist:
+            return HttpResponseNotFound(f'ArchiveFile \'{uuid}\' could not be found')
+
+        except Exception as e:
+            log.exception(f'Move error: {e}', exc_info=True, extra={
+                'request': request, 'uuid': uuid,
+            })
+            return HttpResponseNotFound(f'Location for ArchiveFile \'{uuid}\' could not be found')
+
+        # Check request
+        if not uuid or not destination or not origin:
+            return HttpResponseBadRequest('File UUID, "from" and "to" bucket are required')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=origin)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{origin}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{origin}" does not exist in Fileservice')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=destination)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{destination}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{destination}" does not exist in Fileservice')
 
         # Check permissions on file
         if not request.user.has_perm('filemaster.change_archivefile', archivefile):
@@ -310,10 +346,10 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
             return HttpResponseServerError('Error moving file')
 
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def download(self, request, uuid=None):
-        url = None
-        archivefile = None
+
+        # Get the file record
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
         except:
@@ -323,16 +359,14 @@ class ArchiveFileList(viewsets.ModelViewSet):
             return HttpResponseForbidden()
 
         # Get presigned url
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
-        url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+        url = signedUrlDownload(archivefile)
 
         # Save a download log
         DownloadLog.objects.create(archivefile=archivefile, requesting_user=request.user)
 
         return Response({'url': url})
 
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def post(self, request, uuid=None):
 
         # Get the file record
@@ -347,7 +381,23 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Pull request parameters
         expires = int(self.request.query_params.get('expires', '10'))
-        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
+        bucket = self.request.query_params.get('bucket')
+
+        # If no bucket specified, default to first created
+        if not bucket:
+            try:
+                bucket = next(settings.BUCKETS)
+            except Exception as e:
+                log.exception(f'Error finding default bucket: {e}', exc_info=True, extra={'request': request})
+                return HttpResponseBadRequest(f'No default bucket has been configured for Fileservice, must specify'
+                                              f'bucket in request')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=bucket)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{bucket}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{bucket}" does not exist in Fileservice')
 
         # Check for extra conditions
         conditions = []
@@ -367,7 +417,6 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Generate a folder name
         folder_name = str(uuid4())
-        log.debug('Folder: {}'.format(folder_name))
 
         # Ensure the bucket is writable
         if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=bucket)):
@@ -375,17 +424,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Build the key
         key = folder_name + "/" + archive_file.filename
-        log.debug('Key: {}'.format(key))
-
-        # Get credentials
-        aws_key = self.request.query_params.get('aws_key', settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID"))
-        aws_secret = self.request.query_params.get('aws_secret', settings.BUCKETS.get(bucket, {}).get('AWS_SECRET'))
 
         # Generate the post
-        s3 = boto3.client('s3',
-                          aws_access_key_id=aws_key,
-                          aws_secret_access_key=aws_secret,
-                          config=Config(signature_version='s3v4'))
+        s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
 
         post = s3.generate_presigned_post(
             Bucket=bucket,
@@ -399,7 +440,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         log.debug('Url: {}'.format(url))
 
         # Register file
-        file_location = FileLocation(url=url, storagetype=settings.BUCKETS[bucket]['type'])
+        file_location = FileLocation(url=url, storagetype='s3')
         file_location.save()
         archive_file.locations.add(file_location)
 
@@ -407,57 +448,8 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response({'post': post,
                          'locationid': file_location.id})
 
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
-    def upload(self, request, uuid=None):
-        # take uuid, create presigned url, put location into original file
-        archivefile = None
-        message = None
-        url = None
-
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
-
-        if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
-            return HttpResponseForbidden()
-
-        cloud = self.request.query_params.get('cloud', "aws")
-        bucket = self.request.query_params.get('bucket', settings.S3_DEFAULT_BUCKET)
-        sys.stderr.write("bucket %s\n" % bucket)
-        bucketobj = Bucket.objects.get(name=bucket)
-        if not request.user.has_perm('filemaster.write_bucket', bucketobj):
-            return HttpResponseForbidden()
-
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
-
-        urlhash = signedUrlUpload(archivefile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret, cloud=cloud)
-
-        url = urlhash["url"]
-        message = "PUT to this url"
-        location = urlhash["location"]
-        locationid = urlhash["locationid"]
-
-        # get presigned url
-        return Response({
-            'url': url,
-            'message': message,
-            'location': location,
-            'locationid': locationid,
-            'bucket': urlhash['bucket'],
-            'foldername': urlhash['foldername'],
-            'filename': urlhash['filename'],
-            'secretkey': urlhash['secretkey'],
-            'accesskey': urlhash['accesskey'],
-            'sessiontoken': urlhash['sessiontoken']
-        })
-
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def uploadcomplete(self, request, uuid=None):
-        from datetime import datetime
-        archivefile = None
-        message = None
 
         # Get location
         location = self.request.query_params.get('location', None)
@@ -479,25 +471,27 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         fl = FileLocation.objects.get(id=location)
         bucket, path = fl.get_bucket()
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
-        if not aws_key:
-            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-        if not aws_secret:
-            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-        conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
-        b = conn.get_bucket(bucket)
+        try:
+            # Get the object if it exists
+            s3 = boto3.resource('s3', config=Config(signature_version='s3v4'))
+            k = s3.Object(bucket, path)
+            fl.filesize = k.content_length
+            fl.uploadComplete = datetime.now()
+            fl.save()
 
-        # TODO FS-59: should try/catch here and return something like HttpResponseNotFound 404
-        k = b.get_key(path)
-        fl.filesize = k.size
-        fl.uploadComplete = datetime.now()
-        fl.save()
+            return Response({'message': "upload complete", "filename": archivefile.filename, "uuid": archivefile.uuid})
+        except ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                return HttpResponseBadRequest()
+            else:
+                log.exception(f'Boto Error: {e}', exc_info=True, extra={'uuid': uuid, 'location': location})
+                return HttpResponseServerError()
+        except Exception as e:
+            log.exception(f'Fileservice Error: {e}', exc_info=True, extra={'uuid': uuid, 'location': location})
+            return HttpResponseServerError()
 
-        return Response({'message': "upload complete", "filename": archivefile.filename, "uuid": archivefile.uuid})
-
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def filehash(self, request, uuid=None):
 
         # Get location
@@ -520,26 +514,26 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         fl = FileLocation.objects.get(id=location)
         bucket, path = fl.get_bucket()
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
-        if not aws_key:
-            aws_key = settings.BUCKETS.get(bucket, {}).get("AWS_KEY_ID")
-        if not aws_secret:
-            aws_secret = settings.BUCKETS.get(bucket, {}).get('AWS_SECRET')
 
-        conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
-        b = conn.get_bucket(bucket)
-        k = b.get_key(path)
+        try:
+            # Get the object if it exists
+            s3 = boto3.resource('s3', config=Config(signature_version='s3v4'))
+            k = s3.Object(bucket, path)
 
-        # Check for etag
-        if not k.etag or len(k.etag) < 2:
-            log.error('ETag is missing or invalid: {}'.format(k.etag))
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(k.e_tag)
 
-        # Return etag, stripping quotes
-        return Response(k.etag[1:-1])
+        except ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                return HttpResponseBadRequest()
+            else:
+                log.exception(f'Boto Error: {e}', exc_info=True, extra={'uuid': uuid, 'location': location})
+                return HttpResponseServerError()
 
-    @detail_route(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+        except Exception as e:
+            log.exception(f'Fileservice Error: {e}', exc_info=True, extra={'uuid': uuid, 'location': location})
+            return HttpResponseServerError()
+
+    @action(detail=True, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def register(self, request, uuid=None):
         log.debug("[files][ArchiveFileList][register] - Registering file.")
         # take uuid, create presigned url, put location into original file
@@ -584,7 +578,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         # get presigned url
         return Response({'message': message})
 
-    @list_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=False, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def archive(self, request):
         log.debug("[files][ArchiveFileList][archive] - Archiving Files: {}".format(request.query_params.get('uuids')))
 
@@ -600,7 +594,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         try:
             # Fetch the files
-            archivefiles = ArchiveFile.objects.filter(uuid__in=uuids)
+            archivefiles = ArchiveFile.objects.filter(uuid__in=uuids, deletedate__isnull=True, locations__isnull=False)
         except:
             return HttpResponseNotFound()
 
@@ -610,11 +604,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         # Check for an empty set and quit early.
         if len(archivefiles_allowed) == 0:
-            return HttpResponseForbidden()
-
-        # Set credentials
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
+            return HttpResponseForbidden(f'User does not have "view_archivefile" permission on requested files')
 
         # get presigned urls and prepare response body
         body = ''
@@ -624,7 +614,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             location = archivefile.locations.first()
 
             # Get the URL
-            url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+            url = signedUrlDownload(archivefile)
 
             # Prepare the parts
             protocol = urlparse(url).scheme
@@ -655,10 +645,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         return response
 
-    @detail_route(methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def proxy(self, request, uuid=None):
-        url = None
-        archivefile = None
+
         try:
             archivefile = ArchiveFile.objects.get(uuid=uuid)
         except:
@@ -666,11 +655,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         if not request.user.has_perm('filemaster.download_archivefile', archivefile):
             return HttpResponseForbidden()
-        # get presigned url
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
 
-        url = signedUrlDownload(archivefile, aws_key=aws_key, aws_secret=aws_secret)
+        # Generate pre-signed URL
+        url = signedUrlDownload(archivefile)
 
         # Save a download log
         DownloadLog.objects.create(archivefile=archivefile, requesting_user=request.user)
