@@ -1,3 +1,4 @@
+import os
 import boto3
 from botocore.client import Config
 
@@ -5,6 +6,48 @@ from .models import FileLocation
 
 import logging
 log = logging.getLogger(__name__)
+
+
+def awsClient(service):
+    """
+    Returns a boto3 client for the passed resource. Will use local testing URLs if
+    running in such an environment.
+    :param service: The AWS service
+    :return: boto3.client
+    """
+    # Build kwargs
+    kwargs = {'config': Config(signature_version='s3v4')}
+
+    # Check for local URL
+    if os.environ.get(f'DBMI_AWS_{service.upper()}_URL'):
+        kwargs['endpoint_url'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_URL')
+
+    # Check for local URL
+    if os.environ.get(f'DBMI_AWS_{service.upper()}_REGION'):
+        kwargs['region_name'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_REGION')
+
+    return boto3.client(service, **kwargs)
+
+
+def awsResource(service):
+    """
+    Returns a boto3 resource for the passed resource. Will use local testing URLs if
+    running in such an environment.
+    :param service: The AWS service
+    :return: boto3.resource
+    """
+    # Build kwargs
+    kwargs = {'config': Config(signature_version='s3v4')}
+
+    # Check for local URL
+    if os.environ.get(f'DBMI_AWS_{service.upper()}_URL'):
+        kwargs['endpoint_url'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_URL')
+
+    # Check for local URL
+    if os.environ.get(f'DBMI_AWS_{service.upper()}_REGION'):
+        kwargs['region_name'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_REGION')
+
+    return boto3.resource(service, **kwargs)
 
 
 def awsSignedURLUpload(archiveFile=None, bucket=None, foldername=None):
@@ -18,7 +61,7 @@ def awsSignedURLUpload(archiveFile=None, bucket=None, foldername=None):
     archiveFile.locations.add(fl)
 
     # Get the service client with sigv4 configured
-    s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+    s3 = awsClient(service='s3')
 
     # Generate the URL to get 'key-name' from 'bucket-name'
     # URL expires in 604800 seconds (seven days)
@@ -45,7 +88,7 @@ def signedUrlDownload(archiveFile=None, hours=24):
             return False
 
         # Generate the URL to get 'key-name' from 'bucket-name'
-        s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
+        s3_client = awsClient(service='s3')
         pre_signed_url = s3_client.generate_presigned_url(
             ClientMethod='get_object',
             Params={
@@ -76,7 +119,7 @@ def awsCopyFile(archive_file, destination, origin):
     log.debug(f'Copying file: s3://{origin.lower()}/{key} -> s3://{destination.lower()}/{key}')
 
     # Do the move
-    s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+    s3 = awsClient(service='s3')
     s3.copy_object(Bucket=destination, CopySource=f'{origin}/{key}', Key=f'{key}')
 
     # Create the new location
@@ -101,7 +144,7 @@ def awsRemoveFile(location):
     log.debug(f'Removing file: {bucket}/{key}')
 
     # Do the move
-    s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+    s3 = awsClient(service='s3')
     s3.delete_object(Bucket=bucket, Key=f'{key}')
 
     return True
