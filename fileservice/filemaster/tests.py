@@ -19,6 +19,7 @@ from django.test import Client
 from django.test import override_settings
 from django.test import TestCase
 
+from filemaster.aws import awsClient, awsResource
 from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
 from filemaster.models import DownloadLog
@@ -231,7 +232,7 @@ class FileserviceTests(TestCase):
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
 
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/download/')
@@ -512,7 +513,7 @@ class FileserviceTests(TestCase):
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
 
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/uploadcomplete/?location={file_location_id}')
@@ -539,7 +540,7 @@ class FileserviceTests(TestCase):
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
 
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/uploadcomplete/?location={file_location_id}')
@@ -588,7 +589,7 @@ class FileserviceTests(TestCase):
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
 
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         response = client.get(f'/filemaster/api/file/{self.accessible_file_uuid}/download/')
@@ -617,7 +618,7 @@ class FileserviceTests(TestCase):
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
 
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         # Then have a downloader user try to download it.
@@ -647,7 +648,7 @@ class FileserviceTests(TestCase):
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
 
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         # Then have a readonly user try to download it.
@@ -675,7 +676,7 @@ class FileserviceTests(TestCase):
         # Pretend to upload the file to S3.
         file_content = io.StringIO()
         file_content.write("abcdefghijklmnopqrst")
-        s3 = boto3.client('s3')
+        s3 = awsClient(service='s3')
         s3.upload_fileobj(file_content, ALLOWED_BUCKET_NAME, folder_name + '/' + file_name)
 
         # Then have a downloader user try to download it.

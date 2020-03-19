@@ -1,17 +1,14 @@
-import boto3
 import logging
 import base64
 import json
 import urllib
 
 from botocore.exceptions import ClientError
-from botocore.client import Config
 from datetime import datetime
 from uuid import uuid4
 from urllib.parse import urlparse
 
 from rest_framework.decorators import action
-from rest_framework import filters
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework import generics
@@ -35,6 +32,7 @@ from filemaster.aws import awsCopyFile
 from filemaster.aws import awsMoveFile
 from filemaster.aws import awsRemoveFile
 from filemaster.aws import signedUrlDownload
+from filemaster.aws import awsClient, awsResource
 from filemaster.filters import ArchiveFileFilter
 from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
@@ -426,7 +424,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         key = folder_name + "/" + archive_file.filename
 
         # Generate the post
-        s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+        s3 = awsClient(service='s3')
 
         post = s3.generate_presigned_post(
             Bucket=bucket,
@@ -474,7 +472,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         try:
             # Get the object if it exists
-            s3 = boto3.resource('s3', config=Config(signature_version='s3v4'))
+            s3 = awsResource(service='s3')
             k = s3.Object(bucket, path)
             fl.filesize = k.content_length
             fl.uploadComplete = datetime.now()
@@ -517,7 +515,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         try:
             # Get the object if it exists
-            s3 = boto3.resource('s3', config=Config(signature_version='s3v4'))
+            s3 = awsResource(service='s3')
             k = s3.Object(bucket, path)
 
             return Response(k.e_tag)
