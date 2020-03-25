@@ -2,6 +2,12 @@ import os
 import boto3
 from botocore.client import Config
 
+import json
+import uuid
+from boto.sts import STSConnection
+from boto.s3.connection import S3Connection
+from django.conf import settings
+
 from .models import FileLocation
 
 import logging
@@ -175,3 +181,91 @@ def awsMoveFile(archive_file, destination, origin):
         return new_location
 
     return False
+
+
+def signedUrlUpload(archiveFile=None, bucket=None, aws_key=None, aws_secret=None):
+    '''
+    This method returns data required for a pre-signed PUT operation for uploading
+    a file to the S3 bucket directly.
+
+    Note: This method depends on STS permissions and thus an IAM user configured and
+          will be removed soon as a result. Moving forward it is best to use the
+          pre-signed POSTs returned from the Filemaster API.
+    :param archiveFile:
+    :param bucket:
+    :param aws_key:
+    :param aws_secret:
+    :return: dict
+    '''
+    if not bucket:
+        bucket = settings.S3_DEFAULT_BUCKET
+
+    foldername = str(uuid.uuid4())
+    key = foldername + "/" + archiveFile.filename
+
+    try:
+        if not aws_key:
+            aws_key = settings.BUCKET_CREDENTIALS.get(bucket, {}).get("AWS_KEY_ID")
+        if not aws_secret:
+            aws_secret = settings.BUCKET_CREDENTIALS.get(bucket, {}).get('AWS_SECRET')
+
+        conn = S3Connection(aws_key, aws_secret, is_secure=True, host=S3Connection.DefaultHost)
+        url = "S3://{bucket}/{key}".format(bucket=bucket, key=key)
+
+        # register file
+        fl = FileLocation(url=url, storagetype='s3')
+        fl.save()
+        archiveFile.locations.add(fl)
+
+        url = conn.generate_url(
+            3600 * 24 * 7,
+            'PUT',
+            bucket=bucket,
+            key=foldername + "/" + archiveFile.filename,
+            force_http=False
+        )
+
+        stsconn = STSConnection(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
+
+        policydict = {
+            "Statement": [
+                {
+                    "Action": [
+                        "s3:*"
+                    ],
+                    "Resource": [
+                        "arn:aws:s3:::{bucket}/{foldername}/*".format(bucket=bucket, foldername=foldername)
+                    ],
+                    "Effect": "Allow"
+                }, {
+                    "Action": [
+                        "s3:PutObject"
+                    ],
+                    "Resource": [
+                        "arn:aws:s3:::{bucket}*".format(bucket=bucket)
+                    ],
+                    "Effect": "Allow"
+                }
+            ]
+        }
+
+        policystring = json.dumps(policydict)
+        ststoken = stsconn.get_federation_token("sys_upload", 24 * 3600, policystring)
+
+        jsonoutput = {
+            "url": url,
+            "location": "s3://{bucket}/{key}/".format(bucket=bucket, key=key),
+            "locationid": fl.id,
+            "bucket": bucket,
+            "foldername": foldername,
+            "filename": archiveFile.filename,
+            "secretkey": ststoken.credentials.secret_key,
+            "accesskey": ststoken.credentials.access_key,
+            "sessiontoken": ststoken.credentials.session_token,
+        }
+
+        return jsonoutput
+
+    except Exception as exc:
+        log.error("Error: %s" % exc)
+        return {}
