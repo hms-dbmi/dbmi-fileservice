@@ -13,8 +13,10 @@ from guardian.admin import GuardedModelAdmin
 
 class CustomUserAdmin(admin.ModelAdmin):
     fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'groups', )
-    list_display = ('username', 'email', 'is_staff')
-    search_fields = ('email', 'first_name', 'last_name',)
+    list_display = ('username', 'email', 'is_staff', 'date_joined', )
+    readonly_fields = ('date_joined', )
+    search_fields = ('email', 'first_name', 'last_name', )
+    sortable_by = ('is_staff', 'is_active', 'date_joined', )
 
 
 admin.site.register(CustomUser, CustomUserAdmin)
@@ -31,6 +33,8 @@ class ArchiveFileAdmin(admin.ModelAdmin):
     fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', 'locations')
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
+    sortable_by = ('owner', 'creationdate', 'modifydate')
+    search_fields = ('owner', 'filename', 'metadata', )
 
 
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
@@ -41,6 +45,7 @@ class FileLocationAdmin(admin.ModelAdmin):
     list_display = ('id', 'url', 'filesize', 'creationdate', 'storagetype')
     readonly_fields = ('creationdate', )
     search_fields = ('id', 'url')
+    sortable_by = ('filesize', 'creationdate', 'modifydate', 'storagetype', 'uploadcomplete')
 
 
 admin.site.register(FileLocation, FileLocationAdmin)
@@ -49,6 +54,9 @@ admin.site.register(FileLocation, FileLocationAdmin)
 class DownloadLogAdmin(admin.ModelAdmin):
     fields = ('archivefile', 'download_requested_on', 'requesting_user', )
     readonly_fields = ('download_requested_on', )
+    list_display = ('archivefile', 'download_requested_on', 'requesting_user', )
+    sortable_by = ('archivefile', 'download_requested_on', 'requesting_user', )
+    search_fields = ('archivefile', 'requesting_user', )
 
 
 admin.site.register(DownloadLog, DownloadLogAdmin)

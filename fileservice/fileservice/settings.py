@@ -2,9 +2,7 @@
 
 
 from os.path import abspath, basename, dirname, join, normpath
-from sys import path
-import os, sys
-from django.utils.crypto import get_random_string
+from sys import path, stdout
 
 from dbmi_client import environment
 
@@ -26,7 +24,7 @@ path.append(DJANGO_ROOT)
 
 ########## DEBUG CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = environment.get_bool("DJANGO_DEBUG", False)
+DEBUG = environment.get_bool("DJANGO_DEBUG", default=False)
 
 ########## END DEBUG CONFIGURATION
 
@@ -47,8 +45,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': environment.get_str('MYSQL_NAME', 'fileservice'),
         'USER': environment.get_str('MYSQL_USER', 'fileservice'),
-        'PASSWORD': environment.get_str('MYSQL_PASSWORD'),
-        'HOST': environment.get_str('MYSQL_HOST'),
+        'PASSWORD': environment.get_str('MYSQL_PASSWORD', required=True),
+        'HOST': environment.get_str('MYSQL_HOST', required=True),
         'PORT': environment.get_str('MYSQL_PORT', '3306'),
     }
 }
@@ -107,15 +105,14 @@ STATICFILES_FINDERS = (
 ########## SECRET CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 # Note: This key should only be used for development and testing.
-chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = environment.get_str("SECRET_KEY", get_random_string(50, chars))
+SECRET_KEY = environment.get_str("SECRET_KEY", required=True)
 ########## END SECRET CONFIGURATION
 
 
 ########## SITE CONFIGURATION
 # Hosts/domain names that are valid for this site
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = environment.get_list("ALLOWED_HOSTS")
+ALLOWED_HOSTS = environment.get_list("ALLOWED_HOSTS", required=True)
 ########## END SITE CONFIGURATION
 
 
@@ -226,9 +223,9 @@ DBMI_CLIENT_CONFIG = {
     'CLIENT': 'dbmifileservice',
 
     # Auth0 account details
-    'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID'),
+    'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID', required=True),
     'AUTH0_SECRET': environment.get_str('DBMI_AUTH0_SECRET'),
-    'AUTH0_TENANT': environment.get_str('DBMI_AUTH0_TENANT'),
+    'AUTH0_TENANT': environment.get_str('DBMI_AUTH0_TENANT', required=True),
     'JWT_AUTHZ_NAMESPACE': environment.get_str('DBMI_JWT_AUTHZ_NAMESPACE'),
 
     # Optionally disable logging
@@ -277,9 +274,9 @@ REST_FRAMEWORK = {
 ########## AWS S3 CONFIGURATION
 
 # Set the default S3 bucket to use when not specified
-S3_DEFAULT_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET')
-AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID')
-AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY')
+S3_DEFAULT_BUCKET = environment.get_str('AWS_S3_UPLOAD_BUCKET', required=True)
+AWS_STS_ACCESS_KEY_ID = environment.get_str('AWS_STS_ACCESS_KEY_ID', required=True)
+AWS_STS_SECRET_ACCESS_KEY = environment.get_str('AWS_STS_SECRET_ACCESS_KEY', required=True)
 
 BUCKETS = {
     S3_DEFAULT_BUCKET: {
@@ -314,7 +311,7 @@ BUCKETS["Glacier"] = {"type": "glacier"}
 ########## LOGGING CONFIGURATION
 
 # Configure sentry
-if environment.get_str('RAVEN_URL', None):
+if environment.get_str('RAVEN_URL', default=None):
     RAVEN_CONFIG = {
         'dsn': environment.get_str('RAVEN_URL'),
         'site': 'fileservice',
@@ -339,7 +336,7 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'console',
-            'stream': sys.stdout,
+            'stream': stdout,
         }
     },
     'root': {
