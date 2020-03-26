@@ -47,7 +47,7 @@ admin.site.register(FileLocation, FileLocationAdmin)
 
 
 class DownloadLogAdmin(admin.ModelAdmin):
-    fields = ('archivefile', 'download_requested_on', 'requesting_user', 'requesting_email')
+    fields = ('archivefile', 'download_requested_on', 'requesting_user', )
     readonly_fields = ('download_requested_on', )
 
 

@@ -9,7 +9,7 @@ cryptography==2.3.1
 Django==1.11.20
 django-axes==4.0.2
 django-bootstrap3==11.0.0
-django-dbmi-client==0.2.2
+django-dbmi-client==0.3.13
 django-filter==2.0.0
 django-guardian==1.4.9
 django-haystack==2.8.1
