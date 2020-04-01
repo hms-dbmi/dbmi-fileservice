@@ -2,12 +2,6 @@ import os
 import boto3
 from botocore.client import Config
 
-import json
-import uuid
-from boto.sts import STSConnection
-from boto.s3.connection import S3Connection
-from django.conf import settings
-
 from .models import FileLocation
 
 import logging
@@ -54,33 +48,6 @@ def awsResource(service):
         kwargs['region_name'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_REGION')
 
     return boto3.resource(service, **kwargs)
-
-
-def awsSignedURLUpload(archiveFile=None, bucket=None, foldername=None):
-
-    # Determine URL of upload
-    url = "S3://%s/%s" % (bucket, foldername + "/" + archiveFile.filename)
-
-    # register file
-    fl = FileLocation(url=url, storagetype='s3')
-    fl.save()
-    archiveFile.locations.add(fl)
-
-    # Get the service client with sigv4 configured
-    s3 = awsClient(service='s3')
-
-    # Generate the URL to get 'key-name' from 'bucket-name'
-    # URL expires in 604800 seconds (seven days)
-    pre_signed_url = s3.generate_presigned_url(
-        ClientMethod='put_object',
-        Params={
-            'Bucket': bucket,
-            'Key': foldername + "/" + archiveFile.filename
-        },
-        ExpiresIn=604800
-    )
-    log.error(f'Pre-signed upload: {pre_signed_url}')
-    return pre_signed_url, fl
 
 
 def signedUrlDownload(archiveFile=None, hours=24):

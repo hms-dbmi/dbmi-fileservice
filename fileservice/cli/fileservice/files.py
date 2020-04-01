@@ -1,24 +1,15 @@
 import logging
 import json
 import jsonschema
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 import requests
 import sys
-import math
-import os
-import multiprocessing
-import threading
-import io as StringIO
-from boto.s3.connection import S3Connection
 from cliff.command import Command
-from filechunkio import FileChunkIO
-from furl import furl
+import os
 from magic import Magic
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from furl import furl
 
 from .utils import print_progress_bar
-
-threadLimiter = threading.BoundedSemaphore(multiprocessing.cpu_count())
-chunk_size = 52428800
 
 
 class SearchFiles(Command):
@@ -153,7 +144,7 @@ class WriteFile(Command):
                                              data=json.dumps(j)
                                              )
             if r.status_code>=200 and r.status_code<300:
-                self.app.stdout.write("%s\n" % json.dumps(r.json()["uuid"]))
+                self.app.stdout.write("%s\n" % r.json()["uuid"])
             else:
                 self.app.stdout.write("ERROR WRITING: %s" % r.status_code)
             continue
@@ -175,36 +166,17 @@ class WriteFile(Command):
                 raise
                 return False
 
-def callback(num_bytes_read):
-    #print num_bytes_read, 'bytes read'
-    pass
 
-class processMultipart(threading.Thread):
-    def __init__(self, i,chunk_count,filepath,mp,app):
-        threading.Thread.__init__(self)
-        self.i = i
-        self.chunk_count = chunk_count
-        self.filepath = filepath
-        self.mp = mp
-        self.app = app
+def upload_callback(monitor):
+    # Print a progress bar
+    if not monitor.completed:
+        print_progress_bar(iteration=monitor.bytes_read, total=monitor.len, prefix='Uploading %s: ' % (monitor.filename),
+                           suffix='of %d bytes' % monitor.len, length=70)
 
-    def run(self):
-        threadLimiter.acquire()
-        try:
-            offset = chunk_size * self.i
-            source_size = os.stat(self.filepath).st_size
-    
-            bytes = min(chunk_size, source_size - offset)
-            with FileChunkIO(self.filepath, 'r', offset=offset,bytes=bytes) as fp:
-                self.mp.upload_part_from_file(fp, part_num=self.i + 1, cb=self.percent_cb, num_cb=10)
-                self.app.stdout.write(("Completed %s of %s chunks\n") % (self.i+1,str(self.chunk_count)))
-        finally:
-            threadLimiter.release()
-            
-    def percent_cb(self,complete, total):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-            
+    # Mark as completed to prevent double print
+    if monitor.bytes_read == monitor.len:
+        monitor.completed = True
+
 
 class UploadFile(Command):
     "Upload a file"
@@ -228,167 +200,11 @@ class UploadFile(Command):
 
         return parser
 
-    
     def take_action(self, parsed_args):
         self.log.debug(parsed_args)
         self.log.debug("Logged in -- "+self.app.user.ssotoken)
         headers={"Authorization":self.app.user.ssotoken,"Content-Type": "application/json"}
         bucket=None
-        
-        try:
-            bucket = parsed_args.bucket
-        except:
-            bucket = self.app.configoptions["bucket"]
-        
-        r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
-                                            "filemaster/api/file/%s/upload/" % (parsed_args.fileID)),
-                                            headers=headers,
-                                            params={"bucket":bucket}
-                                            )
-        if r.status_code>=200 and r.status_code<300:
-            uploadurl = r.json()["url"]
-            #upload = requests.put(uploadurl,data=open(parsed_args.localFile))
-            conn = S3Connection(aws_access_key_id=r.json()["accesskey"], 
-                                aws_secret_access_key=r.json()["secretkey"],
-                                security_token=r.json()['sessiontoken'],
-                                is_secure=True, host=S3Connection.DefaultHost)
-            
-            b = conn.get_bucket(r.json()['bucket'],validate=False)
-            
-            from boto.s3.key import Key
-            k = Key(b)
-            k.key = "/"+r.json()['foldername']+"/"+r.json()['filename']
-            
-            source_size = os.stat(parsed_args.localFile).st_size
-            if source_size < 1000000000:
-                k.set_contents_from_filename(parsed_args.localFile, cb=self.percent_cb, num_cb=10)
-            else:
-                mp = b.initiate_multipart_upload(k.key)
-                self.multipartUpload(parsed_args.localFile,mp)
-
-            uploadcomplete = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
-                                                            "filemaster/api/file/%s/uploadcomplete/" % (parsed_args.fileID)),
-                                                            headers=headers,
-                                                            params={"location":r.json()["locationid"]}
-                                                            )                
-            self.app.stdout.write("\n%s,%s,%s\n" % (parsed_args.fileID,uploadurl,uploadcomplete.json()["filename"]))
-        else:
-            self.app.stdout.write("%s" % r)
-        
-    def multipartUpload(self,filepath,mp):
-        source_size = os.stat(filepath).st_size
-        chunk_count = int(math.ceil(source_size / float(chunk_size)))
-
-        self.app.stdout.write(("Uploading in %s Chunks\n") % str(chunk_count))
-        threads = []
-
-        for i in range(chunk_count):
-            self.app.stdout.write(("Starting thread for Chunk %s\n") % str(i))
-            thread = processMultipart(i,chunk_count,filepath,mp,self.app)
-            #thread = threading.Thread(target=processMultipart, args=(i,chunk_count,filepath,mp,self.app))
-            thread.start()
-            threads.append(thread)            
-                
-        for thread in threads:
-            thread.join()                                
-        mp.complete_upload()
-        self.app.stdout.write("Upload Complete\n")        
-        
-    def percent_cb(self,complete, total):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-
-
-class ReadCallbackStream(object):
-    """Wraps a string in a read-only file-like object, but also calls
-    callback(num_bytes_read) whenever read() is called on the stream. Used for
-    tracking upload progress. Idea taken from this StackOverflow answer:
-    http://stackoverflow.com/a/5928451/68707
-    """
-    def __init__(self, data, callback,filename):
-        self._len = len(data)
-        self._io = StringIO.StringIO(data)
-        self._callback = callback
-        self.totalsize = os.path.getsize(filename)
-        self.readsofar = 0
-        sys.stderr.write("Uploading %s" % filename)
-
-    def __len__(self):
-        return self._len
-
-    def read(self, *args):
-        chunk = self._io.read(*args)
-        if len(chunk) > 0:
-            self._callback(len(chunk))
-        self.readsofar += len(chunk)
-        percent = self.readsofar * 1e2 / self.totalsize
-        sys.stderr.write("\r{percent:3.0f}%".format(percent=percent))            
-        return chunk
-
-
-class DownloadFile(Command):
-    "Download a file"
-    log = logging.getLogger(__name__)
-
-    def get_parser(self, prog_name):
-        parser = super(DownloadFile, self).get_parser(prog_name)
-
-        parser.add_argument('--fileID',
-                            help="File UUID",
-                            required=True)
-
-        return parser
-
-    def take_action(self, parsed_args):
-        self.log.debug(parsed_args)
-        self.log.debug("Logged in -- "+self.app.user.ssotoken)
-        headers={"Authorization":self.app.user.ssotoken,"Content-Type": "application/json"}
-
-        r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
-                                            "filemaster/api/file/%s/download/" % (parsed_args.fileID)),
-                                            headers=headers
-                                            )
-        self.app.stdout.write("%s" % json.dumps(r.json()))
-
-
-def upload_callback(monitor):
-    # Print a progress bar
-    if not monitor.completed:
-        print_progress_bar(iteration=monitor.bytes_read, total=monitor.len,
-                           prefix='Uploading %s: ' % (monitor.filename),
-                           suffix='of %d bytes' % monitor.len, length=70)
-
-    # Mark as completed to prevent double print
-    if monitor.bytes_read == monitor.len:
-        monitor.completed = True
-
-
-class PostFile(Command):
-    "POST a file"
-    log = logging.getLogger(__name__)
-
-    def get_parser(self, prog_name):
-        parser = super(PostFile, self).get_parser(prog_name)
-
-        parser.add_argument('--fileID',
-                            help="File UUID",
-                            required=True)
-
-        parser.add_argument('--localFile',
-                            help="The local location of the file -- eg /home/user/test.bam",
-                            required=True)
-
-        parser.add_argument('--bucket',
-                            help="The bucket where the file should go",
-                            required=False)
-
-        return parser
-
-    def take_action(self, parsed_args):
-        self.log.debug(parsed_args)
-        self.log.debug("Logged in -- " + self.app.user.ssotoken)
-        headers = {"Authorization": self.app.user.ssotoken, "Content-Type": "application/json"}
-        bucket = None
 
         try:
             bucket = parsed_args.bucket
@@ -448,3 +264,28 @@ class PostFile(Command):
                 sys.stderr.write("Upload error: %s" % post_r.content)
         except Exception as e:
             sys.stderr.write("Pre-signed POST error: %s" % e)
+
+
+class DownloadFile(Command):
+    "Download a file"
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(DownloadFile, self).get_parser(prog_name)
+
+        parser.add_argument('--fileID',
+                            help="File UUID",
+                            required=True)
+
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug(parsed_args)
+        self.log.debug("Logged in -- "+self.app.user.ssotoken)
+        headers={"Authorization":self.app.user.ssotoken,"Content-Type": "application/json"}
+
+        r = requests.get("%s/%s" % (self.app.configoptions["fileserviceurl"],
+                                            "filemaster/api/file/%s/download/" % (parsed_args.fileID)),
+                                            headers=headers
+                                            )
+        self.app.stdout.write("%s" % json.dumps(r.json()))

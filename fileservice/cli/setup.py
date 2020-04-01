@@ -46,7 +46,6 @@ setup(
         'requests',
         'requests-toolbelt',
         'furl',
-        'filechunkio',
     ],
     namespace_packages=[],
     packages=find_packages(),
