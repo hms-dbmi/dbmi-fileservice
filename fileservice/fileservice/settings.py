@@ -3,6 +3,9 @@
 
 from os.path import abspath, basename, dirname, join, normpath
 from sys import path, stdout
+import os
+import warnings
+import logging
 
 from dbmi_client import environment
 
@@ -220,7 +223,7 @@ ANONYMOUS_USER_ID = 1
 
 ######## DBMI CLIENT CONFIG
 DBMI_CLIENT_CONFIG = {
-    'CLIENT': 'dbmifileservice',
+    'CLIENT': 'dbmi',
 
     # Auth0 account details
     'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID', required=True),
@@ -230,6 +233,7 @@ DBMI_CLIENT_CONFIG = {
 
     # Optionally disable logging
     'ENABLE_LOGGING': True,
+    'LOG_LEVEL': environment.get_int('DBMI_LOG_LEVEL', default=logging.WARNING),
 
     # Universal login screen branding
     'AUTHN_TITLE': 'DBMI Fileservice',
@@ -273,37 +277,47 @@ REST_FRAMEWORK = {
 
 ########## AWS S3 CONFIGURATION
 
-# Set the default S3 bucket to use when not specified
-S3_DEFAULT_BUCKET = environment.get_str('AWS_S3_UPLOAD_BUCKET', required=True)
-AWS_STS_ACCESS_KEY_ID = environment.get_str('AWS_STS_ACCESS_KEY_ID', required=True)
-AWS_STS_SECRET_ACCESS_KEY = environment.get_str('AWS_STS_SECRET_ACCESS_KEY', required=True)
+# Check for specified buckets
+if os.environ.get('DBMI_S3_BUCKETS'):
+    BUCKETS = environment.get_list('DBMI_S3_BUCKETS', default=[])
 
-BUCKETS = {
-    S3_DEFAULT_BUCKET: {
-        'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
-        'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
-    }
-}
+# Check for deprecated configuration
+else:
+    BUCKET_CREDENTIALS = {}
 
-# Include all additional buckets and AWS credentials like follows:
-# Bucket specification format:
-# <S3 bucket name>: {
-#   "AWS_KEY_ID": <AWS STS key id>,
-#   "AWS_SECRET": <AWS STS secret key>
-# },
-BUCKETS.update({
-    bucket: {
-        'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
-        'AWS_SECRET': credentials.get('AWS_SECRET'),
-    } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
-})
+    if os.environ.get('AWS_S3_UPLOAD_BUCKET') and os.environ.get('AWS_STS_ACCESS_KEY_ID') \
+        and os.environ.get('AWS_STS_SECRET_ACCESS_KEY'):
 
-# Add glacier
-BUCKETS["Glacier"] = {"type": "glacier"}
+        # Set the default S3 bucket to use when not specified
+        S3_DEFAULT_BUCKET = environment.get_str('AWS_S3_UPLOAD_BUCKET')
+        AWS_STS_ACCESS_KEY_ID = environment.get_str('AWS_STS_ACCESS_KEY_ID')
+        AWS_STS_SECRET_ACCESS_KEY = environment.get_str('AWS_STS_SECRET_ACCESS_KEY')
+
+        BUCKET_CREDENTIALS.update({
+            S3_DEFAULT_BUCKET: {
+                'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
+                'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
+            }
+        })
+
+    if os.environ.get('AWS_S3_BUCKETS'):
+        BUCKET_CREDENTIALS.update({
+            bucket: {
+                'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
+                'AWS_SECRET': credentials.get('AWS_SECRET'),
+            } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
+        })
+
+    # Retain list of buckets for updated settings configuration
+    BUCKETS = list(BUCKET_CREDENTIALS.keys())
+
+    warnings.warn(
+        'Fileservice configurations with AWS IAM user credentials should be avoided',
+        DeprecationWarning
+    )
+if not BUCKETS:
+    raise SystemError(f'Invalid configuration: DBMI_S3_BUCKETS or AWS_S3_UPLOAD_BUCKET/AWS_STS_ACCESS_KEY_ID/'
+                      f'AWS_STS_SECRET_ACCESS_KEY and/or AWS_S3_BUCKETS with credentials must be defined')
 
 ########## END AWS S3 CONFIGURATION
 
@@ -358,6 +372,26 @@ LOGGING = {
             'level': 'WARNING',
             'handlers': ['console'],
             'propagate': False,
+        },
+        'botocore': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'boto': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'boto3': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        's3transfer': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
         },
     },
 }

@@ -37,7 +37,7 @@ def buckets(sender, **kwargs):
 
     # Iterate buckets
     logger.debug('post-migrate: Checking configured AWS buckets for entry in Bucket table')
-    for bucket, credentials in settings.BUCKETS.items():
+    for bucket in settings.BUCKETS:
         bucket, created = Bucket.objects.get_or_create(name=bucket)
         if created:
             logger.info('post-migrate: Added Bucket \'{}\''.format(bucket))

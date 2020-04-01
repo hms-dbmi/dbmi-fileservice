@@ -1,25 +1,25 @@
 import logging
 import json
-import os
 import jsonschema
-import importlib
-import uuid
 import requests
 import sys
+import math
+import os
+import multiprocessing
+import threading
 import io as StringIO
-import urllib.request, urllib.error, urllib.parse
-from boto.sts import STSConnection
 from boto.s3.connection import S3Connection
 from cliff.command import Command
 from filechunkio import FileChunkIO
-import math, os
-import multiprocessing
-from multiprocessing.pool import IMapIterator
-import threading
-import time
+from furl import furl
+from magic import Magic
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+
+from .utils import print_progress_bar
 
 threadLimiter = threading.BoundedSemaphore(multiprocessing.cpu_count())
 chunk_size = 52428800
+
 
 class SearchFiles(Command):
     "Search by keywords, tags and fields: fileservice search --fields 'description' --keyword testfile"
@@ -91,6 +91,7 @@ class ListFiles(Command):
             self.app.stdout.write("%s" % json.dumps(r.json(),indent=4))
         else:
             self.app.stdout.write("%s" % r.status_code)
+
 
 class ReadFile(Command):
     "Details about a file"
@@ -298,7 +299,6 @@ class UploadFile(Command):
         sys.stdout.flush()
 
 
-    
 class ReadCallbackStream(object):
     """Wraps a string in a read-only file-like object, but also calls
     callback(num_bytes_read) whenever read() is called on the stream. Used for
@@ -325,6 +325,7 @@ class ReadCallbackStream(object):
         sys.stderr.write("\r{percent:3.0f}%".format(percent=percent))            
         return chunk
 
+
 class DownloadFile(Command):
     "Download a file"
     log = logging.getLogger(__name__)
@@ -348,5 +349,102 @@ class DownloadFile(Command):
                                             headers=headers
                                             )
         self.app.stdout.write("%s" % json.dumps(r.json()))
-        
 
+
+def upload_callback(monitor):
+    # Print a progress bar
+    if not monitor.completed:
+        print_progress_bar(iteration=monitor.bytes_read, total=monitor.len,
+                           prefix='Uploading %s: ' % (monitor.filename),
+                           suffix='of %d bytes' % monitor.len, length=70)
+
+    # Mark as completed to prevent double print
+    if monitor.bytes_read == monitor.len:
+        monitor.completed = True
+
+
+class PostFile(Command):
+    "POST a file"
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(PostFile, self).get_parser(prog_name)
+
+        parser.add_argument('--fileID',
+                            help="File UUID",
+                            required=True)
+
+        parser.add_argument('--localFile',
+                            help="The local location of the file -- eg /home/user/test.bam",
+                            required=True)
+
+        parser.add_argument('--bucket',
+                            help="The bucket where the file should go",
+                            required=False)
+
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug(parsed_args)
+        self.log.debug("Logged in -- " + self.app.user.ssotoken)
+        headers = {"Authorization": self.app.user.ssotoken, "Content-Type": "application/json"}
+        bucket = None
+
+        try:
+            bucket = parsed_args.bucket
+        except:
+            bucket = self.app.configoptions["bucket"]
+
+        try:
+            # Build URL to get pre-signed POST
+            post_url = furl(self.app.configoptions["fileserviceurl"])
+            post_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'post', ''])
+
+            # Make request
+            post_r = requests.get(post_url.url, headers=headers, params={"bucket": bucket})
+            if post_r.ok:
+                # Parse elements of pre-signed POST from Fileservice
+                location_id = post_r.json()["locationid"]
+                post = post_r.json()["post"]
+                upload_url = post["url"]
+                fields = post["fields"]
+
+                # Get MIME type
+                magic = Magic(mime=True)
+                mime_type = magic.from_file(parsed_args.localFile)
+
+                # Add file
+                fields['file'] = (os.path.basename(parsed_args.localFile), open(parsed_args.localFile, 'rb'), mime_type)
+
+                encoder = MultipartEncoder(fields=fields)
+                monitor = MultipartEncoderMonitor(encoder, upload_callback)
+
+                # Add filename
+                setattr(monitor, 'filename', os.path.basename(parsed_args.localFile))
+                setattr(monitor, 'completed', False)
+
+                # Make the request
+                upload_r = requests.post(upload_url, data=monitor, headers={'Content-Type': monitor.content_type})
+                if upload_r.ok:
+
+                    # Build URL to get complete file
+                    complete_url = furl(self.app.configoptions["fileserviceurl"])
+                    complete_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID,
+                                                       'uploadcomplete', ''])
+
+                    # Make the request
+                    complete_r = requests.get(complete_url.url, headers=headers, params={"location": location_id})
+                    if not complete_r.ok:
+                        sys.stderr.write("Completion error: %s" % complete_r.content)
+
+                    # Print upload details
+                    self.app.stdout.write("\n%s,%s,%s\n" % (
+                        parsed_args.fileID, upload_url, complete_r.json()["filename"]
+                    ))
+
+                else:
+                    sys.stderr.write("Upload POST error: %s" % upload_r.content)
+            else:
+                sys.stderr.write("Upload error: %s" % post_r.content)
+        except Exception as e:
+            sys.stderr.write("Pre-signed POST error: %s" % e)
