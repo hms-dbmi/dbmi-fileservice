@@ -678,69 +678,6 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         return response
 
-    @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
-    def upload(self, request, uuid=None):
-        from filemaster.aws import signedUrlUpload
-
-        try:
-            archivefile = ArchiveFile.objects.get(uuid=uuid)
-        except:
-            return HttpResponseNotFound()
-
-        if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
-            return HttpResponseForbidden()
-
-        bucket = self.request.query_params.get('bucket')
-        aws_key = self.request.query_params.get('aws_key', None)
-        aws_secret = self.request.query_params.get('aws_secret', None)
-
-        # If no bucket specified, default to first created
-        if not bucket:
-            try:
-                bucket = next(settings.BUCKETS)
-            except Exception as e:
-                log.exception(f'Error finding default bucket: {e}', exc_info=True, extra={'request': request})
-                return HttpResponseBadRequest(f'No default bucket has been configured for Fileservice, must specify'
-                                              f'bucket in request')
-
-        try:
-            # Check bucket perms
-            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=bucket)):
-                return HttpResponseForbidden(f'User does not have permissions on Bucket "{bucket}"')
-        except Bucket.DoesNotExist:
-            return HttpResponseNotFound(f'Bucket "{bucket}" does not exist in Fileservice')
-
-        # Ensure we have a configured IAM User
-        if (not aws_key or not aws_secret) and (not hasattr(settings, 'BUCKET_CREDENTIALS')
-                                                or not settings.BUCKET_CREDENTIALS.get(bucket)
-                                                or not settings.BUCKET_CREDENTIALS[bucket].get('AWS_KEY_ID')
-                                                or not settings.BUCKET_CREDENTIALS[bucket].get('AWS_SECRET')):
-            log.error(f'Upload failed as IAM/STS credentials are not enabled for this instance of Fileservice', extra={
-                'request': request, 'archivefile': archivefile, 'bucket': bucket,
-            })
-            return HttpResponseBadRequest(f'No IAM credentials configured for bucket "{bucket}"')
-
-        urlhash = signedUrlUpload(archivefile, bucket=bucket, aws_key=aws_key, aws_secret=aws_secret)
-
-        url = urlhash["url"]
-        message = "PUT to this url"
-        location = urlhash["location"]
-        locationid = urlhash["locationid"]
-
-        # get presigned url
-        return Response({
-            'url': url,
-            'message': message,
-            'location': location,
-            'locationid': locationid,
-            'bucket': urlhash['bucket'],
-            'foldername': urlhash['foldername'],
-            'filename': urlhash['filename'],
-            'secretkey': urlhash['secretkey'],
-            'accesskey': urlhash['accesskey'],
-            'sessiontoken': urlhash['sessiontoken']
-        })
-
 
 class DownloadLogList(generics.ListAPIView):
     """
