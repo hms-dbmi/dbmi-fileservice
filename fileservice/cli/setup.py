@@ -61,7 +61,6 @@ setup(
             'write = fileservice.files:WriteFile',
             'download = fileservice.files:DownloadFile',
             'upload = fileservice.files:UploadFile',
-            'post = fileservice.files:PostFile',
             'udn = fileservice.udn:RegisterFile',
         ],
     },
