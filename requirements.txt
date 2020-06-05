@@ -6,7 +6,7 @@ botocore==1.12.106
 celery==4.2.1
 celery-haystack==0.10
 cryptography==2.3.1
-Django==1.11.20
+Django==1.11.29
 django-axes==4.0.2
 django-bootstrap3==11.0.0
 django-dbmi-client==0.2.2
