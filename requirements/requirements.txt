@@ -1,0 +1,23 @@
+-c constraints.txt
+boto
+boto3
+celery
+celery-haystack
+Django
+django-axes
+django-bootstrap3
+django-dbmi-client
+django-filter
+django-guardian
+django-haystack
+django-health-check
+django-nose
+django-taggit
+django-taggit-serializer
+djangorestframework
+djangorestframework-guardian
+jsonfield
+mysqlclient
+pyyaml
+raven
+requests

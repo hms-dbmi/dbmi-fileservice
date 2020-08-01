@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from django.conf.urls import include
 from django.conf.urls import url
 
+from filemaster.apps import FilemasterConfig
 from .views import GroupDetail
 from .views import GroupList
 from .views import UserList
@@ -13,7 +14,8 @@ from .views import logout
 from .files import ArchiveFileList
 from .files import DownloadLogList
 
-# TODO remove this?
+app_name = FilemasterConfig.name
+
 router = DefaultRouter()
 router.register(r'file', ArchiveFileList)
 

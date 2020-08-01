@@ -1,4 +1,4 @@
-FROM python:3.6-alpine3.8 AS builder
+FROM python:3.6-alpine3.11 AS builder
 
 # Install dependencies
 RUN apk add --update \
@@ -9,12 +9,13 @@ RUN apk add --update \
     git
 
 # Add requirements
-ADD requirements.txt /requirements.txt
+ADD requirements /requirements
 
 # Install Python packages
-RUN pip install -r /requirements.txt
+ARG PIP_ARGS
+RUN pip install ${PIP_ARGS} -r /requirements/requirements.txt
 
-FROM hmsdbmitc/dbmisvc:3.6-alpine-zip
+FROM hmsdbmitc/dbmisvc:alpine-zip-python3.6-0.1.0
 
 RUN apk add --no-cache --update \
     mariadb-connector-c git libffi-dev git \
@@ -24,10 +25,11 @@ RUN apk add --no-cache --update \
 COPY --from=builder /root/.cache /root/.cache
 
 # Add requirements
-ADD requirements.txt /requirements.txt
+ADD requirements /requirements
 
 # Install Python packages
-RUN pip install -r /requirements.txt
+ARG PIP_ARGS
+RUN pip install ${PIP_ARGS} -r /requirements/requirements.txt
 
 # Copy app source
 COPY /fileservice /app
