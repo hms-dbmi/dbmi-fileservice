@@ -73,6 +73,10 @@ USE_L10N = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
+
+SILENCED_SYSTEM_CHECKS = [
+    'admin.E408',  # This throws an error if normal Auth middleware is not in use
+]
 ########## END GENERAL CONFIGURATION
 
 
@@ -150,7 +154,7 @@ TEMPLATES = [
 
 ########## MIDDLEWARE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#middleware-classes
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     # Default Django middleware.
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -158,6 +162,7 @@ MIDDLEWARE_CLASSES = (
     'dbmi_client.middleware.DBMIAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 )
 ########## END MIDDLEWARE CONFIGURATION
 
@@ -210,6 +215,7 @@ AUTHENTICATION_BACKENDS = (
     'dbmi_client.authn.DBMIUsersModelAuthenticationBackend',
     'guardian.backends.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'axes.backends.AxesBackend',
 )
 
 # Custom user model

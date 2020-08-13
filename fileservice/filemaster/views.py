@@ -4,7 +4,6 @@ from furl import furl
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 from django.http import HttpResponseForbidden
@@ -111,7 +110,9 @@ class GroupList(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
+        log.debug("[views][GroupList][post]")
         if not request.user.has_perm('auth.add_group'):
+            log.warning("User '{}' does not have permission 'add_group'".format(request.user.username))
             return HttpResponseForbidden()
         sdata=[]
         for types in GROUPTYPES: 
