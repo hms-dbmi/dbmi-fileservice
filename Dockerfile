@@ -12,8 +12,7 @@ RUN apk add --update \
 ADD requirements /requirements
 
 # Install Python packages
-ARG PIP_ARGS
-RUN pip install ${PIP_ARGS} -r /requirements/requirements.txt
+RUN pip install -r /requirements/requirements.txt
 
 FROM hmsdbmitc/dbmisvc:alpine-zip-python3.6-0.1.0
 
@@ -28,8 +27,7 @@ COPY --from=builder /root/.cache /root/.cache
 ADD requirements /requirements
 
 # Install Python packages
-ARG PIP_ARGS
-RUN pip install ${PIP_ARGS} -r /requirements/requirements.txt
+RUN pip install -r /requirements/requirements.txt
 
 # Copy app source
 COPY /fileservice /app
