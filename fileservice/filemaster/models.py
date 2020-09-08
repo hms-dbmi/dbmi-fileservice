@@ -287,3 +287,53 @@ class DownloadLog(models.Model):
     archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.PROTECT)
     download_requested_on = models.DateTimeField(blank=False, null=False, auto_now_add=True)
     requesting_user = models.ForeignKey(CustomUser, blank=False, null=False, on_delete=models.PROTECT)
+
+
+def week_from_now():
+    """
+    Return the date object seven days from now
+    """
+    return timezone.now() + timedelta(days=7)
+
+
+class MultipartUpload(models.Model):
+    """
+    A model used to track multipart upload processes
+    """
+    uuid = UUIDField(primary_key=True, unique=True, default=uuid.uuid4, editable=False)
+    upload_id = models.TextField(null=False, blank=False, editable=False)
+    uploader = models.ForeignKey(CustomUser, null=False, blank=False, on_delete=models.CASCADE)
+    bucket = models.ForeignKey(Bucket, null=True, blank=True, on_delete=models.SET_NULL)
+    size = models.IntegerField(blank=False, null=False)
+    archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.CASCADE)
+    location = models.ForeignKey(FileLocation, blank=True, null=True, on_delete=models.SET_NULL)
+    etag = models.TextField(null=True, blank=True)
+    creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
+    modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    completeddate = models.DateTimeField(null=True, blank=True)
+    aborteddate = models.DateTimeField(null=True, blank=True)
+    expirationdate = models.DateTimeField(null=False, blank=False, default=week_from_now)
+
+    def save(self, *args, **kwargs):
+        if self.etag:
+            self.completeddate = timezone.now()
+        return super(MultipartUpload, self).save(*args, **kwargs)
+
+
+class UploadPart(models.Model):
+    """
+    A model used to track a part of a multipart upload
+    """
+    upload = models.ForeignKey(MultipartUpload, blank=False, null=False, on_delete=models.CASCADE, related_name='parts')
+    size = models.IntegerField(blank=False, null=False, default=5 * 1024 * 1024)
+    index = models.IntegerField(blank=False, null=False)
+    url = models.TextField(blank=False, null=False)
+    etag = models.TextField(null=True, blank=True)
+    creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
+    modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    completeddate = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.etag:
+            self.completeddate = timezone.now()
+        return super(UploadPart, self).save(*args, **kwargs)

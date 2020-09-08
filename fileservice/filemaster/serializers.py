@@ -14,6 +14,7 @@ from .models import ArchiveFile
 from .models import CustomUser
 from .models import DownloadLog
 from .models import FileLocation
+from filemaster.models import MultipartUpload, UploadPart
 
 
 class WritableField(serializers.Field):
@@ -159,3 +160,38 @@ class DownloadLogSerializer(serializers.ModelSerializer):
         model = DownloadLog
         fields = ('archivefile', 'download_requested_on', 'requesting_user')
         depth = 1
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    """
+    This serializer returns user details
+    """
+    class Meta:
+        model = CustomUser
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'is_active', 'date_joined')
+        read_only_fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'is_active', 'date_joined')
+
+
+class UploadPartSerializer(serializers.ModelSerializer):
+    size = serializers.IntegerField(required=False)
+    etag = serializers.CharField(required=False)
+
+    class Meta:
+        model = UploadPart
+        fields = '__all__'
+        read_only_fields = ('upload', 'index', 'url', 'creationdate', 'modifydate', 'completeddate', 'expirationdate')
+
+
+class MultipartUploadSerializer(serializers.ModelSerializer):
+    archivefile = serializers.CharField(required=True)
+    bucket = serializers.CharField(required=True)
+    size = serializers.IntegerField(required=True)
+    uploader = CustomUserSerializer(read_only=True)
+    parts = UploadPartSerializer(many=True, read_only=True)
+    expirationdate = serializers.DateTimeField(required=False)
+
+    class Meta:
+        model = MultipartUpload
+        fields = '__all__'
+        lookup_field = 'uuid'
+        read_only_fields = ('uuid', 'upload_id', 'location', 'uploader', 'parts', 'creationdate', 'modifydate', 'completeddate', 'aborteddate')

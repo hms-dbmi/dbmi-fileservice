@@ -14,6 +14,7 @@ from filechunkio import FileChunkIO
 from furl import furl
 from magic import Magic
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from pathlib import Path
 
 from .utils import print_progress_bar
 
@@ -162,7 +163,8 @@ class WriteFile(Command):
         for j in jsondata:
             schema = None
             try:
-                schema = json.load(open("data/schemas/files.json"))
+                dirname = os.path.dirname(os.path.dirname(__file__))
+                schema = json.load(open(os.path.join(dirname, "data/schemas/files.json")))
             except Exception as e:
                 self.log.error("Cannot decode schema file -- %s" % e)
                 return False
@@ -448,3 +450,131 @@ class PostFile(Command):
                 sys.stderr.write("Upload error: %s" % post_r.content)
         except Exception as e:
             sys.stderr.write("Pre-signed POST error: %s" % e)
+
+
+class MultipartUploadFile(Command):
+    "PUT a file via multipart"
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(MultipartUploadFile, self).get_parser(prog_name)
+
+        parser.add_argument('--fileID',
+                            help="File UUID",
+                            required=True)
+
+        parser.add_argument('--localFile',
+                            help="The local location of the file -- eg /home/user/test.bam",
+                            required=True)
+
+        parser.add_argument('--bucket',
+                            help="The bucket where the file should go",
+                            required=False)
+
+        parser.add_argument('--partSize',
+                            type=int,
+                            default=10 * 1024 * 1024,
+                            help="The size of the uploaded parts in KB",
+                            required=False)
+
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug(parsed_args)
+        self.log.debug("Multipart Upload")
+        headers = {"Authorization": self.app.user.ssotoken, "Content-Type": "application/json"}
+
+        bucket = None
+        try:
+            bucket = parsed_args.bucket
+        except:
+            bucket = self.app.configoptions["bucket"]
+
+        try:
+            # Build URL to get multipart upload started
+            multipart_url = furl(self.app.configoptions["fileserviceurl"])
+            multipart_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', ''])
+            multipart_url.path.segments.extend(['filemaster', 'api', 'multipart', ''])
+
+            multipart_file = Path(parsed_args.localFile)
+            multipart_file_size = multipart_file.stat().st_size
+            multipart_file_parts = int(multipart_file_size / parsed_args.partSize) + 1
+
+            # Set data
+            data = {'archivefile': parsed_args.fileID, 'bucket': bucket, 'size': multipart_file_size}
+
+            # Make request
+            multipart_r = requests.post(multipart_url.url, headers=headers, json=data)
+            if multipart_r.ok:
+
+                # Get the upload ID
+                upload_id = multipart_r.json()["uuid"]
+
+                # Get MIME type
+                magic = Magic(mime=True)
+                mime_type = magic.from_file(parsed_args.localFile)
+
+                try:
+                    self.app.stdout.write("Archivefile {}: Starting upload {}".format(parsed_args.fileID, upload_id))
+                    with multipart_file.open('rb') as f:
+                        for part in range(1, multipart_file_parts + 1):
+                            try:
+                                self.app.stdout.write("Starting part {}/{}".format(part, multipart_file_parts))
+
+                                # Build URL to get complete file
+                                part_url = furl(self.app.configoptions["fileserviceurl"])
+                                #part_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, 'part', part, ''])
+                                part_url.path.segments.extend(['filemaster', 'api', 'multipart', upload_id, 'part', part, ''])
+
+                                # Make the request
+                                part_r = requests.put(part_url.url, headers=headers)
+                                if part_r.ok:
+
+                                    # Get the upload
+                                    upload_url = part_r.json()['url']
+
+                                    # Read the data
+                                    data = f.read(parsed_args.partSize)
+
+                                    # Make the request
+                                    upload_r = requests.put(upload_url, data=data)
+                                    if upload_r.ok:
+
+                                        # Get ETag
+                                        etag = upload_r.headers['ETag'].replace('\'', '').replace('"', '')
+
+                                        # Build URL to get complete file
+                                        part_url = furl(self.app.configoptions["fileserviceurl"])
+                                        #part_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, 'part', part, ''])
+                                        part_url.path.segments.extend(['filemaster', 'api', 'multipart', upload_id, 'part', part, ''])
+
+                                        # Make the request
+                                        part_r = requests.patch(part_url.url, headers=headers, json={'etag': etag})
+                                        if part_r.ok:
+                                            self.app.stdout.write("Uploaded part {}/{}".format(part, multipart_file_parts))
+                            except Exception as e:
+                                sys.stderr.write("Upload part error: %s" % e)
+                                if part_r and getattr(part_r, 'content'):
+                                    sys.stderr.write("Upload part request: %s" % part_r.content)
+
+                except Exception as e:
+                    sys.stderr.write("File error: %s" % e)
+
+                # Build URL to get complete file
+                complete_url = furl(self.app.configoptions["fileserviceurl"])
+                #complete_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, ''])
+                complete_url.path.segments.extend(['filemaster', 'api', 'multipart', upload_id, ''])
+
+                # Make the request
+                complete_r = requests.patch(complete_url.url, headers=headers)
+                if not complete_r.ok:
+                    sys.stderr.write("Completion error: %s" % complete_r.content)
+
+                else:
+                    self.log.debug("Upload complete")
+                    self.app.stdout.write("Archivefile {}: Upload complete {}".format(parsed_args.fileID, upload_id))
+
+            else:
+                sys.stderr.write("Multipart creation error: %s" % multipart_r.content)
+        except Exception as e:
+            sys.stderr.write("Multipart Upload error: %s" % e)

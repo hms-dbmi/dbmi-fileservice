@@ -7,11 +7,13 @@ from filemaster.models import Bucket
 from filemaster.models import CustomUser
 from filemaster.models import DownloadLog
 from filemaster.models import FileLocation
+from filemaster.models import MultipartUpload
+from filemaster.models import UploadPart
 
 from guardian.admin import GuardedModelAdmin
 
 
-class CustomUserAdmin(admin.ModelAdmin):
+class CustomUserAdmin(GuardedModelAdmin):
     fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'groups', )
     list_display = ('username', 'email', 'is_staff', 'date_joined', )
     readonly_fields = ('date_joined', )
@@ -22,14 +24,14 @@ class CustomUserAdmin(admin.ModelAdmin):
 admin.site.register(CustomUser, CustomUserAdmin)
 
 
-class BucketAdmin(admin.ModelAdmin):
+class BucketAdmin(GuardedModelAdmin):
     list_display = ('name', )
 
 
 admin.site.register(Bucket, BucketAdmin)
 
 
-class ArchiveFileAdmin(admin.ModelAdmin):
+class ArchiveFileAdmin(GuardedModelAdmin):
     fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', 'locations')
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
@@ -40,7 +42,7 @@ class ArchiveFileAdmin(admin.ModelAdmin):
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
 
 
-class FileLocationAdmin(admin.ModelAdmin):
+class FileLocationAdmin(GuardedModelAdmin):
     fields = ('creationdate', 'url', 'uploadComplete', 'storagetype', 'filesize', )
     list_display = ('id', 'url', 'filesize', 'creationdate', 'storagetype')
     readonly_fields = ('creationdate', )
@@ -51,7 +53,7 @@ class FileLocationAdmin(admin.ModelAdmin):
 admin.site.register(FileLocation, FileLocationAdmin)
 
 
-class DownloadLogAdmin(admin.ModelAdmin):
+class DownloadLogAdmin(GuardedModelAdmin):
     fields = ('archivefile', 'download_requested_on', 'requesting_user', )
     readonly_fields = ('download_requested_on', )
     list_display = ('archivefile', 'download_requested_on', 'requesting_user', )
@@ -60,6 +62,56 @@ class DownloadLogAdmin(admin.ModelAdmin):
 
 
 admin.site.register(DownloadLog, DownloadLogAdmin)
+
+
+class MultipartUploadAdmin(GuardedModelAdmin):
+    fields = (
+        'uuid', 'upload_id', 'uploader', 'bucket', 'size', 
+        'archivefile', 'location', 'etag', 'creationdate', 
+        'completeddate', 'aborteddate', 'modifydate', 'expirationdate', 
+        )
+    readonly_fields = (
+        'uuid', 'upload_id', 'uploader', 'bucket', 'size', 
+        'archivefile', 'location', 'etag', 'creationdate', 
+        'completeddate', 'aborteddate', 'modifydate', 'expirationdate', 
+        )
+    list_display = ('archivefile', 'uploader', 'bucket', 'size' )
+    sortable_by = (
+        'archivefile', 'uploader', 'size', 'bucket', 'completeddate', 
+        'aborteddate', 'modifydate', 'expirationdate', 
+        'expirationdate'
+        )
+    search_fields = (
+        'archivefile', 'uploader', 'size', 'bucket', 'location', 
+        'etag', 'creationdate', 'aborteddate', 'completeddate', 'modifydate', 
+        'expirationdate'
+        )
+
+
+admin.site.register(MultipartUpload, MultipartUploadAdmin)
+
+
+class UploadPartAdmin(GuardedModelAdmin):
+    fields = (
+        'upload', 'size', 'index', 'url', 'etag', 'creationdate', 'modifydate', 
+        'completeddate'
+        )
+    readonly_fields = (
+        'upload', 'size', 'index', 'url', 'creationdate', 'modifydate', 
+        'completeddate'
+        )
+    list_display = ('upload', 'index', 'size', 'creationdate', 'completeddate')
+    sortable_by = (
+        'upload', 'size', 'index', 'creationdate', 'modifydate', 
+        'completeddate'
+        )
+    search_fields = (
+        'upload', 'size', 'index', 'url', 'etag', 'creationdate', 'modifydate', 
+        'completeddate'
+        )
+
+
+admin.site.register(UploadPart, UploadPartAdmin)
 
 
 def patch_admin(model, admin_site=None):

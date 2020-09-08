@@ -13,6 +13,7 @@ django-taggit
 django-taggit-serializer
 djangorestframework
 djangorestframework-guardian
+drf-nested-routers
 jsonfield
 mysqlclient
 pyyaml

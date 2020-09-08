@@ -20,6 +20,7 @@ django-taggit-serializer==0.1.7
 djangorestframework==3.11.1
 djangorestframework-guardian==0.3.0
 docutils==0.16
+drf-nested-routers==0.91
 furl==2.1.0
 idna==2.10
 importlib-metadata==1.7.0

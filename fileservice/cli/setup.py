@@ -64,6 +64,7 @@ setup(
             'upload = fileservice.files:UploadFile',
             'post = fileservice.files:PostFile',
             'udn = fileservice.udn:RegisterFile',
+            'multipart = fileservice.files:MultipartUploadFile',
         ],
     },
     zip_safe=False,

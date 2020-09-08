@@ -12,35 +12,51 @@ from rest_framework.decorators import action
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework import generics
+from rest_framework import mixins
 from rest_framework.response import Response
+from rest_framework.request import clone_request
+from django.http import Http404
 
 from django_filters import rest_framework as rest_framework_filters
-from rest_framework_guardian.filters import DjangoObjectPermissionsFilter
+from rest_framework_guardian.filters import ObjectPermissionsFilter
 from guardian.shortcuts import get_objects_for_user
 
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseServerError
+from django.http import HttpResponseNotAllowed
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
+from filemaster.permissions import DjangoModelPermissionsAll
 from filemaster.aws import awsCopyFile
 from filemaster.aws import awsMoveFile
 from filemaster.aws import awsRemoveFile
 from filemaster.aws import signedUrlDownload
 from filemaster.aws import awsClient, awsResource
+from filemaster.aws import awsCreateMultipartUpload
+from filemaster.aws import awsCreateUploadPart
+from filemaster.aws import awsAbortMultipartUpload
+from filemaster.aws import awsCompleteMultipartUpload
+from filemaster.aws import MultipartUploadEntityTooSmallError
+from filemaster.aws import MultipartUploadInvalidPart
+from filemaster.aws import MultipartUploadInvalidPartOrder
+from filemaster.aws import MultipartUploadNoSuchUpload
 from filemaster.filters import ArchiveFileFilter
 from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
 from filemaster.models import DownloadLog
 from filemaster.models import FileLocation
+from filemaster.models import MultipartUpload, UploadPart
 from filemaster.serializers import ArchiveFileSerializer
 from filemaster.serializers import DownloadLogSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
+from filemaster.serializers import MultipartUploadSerializer, UploadPartSerializer
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +69,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
     filter_class = ArchiveFileFilter
-    filter_backends = (rest_framework_filters.DjangoFilterBackend, DjangoObjectPermissionsFilter,)
+    filter_backends = (rest_framework_filters.DjangoFilterBackend, ObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
         log.debug("[files][ArchiveFileList][pre_savepre_save] - Making user owner.")
@@ -778,3 +794,305 @@ class DownloadLogList(generics.ListAPIView):
             queryset = queryset.filter(download_requested_on__lte=download_date_lte)
 
         return queryset
+
+
+class MultipartUploadViewSet(viewsets.ModelViewSet):
+    queryset = MultipartUpload.objects.all()
+    serializer_class = MultipartUploadSerializer
+    lookup_field = 'uuid'
+    filter_backends = (rest_framework_filters.DjangoFilterBackend, )
+
+    def get_queryset(self):
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=self.kwargs.get('archivefile_uuid'))
+            return MultipartUpload.objects.filter(archivefile=archivefile)
+        except (ArchiveFile.DoesNotExist):
+            raise Http404
+
+    def get_object(self):
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=self.kwargs.get('archivefile_uuid'))
+            upload = MultipartUpload.objects.get(uuid=self.kwargs.get('uuid'), archivefile=archivefile)
+            return upload
+        except (MultipartUpload.DoesNotExist, ArchiveFile.DoesNotExist):
+            raise Http404
+
+    def create(self, request, *args, **kwargs):
+        log.debug("[MultipartUploadViewSet] Create")
+
+        # Get the UUIDs from the request data.
+        archivefile_uuid = kwargs.get('archivefile_uuid')
+        if archivefile_uuid is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Fetch the Archive File
+            archivefile = ArchiveFile.objects.get(uuid=archivefile_uuid)
+        except:
+            log.warning('Request for ArchiveFile "{}" but does not exist'.format(archivefile_uuid))
+            return HttpResponseNotFound()
+
+        # Check for permissions on the file itself
+        if not request.user.has_perm('filemaster.upload_archivefile', archivefile):
+            log.warning('Request for ArchiveFile "{}" but user doesn\'t permissions'.format(archivefile_uuid))
+            return HttpResponseForbidden()
+
+        try:
+            # Fetch the Archive File
+            bucket = Bucket.objects.get(name=request.data.get('bucket'))
+        except:
+            log.warning('Request for bucket "{}" but does not exist'.format(request.data.get('bucket')))
+            return HttpResponseNotFound()
+
+        # Ensure the bucket is writable
+        if not request.user.has_perm('filemaster.write_bucket', bucket):
+            log.warning('Request for bucket "{}" but user doesn\'t permissions'.format(request.data.get('bucket')))
+            return HttpResponseForbidden()
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        log.debug("[MultipartUploadViewSet] Perform create")
+
+        # Get the UUIDs from the request data.
+        archivefile = ArchiveFile.objects.get(uuid=self.kwargs.get('archivefile_uuid'))
+        bucket = Bucket.objects.get(name=serializer.validated_data.get('bucket'))
+
+        # Build the key
+        key = str(uuid4()) + "/" + archivefile.filename
+
+        # Form the URL to the file
+        url = "S3://%s/%s" % (bucket.name, key)
+
+        # Create the multipart upload
+        upload_id = awsCreateMultipartUpload(bucket=bucket.name, key=key)
+
+        # Register file
+        location = FileLocation(url=url, storagetype='s3')
+        location.save()
+        archivefile.locations.add(location)
+        archivefile.save()
+
+        # Call save
+        serializer.save(
+            uploader=self.request.user,
+            archivefile=archivefile,
+            location=location,
+            upload_id=upload_id,
+            bucket=bucket
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        log.debug("[MultipartUploadViewSet] Destroy: {}".format(kwargs.get('uuid')))
+
+        # UUID is required.
+        upload_uuid = kwargs.get('uuid')
+        if not upload_uuid:
+            return HttpResponseBadRequest('"uuid" is required')
+
+        try:
+            upload = MultipartUpload.objects.get(uuid=upload_uuid)
+        except:
+            return HttpResponseNotFound()
+
+        try:
+            # Get details
+            bucket, key = upload.location.get_bucket()
+
+            # Abort it if not completed
+            if not upload.completeddate or not upload.aborteddate:
+
+                # Make the call to abort it
+                if awsAbortMultipartUpload(bucket, key, upload.upload_id):
+
+                    # Save it
+                    upload.aborteddate = timezone.now()
+                    upload.save()
+
+                    # Delete location
+                    if upload.location:
+                        upload.location.delete()
+
+
+                else:
+                    Response({'message': "multipart upload could not be aborted", "uuid": upload_uuid},
+                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            log.exception(f'Multipart upload delete error: {e}', exc_info=True, extra={
+                'upload': upload.upload_id, 'archivefile': upload.archivefile.uuid, 'location': upload.location.url
+            })
+
+        return Response({'message': "multipart upload deleted", "uuid": upload_uuid},
+                        status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        log.debug("[MultipartUploadViewSet] Update: {}".format(kwargs.get('uuid')))
+
+        # UUID is required.
+        upload_uuid = kwargs.get('uuid')
+        if not upload_uuid:
+            return HttpResponseBadRequest('"uuid" is required')
+
+        try:
+            instance = MultipartUpload.objects.get(uuid=upload_uuid)
+        except:
+            return HttpResponseNotFound()
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        # Check for partial update (complete)
+        if partial:
+
+            # Ensure we have completed parts
+            incompletes = [p for p in instance.parts.all() if not p.etag]
+            if not len(instance.parts.all()) or len(incompletes):
+                return HttpResponseBadRequest('MultipartUpload has incomplete parts, cannot complete: {}'.format(
+                    [p.index for p in incompletes]
+                ))
+
+            try:
+                # Complete the upload
+                bucket, key = instance.location.get_bucket()
+                etag = awsCompleteMultipartUpload(
+                    bucket=bucket,
+                    key=key,
+                    upload_id=instance.upload_id,
+                    parts=instance.parts.all()
+                )
+
+                # Set it and save it
+                serializer.save(etag=etag)
+
+                # Update the file location
+                s3 = awsResource(service='s3')
+                file = s3.Object(bucket, key)
+                instance.location.filesize = file.content_length
+                instance.location.uploadComplete = timezone.now()
+                instance.location.save()
+
+            except MultipartUploadEntityTooSmallError as e:
+                log.exception('Upload part too small: {}'.format(e.message))
+                return HttpResponseBadRequest('One or more upload parts are too small, must be > 5MB')
+
+            except MultipartUploadInvalidPart as e:
+                log.exception('Upload part invalid: {}'.format(e.message))
+                return HttpResponseBadRequest('One or more upload parts are invalid: {}'.format(e.message))
+
+            except MultipartUploadInvalidPartOrder as e:
+                log.exception('Upload part out of order: {}'.format(e.message))
+                return HttpResponseBadRequest('One or more upload parts are out of order: {}'.format(e.message))
+
+            except MultipartUploadNoSuchUpload as e:
+                log.exception('Upload does not exist: {}'.format(e.message))
+                return HttpResponseBadRequest('This upload does not exist in AWS')
+
+            except Exception as e:
+                return HttpResponseServerError()
+
+        else:
+            # Save it
+            serializer.save()
+
+        # Return them
+        return Response(serializer.data)
+
+
+class UploadPartViewSet(viewsets.ModelViewSet):
+    queryset = UploadPart.objects.all()
+    serializer_class = UploadPartSerializer
+    lookup_field = 'index'
+    filter_backends = (rest_framework_filters.DjangoFilterBackend,)
+
+    def get_queryset(self):
+        try:
+            upload = MultipartUpload.objects.get(uuid=self.kwargs.get('upload_uuid'))
+            return UploadPart.objects.filter(upload=upload)
+        except (MultipartUpload.DoesNotExist, UploadPart.DoesNotExist):
+            raise Http404
+
+    def update(self, request, archivefile_uuid=None, upload_uuid=None, index=None, *args, **kwargs):
+        log.debug("[UploadPartViewSet] Update: {} / {} / {}".format(archivefile_uuid, upload_uuid, index))
+
+        # Ensure the request upload object exists
+        try:
+            # Fetch the upload
+            upload = MultipartUpload.objects.get(uuid=upload_uuid)
+        except:
+            log.warning('Request for MultipartUpload "{}" but does not exist'.format(upload_uuid))
+            return HttpResponseNotFound()
+
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object_or_none()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        # Check for a replacement
+        if instance and not partial:
+
+            # Ensure part is not completed
+            if instance.etag and instance.completeddate:
+                log.debug('Cannot replace a finished upload part: {} / {}'.format(upload_uuid, index))
+                return HttpResponseNotAllowed(permitted_methods=['PATCH'])
+
+            # Delete it
+            log.debug('Replacing incomplete upload part: {} / {}'.format(upload_uuid, index))
+            instance.delete()
+            instance = None
+
+        # Check for PUT-as-create
+        if instance is None:
+            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+            lookup_value = self.kwargs[lookup_url_kwarg]
+            extra_kwargs = {self.lookup_field: lookup_value}
+
+            # Add the upload
+            extra_kwargs['upload'] = upload
+
+            # Get seconds from expiration
+            lifetime = upload.expirationdate - timezone.now()
+
+            # Generate a URL for this part
+            bucket, key = upload.location.get_bucket()
+            extra_kwargs['url'] = awsCreateUploadPart(
+                bucket=bucket,
+                key=key,
+                upload_id=upload.upload_id,
+                part=int(index),
+                lifetime=lifetime.seconds
+            )
+
+            # Save
+            serializer.save(**extra_kwargs)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        serializer.save()
+        return Response(serializer.data)
+
+    def partial_update(self, request, archivefile_uuid=None, upload_uuid=None, index=None, *args, **kwargs):
+        log.debug("[UploadPartViewSet] Partial Update: {} / {} / {}".format(archivefile_uuid, upload_uuid, index))
+        kwargs['partial'] = True
+        return self.update(request, index, upload_uuid, *args, **kwargs)
+
+    def get_object_or_none(self):
+        try:
+            return self.get_object()
+        except Http404:
+            if self.request.method == 'PUT':
+                # For PUT-as-create operation, check permissions
+                self.check_permissions(clone_request(self.request, 'POST'))
+            else:
+                raise
+
+    def get_object(self):
+        try:
+            upload = MultipartUpload.objects.get(uuid=self.kwargs.get('upload_uuid'))
+            return UploadPart.objects.get(upload=upload, index=self.kwargs.get('index'))
+        except (MultipartUpload.DoesNotExist, UploadPart.DoesNotExist):
+            raise Http404
