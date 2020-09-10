@@ -11,6 +11,7 @@ django-health-check
 django-nose
 django-taggit
 django-taggit-serializer
+django-safedelete
 djangorestframework
 djangorestframework-guardian
 jsonfield

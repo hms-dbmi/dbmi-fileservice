@@ -35,6 +35,8 @@ from guardian.shortcuts import assign_perm
 from guardian.shortcuts import remove_perm
 from guardian.shortcuts import get_groups_with_perms
 from taggit.managers import TaggableManager
+from safedelete.models import SafeDeleteModel
+from safedelete.models import SOFT_DELETE_CASCADE, SOFT_DELETE
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +51,9 @@ def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 
-class FileLocation(models.Model):
+class FileLocation(SafeDeleteModel):
+    _safedelete_policy = SOFT_DELETE_CASCADE
+
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
     url = models.TextField(blank=False, null=False)
@@ -74,7 +78,9 @@ class FileLocation(models.Model):
         return bucket, path
 
 
-class Bucket(models.Model):
+class Bucket(SafeDeleteModel):
+    _safedelete_policy = SOFT_DELETE
+    
     name = models.CharField(max_length=255, blank=False, null=False, unique=True)
     default = models.BooleanField(default=False)
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
@@ -145,7 +151,9 @@ class Bucket(models.Model):
         return False
 
 
-class ArchiveFile(models.Model):
+class ArchiveFile(SafeDeleteModel):
+    _safedelete_policy = SOFT_DELETE
+
     uuid = UUIDField(default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=255, blank=True, null=True, default='')
     filename = models.TextField()
@@ -342,11 +350,12 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
         Token.objects.get_or_create(user=instance)
 
 
-class DownloadLog(models.Model):
+class DownloadLog(SafeDeleteModel):
     """
     A model used to track when a user has requested a file download.
     """
+    _safedelete_policy = SOFT_DELETE_CASCADE
 
-    archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.PROTECT)
+    archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.CASCADE)
     download_requested_on = models.DateTimeField(blank=False, null=False, auto_now_add=True)
-    requesting_user = models.ForeignKey(CustomUser, blank=False, null=False, on_delete=models.PROTECT)
+    requesting_user = models.ForeignKey(CustomUser, blank=False, null=False, on_delete=models.CASCADE)
