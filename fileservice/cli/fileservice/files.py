@@ -145,7 +145,7 @@ class WriteFile(Command):
         #validate
         if not self.validatejson(jsonfile):
             self.app.stdout.write("json parsing error")
-            sys.exit(0)
+            sys.exit(1)
         #for each entry, addand spit out line
         for j in jsonfile:
             r = requests.post("%s/%s/" % (self.app.configoptions["fileserviceurl"],
@@ -163,7 +163,7 @@ class WriteFile(Command):
         for j in jsondata:
             schema = None
             try:
-                dirname = os.path.dirname(os.path.dirname(__file__))
+                dirname = os.path.dirname(os.path.abspath(__file__))
                 schema = json.load(open(os.path.join(dirname, "data/schemas/files.json")))
             except Exception as e:
                 self.log.error("Cannot decode schema file -- %s" % e)
@@ -494,7 +494,6 @@ class MultipartUploadFile(Command):
             # Build URL to get multipart upload started
             multipart_url = furl(self.app.configoptions["fileserviceurl"])
             multipart_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', ''])
-            multipart_url.path.segments.extend(['filemaster', 'api', 'multipart', ''])
 
             multipart_file = Path(parsed_args.localFile)
             multipart_file_size = multipart_file.stat().st_size
@@ -523,8 +522,7 @@ class MultipartUploadFile(Command):
 
                                 # Build URL to get complete file
                                 part_url = furl(self.app.configoptions["fileserviceurl"])
-                                #part_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, 'part', part, ''])
-                                part_url.path.segments.extend(['filemaster', 'api', 'multipart', upload_id, 'part', part, ''])
+                                part_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, 'part', part, ''])
 
                                 # Make the request
                                 part_r = requests.put(part_url.url, headers=headers)
@@ -545,8 +543,7 @@ class MultipartUploadFile(Command):
 
                                         # Build URL to get complete file
                                         part_url = furl(self.app.configoptions["fileserviceurl"])
-                                        #part_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, 'part', part, ''])
-                                        part_url.path.segments.extend(['filemaster', 'api', 'multipart', upload_id, 'part', part, ''])
+                                        part_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, 'part', part, ''])
 
                                         # Make the request
                                         part_r = requests.patch(part_url.url, headers=headers, json={'etag': etag})
@@ -562,8 +559,7 @@ class MultipartUploadFile(Command):
 
                 # Build URL to get complete file
                 complete_url = furl(self.app.configoptions["fileserviceurl"])
-                #complete_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, ''])
-                complete_url.path.segments.extend(['filemaster', 'api', 'multipart', upload_id, ''])
+                complete_url.path.segments.extend(['filemaster', 'api', 'file', parsed_args.fileID, 'multipart', upload_id, ''])
 
                 # Make the request
                 complete_r = requests.patch(complete_url.url, headers=headers)
