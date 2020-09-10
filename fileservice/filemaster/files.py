@@ -387,7 +387,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         # If no bucket specified, default to first created
         if not bucket:
             try:
-                bucket = next(iter(settings.BUCKETS))
+                bucket = Bucket.objects.get(default=True).name
             except Exception as e:
                 log.exception(f'Error finding default bucket: {e}', exc_info=True, extra={'request': request})
                 return HttpResponseBadRequest(f'No default bucket has been configured for Fileservice, must specify'

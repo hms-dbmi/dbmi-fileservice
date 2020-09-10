@@ -16,6 +16,7 @@ from rest_framework.decorators import api_view
 from rest_framework.decorators import authentication_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import viewsets
 
 from guardian.shortcuts import assign_perm
 from guardian.shortcuts import get_objects_for_group
@@ -28,6 +29,7 @@ from filemaster.models import Bucket
 from filemaster.models import GROUPTYPES
 from filemaster.serializers import SpecialGroupSerializer
 from filemaster.serializers import TokenSerializer
+from filemaster.serializers import BucketSerializer
 
 import logging
 log = logging.getLogger(__name__)
@@ -295,6 +297,15 @@ class UserList(APIView):
         sdata.append({"users":userstructure})
 
         return Response(sdata, status=status.HTTP_201_CREATED)
+
+
+class BucketViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for viewing and editing Bucket instances.
+    """
+    serializer_class = BucketSerializer
+    queryset = Bucket.objects.all()
+    lookup_field = 'name'
 
 
 @api_view(['GET'])

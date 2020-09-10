@@ -10,6 +10,7 @@ from .views import UserList
 from .views import token
 from .views import index
 from .views import logout
+from .views import BucketViewSet
 
 from .files import ArchiveFileList
 from .files import DownloadLogList
@@ -18,6 +19,7 @@ app_name = FilemasterConfig.name
 
 router = DefaultRouter()
 router.register(r'file', ArchiveFileList)
+router.register(r'bucket', BucketViewSet)
 
 urlpatterns = [
     url(r'^groups?/?$', GroupList.as_view()),

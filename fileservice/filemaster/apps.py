@@ -38,10 +38,21 @@ def buckets(sender, **kwargs):
     # Iterate buckets
     logger.debug('post-migrate: Checking configured AWS buckets for entry in Bucket table')
     for bucket in settings.BUCKETS:
-        bucket, created = Bucket.objects.get_or_create(name=bucket)
-        if created:
-            logger.info('post-migrate: Added Bucket \'{}\''.format(bucket))
 
+        if not Bucket.check_bucket(bucket=bucket):
+            logger.error(f'post-migrate: Could not create bucket "{bucket}" as it failed S3 permission check')
+
+        else:
+            default = not Bucket.objects.exists()
+            bucket, created = Bucket.objects.get_or_create(name=bucket)
+            if created:
+                logger.info('post-migrate: Added Bucket \'{}\''.format(bucket))
+
+                # Set if as default if needed
+                if default:
+                    bucket.default = default
+                    bucket.save()
+                    logger.info('post-migrate: Bucket \'{}\' set as DEFAULT'.format(bucket))
 
 class FilemasterConfig(AppConfig):
     name = 'filemaster'

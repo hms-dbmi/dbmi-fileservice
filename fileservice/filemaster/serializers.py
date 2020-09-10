@@ -14,6 +14,7 @@ from .models import ArchiveFile
 from .models import CustomUser
 from .models import DownloadLog
 from .models import FileLocation
+from .models import Bucket
 
 
 class WritableField(serializers.Field):
@@ -65,11 +66,22 @@ class UserModelSerializer(serializers.ModelSerializer):
         model = User
 
 
-class BucketSerializer(serializers.Serializer):
-    name = serializers.CharField(required=False)
+class BucketSerializer(serializers.ModelSerializer):
+
+    def validate_name(self, value):
+        if not value:
+            raise serializers.ValidationError("name field required.")
+
+        if not Bucket.check_bucket(bucket=value):
+            raise serializers.ValidationError(f"Fileservice does not have need permissions on bucket '{value}'")
+
+        return value
+
 
     class Meta:
-        fields = ('name',)
+        model = Bucket
+        fields = '__all__'
+        read_only_fields = ['modifydate', 'creationdate', ]
 
 
 class SpecialGroupSerializer(serializers.Serializer):

@@ -10,6 +10,9 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import uuid
+import boto3
+from botocore.client import Config
+from botocore.client import ClientError
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser
@@ -25,6 +28,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from django.db import transaction
 
 from rest_framework.authtoken.models import Token
 from guardian.shortcuts import assign_perm
@@ -72,14 +76,73 @@ class FileLocation(models.Model):
 
 class Bucket(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False, unique=True)
+    default = models.BooleanField(default=False)
+    creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
+    modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
 
     def __str__(self):
-        return "%s" % (self.name)
+        return f'{self.name}{" (default)" if self.default else ""}'
 
     class Meta:
         permissions = (
             ('write_bucket', 'Write to bucket'),
         )
+
+    def save(self, *args, **kwargs):
+        # Check if we are updating the default bucket
+        if not self.default:
+            return super(Bucket, self).save(*args, **kwargs)
+
+        # If we are, make sure all buckets are cleared as default before saving
+        with transaction.atomic():
+            Bucket.objects.filter(default=True).update(default=False)
+            return super(Bucket, self).save(*args, **kwargs)
+
+    @classmethod
+    def check_bucket(cls, bucket):
+        """
+        Checks S3 for the passed bucket and ensures Fileservice has needed
+        permissions to manage files in that bucket
+        :param bucket: The name of the S3 bucket to check
+        :return: bool
+        """
+        # Create test file key
+        key = f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'
+        log.debug(f'Test file: {key}')
+        try:
+            # Check AWS permissions on bucket before allowing creation
+            s3 = boto3.resource('s3', config=Config(signature_version='s3v4'))
+
+            # Test write to bucket
+            test_object = s3.Object(bucket, key)
+            test_object.put(Body=b'This is a test file for Fileservice')
+            log.debug(f'Test file: created')
+
+            # Check bucket
+            b = s3.Bucket(bucket)
+            for o in b.objects.all():
+                if o.key == key:
+                    log.debug(f'Test file: found')
+                    break
+
+            # HEAD the file
+            test_object = s3.Object(bucket, key)
+            test_object.load()
+            log.debug(f'Test file: loaded')
+
+            # Delete file
+            test_object.delete()
+            log.debug(f'Test file: deleted')
+
+            return True
+
+        except ClientError as e:
+            log.debug(f'Bucket check failed: {e}')
+
+        except Exception as e:
+            log.exception(f'Bucket check error: {e}', exc_info=True, extra={'bucket': bucket})
+
+        return False
 
 
 class ArchiveFile(models.Model):
