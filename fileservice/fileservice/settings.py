@@ -9,7 +9,8 @@ import logging
 
 from dbmi_client import environment
 
-########## PATH CONFIGURATION
+# PATH CONFIGURATION
+
 # Absolute filesystem path to the Django project directory:
 DJANGO_ROOT = dirname(abspath(__file__))
 
@@ -22,26 +23,27 @@ SITE_NAME = basename(DJANGO_ROOT)
 # Add our project to our pythonpath, this way we don't need to type our project
 # name in our dotted import paths:
 path.append(DJANGO_ROOT)
-########## END PATH CONFIGURATION
+
+# END PATH CONFIGURATION
 
 
-########## DEBUG CONFIGURATION
+# DEBUG CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = environment.get_bool("DJANGO_DEBUG", default=False)
 
-########## END DEBUG CONFIGURATION
+# END DEBUG CONFIGURATION
 
 
-########## MANAGER CONFIGURATION
+# MANAGER CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = ()
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
-########## END MANAGER CONFIGURATION
+# END MANAGER CONFIGURATION
 
 
-########## DATABASE CONFIGURATION
+# DATABASE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#databases
 DATABASES = {
     'default': {
@@ -53,9 +55,9 @@ DATABASES = {
         'PORT': environment.get_str('MYSQL_PORT', '3306'),
     }
 }
-########## END DATABASE CONFIGURATION
+# END DATABASE CONFIGURATION
 
-########## GENERAL CONFIGURATION
+# GENERAL CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#time-zone
 TIME_ZONE = 'America/New_York'
 
@@ -77,19 +79,19 @@ USE_TZ = True
 SILENCED_SYSTEM_CHECKS = [
     'admin.E408',  # This throws an error if normal Auth middleware is not in use
 ]
-########## END GENERAL CONFIGURATION
+# END GENERAL CONFIGURATION
 
 
-########## MEDIA CONFIGURATION
+# MEDIA CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-root
 MEDIA_ROOT = normpath(join(SITE_ROOT, 'media'))
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = '/media/'
-########## END MEDIA CONFIGURATION
+# END MEDIA CONFIGURATION
 
 
-########## STATIC FILE CONFIGURATION
+# STATIC FILE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#static-root
 STATIC_ROOT = normpath(join(SITE_ROOT, 'assets'))
 
@@ -106,32 +108,32 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
-########## END STATIC FILE CONFIGURATION
+# END STATIC FILE CONFIGURATION
 
 
-########## SECRET CONFIGURATION
+# SECRET CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 # Note: This key should only be used for development and testing.
 SECRET_KEY = environment.get_str("SECRET_KEY", required=True)
-########## END SECRET CONFIGURATION
+# END SECRET CONFIGURATION
 
 
-########## SITE CONFIGURATION
+# SITE CONFIGURATION
 # Hosts/domain names that are valid for this site
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = environment.get_list("ALLOWED_HOSTS", required=True)
-########## END SITE CONFIGURATION
+# END SITE CONFIGURATION
 
 
-########## FIXTURE CONFIGURATION
+# FIXTURE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-FIXTURE_DIRS
 FIXTURE_DIRS = (
     normpath(join(SITE_ROOT, 'fixtures')),
 )
-########## END FIXTURE CONFIGURATION
+# END FIXTURE CONFIGURATION
 
 
-########## TEMPLATE CONFIGURATION
+# TEMPLATE CONFIGURATION
 
 TEMPLATES = [
     {
@@ -149,10 +151,10 @@ TEMPLATES = [
     },
 ]
 
-########## END TEMPLATE CONFIGURATION
+# END TEMPLATE CONFIGURATION
 
 
-########## MIDDLEWARE CONFIGURATION
+# MIDDLEWARE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#middleware-classes
 MIDDLEWARE = (
     # Default Django middleware.
@@ -164,16 +166,16 @@ MIDDLEWARE = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
 )
-########## END MIDDLEWARE CONFIGURATION
+# END MIDDLEWARE CONFIGURATION
 
 
-########## URL CONFIGURATION
+# URL CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
 ROOT_URLCONF = '%s.urls' % SITE_NAME
-########## END URL CONFIGURATION
+# END URL CONFIGURATION
 
 
-########## APP CONFIGURATION
+# APP CONFIGURATION
 DJANGO_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -207,10 +209,10 @@ TAGGIT_CASE_INSENSITIVE = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
-########## END APP CONFIGURATION
+# END APP CONFIGURATION
 
 
-######## AUTH CONFIG
+# AUTH CONFIG
 AUTHENTICATION_BACKENDS = (
     'dbmi_client.authn.DBMIUsersModelAuthenticationBackend',
     'guardian.backends.ObjectPermissionBackend',
@@ -224,10 +226,10 @@ AUTH_USER_MODEL = 'filemaster.CustomUser'
 # Guardian user settings
 GUARDIAN_GET_INIT_ANONYMOUS_USER = 'filemaster.models.get_anonymous_user_instance'
 ANONYMOUS_USER_ID = 1
-##### END AUTH CONFIG
+# END AUTH CONFIG
 
 
-######## DBMI CLIENT CONFIG
+# DBMI CLIENT CONFIG
 DBMI_CLIENT_CONFIG = {
     'CLIENT': 'dbmi',
 
@@ -258,10 +260,10 @@ DBMI_CLIENT_CONFIG = {
     # Autocreate users
     'USER_MODEL_AUTOCREATE': True,
 }
-######## END DBMI CLIENT CONFIG
+# END DBMI CLIENT CONFIG
 
 
-######## DJANGO REST FRAMEWORK CONFIG
+# DJANGO REST FRAMEWORK CONFIG
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
@@ -275,19 +277,23 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.YAMLRenderer'
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'DEFAULT_PAGINATION_CLASS': (
+        'rest_framework.pagination.LimitOffsetPagination',
+    ),
     'PAGE_SIZE': 100
 }
-######## END DJANGO REST FRAMEWORK CONFIG
+# END DJANGO REST FRAMEWORK CONFIG
 
 
-########## AWS S3 CONFIGURATION
+# AWS S3 CONFIGURATION
 
-# Check for specified buckets
+# Check for specified buckets 
+# this is for IAM roles
 if os.environ.get('DBMI_S3_BUCKETS'):
     BUCKETS = environment.get_list('DBMI_S3_BUCKETS', default=[])
 
 # Check for deprecated configuration
+# this uses IAM credentials - to be deprecated but useful for local dev environment 
 else:
     BUCKET_CREDENTIALS = {}
 
@@ -325,10 +331,10 @@ if not BUCKETS:
     raise SystemError(f'Invalid configuration: DBMI_S3_BUCKETS or AWS_S3_UPLOAD_BUCKET/AWS_STS_ACCESS_KEY_ID/'
                       f'AWS_STS_SECRET_ACCESS_KEY and/or AWS_S3_BUCKETS with credentials must be defined')
 
-########## END AWS S3 CONFIGURATION
+# END AWS S3 CONFIGURATION
 
 
-########## LOGGING CONFIGURATION
+# LOGGING CONFIGURATION
 
 # Configure sentry
 if environment.get_str('RAVEN_URL', default=None):
@@ -401,12 +407,12 @@ LOGGING = {
         },
     },
 }
-########## END LOGGING CONFIGURATION
+# END LOGGING CONFIGURATION
 
 
-########## TEST CONFIGURATION
+# TEST CONFIGURATION
 TEST_AWS_KEY = environment.get_str('TEST_AWS_KEY', 'AKIAxxxxx')
 TEST_AWS_SECRET = environment.get_str('TEST_AWS_SECRET', 'asdfadsfadsf')
 EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-########## END TEST CONFIGURATION
+# END TEST CONFIGURATION
