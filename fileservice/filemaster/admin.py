@@ -29,7 +29,7 @@ class BucketAdmin(admin.ModelAdmin):
 admin.site.register(Bucket, BucketAdmin)
 
 
-class ArchiveFileAdmin(admin.ModelAdmin):
+class ArchiveFileAdmin(GuardedModelAdmin):
     fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', 'locations')
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
@@ -40,7 +40,7 @@ class ArchiveFileAdmin(admin.ModelAdmin):
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
 
 
-class FileLocationAdmin(admin.ModelAdmin):
+class FileLocationAdmin(GuardedModelAdmin):
     fields = ('creationdate', 'url', 'uploadComplete', 'storagetype', 'filesize', )
     list_display = ('id', 'url', 'filesize', 'creationdate', 'storagetype')
     readonly_fields = ('creationdate', )
