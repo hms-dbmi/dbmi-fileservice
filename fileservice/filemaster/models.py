@@ -55,6 +55,9 @@ class FileLocation(models.Model):
 
     class Meta:
         ordering = ('-creationdate',)
+        permissions = (
+            ('write_filelocation', 'Write filelocation'),
+        )
 
     def __str__(self):
         return "%s" % (self.id)
