@@ -12,7 +12,10 @@ from .views import index
 from .views import logout
 
 from .files import ArchiveFileList
+from .files import ArchiveFileDetail
 from .files import DownloadLogList
+from .files import FileLocationList
+from .files import FileLocationDetail
 
 app_name = FilemasterConfig.name
 
@@ -26,6 +29,9 @@ urlpatterns = [
     url(r'^token/?$', token, name="token"),
     url(r'^api/', include(router.urls)),
     url(r'^api/logs/?$', DownloadLogList.as_view()),
+    url(r'^api/location/?$', FileLocationList.as_view()),
+    url(r'^api/location/(?P<pk>[^/]+)/?$', FileLocationDetail.as_view()),
+    url(r'^api/file-detail/(?P<pk>[^/]+)/?$', ArchiveFileDetail.as_view()),
     url(r'^logout/?$', logout, name="logout"),
     url(r'^$', index, name="index"),
 ]

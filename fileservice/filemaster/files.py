@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
 
 from django_filters import rest_framework as rest_framework_filters
 from rest_framework_guardian.filters import DjangoObjectPermissionsFilter
@@ -39,8 +40,11 @@ from filemaster.models import Bucket
 from filemaster.models import DownloadLog
 from filemaster.models import FileLocation
 from filemaster.serializers import ArchiveFileSerializer
+from filemaster.serializers import ArchiveFileSimpleSerializer
 from filemaster.serializers import DownloadLogSerializer
+from filemaster.serializers import FileLocationSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
+from filemaster.permissions import DjangoObjectPermissionsChange
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +115,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
+        """
+        Overloaded to return files that the user has permission for
+        """
         log.debug("[files][ArchiveFileList][list] - Listing Files.")
 
         # Get the UUIDs from the request data.
@@ -163,7 +170,9 @@ class ArchiveFileList(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, uuid=None, *args, **kwargs):
-
+        """
+        Overloaded to enforce permissions
+        """
         # UUID is required.
         if not uuid:
             return HttpResponseBadRequest('"uuid" is required')
@@ -556,7 +565,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
                 archivefile.locations.add(fl)
                 url = self.request.data['location']
                 message = "Local location %s added to file %s" % (self.request.data['location'], archivefile.uuid)
-            elif self.request.data['location'].startswith("S3://"):
+            elif self.request.data['location'].startswith(('S3://', 's3://')):
                 fl = None
                 try:
                     # if file already exists, see if user has upload rights
@@ -778,3 +787,18 @@ class DownloadLogList(generics.ListAPIView):
             queryset = queryset.filter(download_requested_on__lte=download_date_lte)
 
         return queryset
+
+class ArchiveFileDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ArchiveFile.objects.all()
+    serializer_class = ArchiveFileSimpleSerializer
+    permission_classes = [IsAdminUser]
+    
+class FileLocationList(generics.ListCreateAPIView):
+    queryset = FileLocation.objects.all()
+    serializer_class = FileLocationSerializer
+    permission_classes = [IsAdminUser]
+
+class FileLocationDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = FileLocation.objects.all()
+    serializer_class = FileLocationSerializer
+    permission_classes = [IsAdminUser]

@@ -87,18 +87,28 @@ class JSONFieldSerializer(WritableField):
         return obj
 
 
-class ArchiveFileSerializer(TaggitSerializer, serializers.ModelSerializer):
+class ArchiveFileSimpleSerializer(TaggitSerializer, serializers.ModelSerializer):
+    permissions = serializers.ListField(read_only=True, source='get_permissions_display')
     tags = TagListSerializerField(required=False)
     metadata = JSONFieldSerializer(required=False)
-    owner = UserSerializer(required=False)
-    locations = serializers.SerializerMethodField('get_locations_list')
     permissions = serializers.ListField(read_only=True, source='get_permissions_display')
     expirationdate = serializers.DateField(required=False)
+    
+    class Meta:
+        model = ArchiveFile
+        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename', 
+        'locations', 'permissions', 'creationdate', 'modifydate', 'expirationdate')
+
+
+class ArchiveFileSerializer(ArchiveFileSimpleSerializer):
+    owner = UserSerializer(required=False)
+    locations = serializers.SerializerMethodField('get_locations_list')
 
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename', 'locations', 'permissions', 'creationdate', 'modifydate', 'expirationdate')
+        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename', 
+        'locations', 'permissions', 'creationdate', 'modifydate', 'expirationdate')
 
     def get_locations_list(self, instance):
         locations = instance.locations.all().order_by('id')
