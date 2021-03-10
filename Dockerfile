@@ -1,4 +1,4 @@
-FROM python:3.6-alpine3.8 AS builder
+FROM python:3.6-alpine3.11 AS builder
 
 # Install dependencies
 RUN apk add --update \
@@ -9,12 +9,15 @@ RUN apk add --update \
     git
 
 # Add requirements
-ADD requirements.txt /requirements.txt
+ADD requirements /requirements
+
+# Use this until we can safely update to Alpine 3.13 or above
+ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 
 # Install Python packages
-RUN pip install -r /requirements.txt
+RUN pip install -r /requirements/requirements.txt
 
-FROM hmsdbmitc/dbmisvc:3.6-alpine-zip
+FROM hmsdbmitc/dbmisvc:alpine-zip-python3.6-0.1.0
 
 RUN apk add --no-cache --update \
     mariadb-connector-c git libffi-dev git \
@@ -24,10 +27,10 @@ RUN apk add --no-cache --update \
 COPY --from=builder /root/.cache /root/.cache
 
 # Add requirements
-ADD requirements.txt /requirements.txt
+ADD requirements /requirements
 
 # Install Python packages
-RUN pip install -r /requirements.txt
+RUN pip install -r /requirements/requirements.txt
 
 # Copy app source
 COPY /fileservice /app
@@ -48,6 +51,7 @@ ENV DBMI_APP_STATIC_URL_PATH=/static
 ENV DBMI_APP_STATIC_ROOT=/app/assets
 
 # Set nginx and network parameters
+ENV DBMI_NGINX_USER=nginx
 ENV DBMI_PORT=443
 ENV DBMI_LB=true
 ENV DBMI_SSL=true
@@ -55,3 +59,4 @@ ENV DBMI_CREATE_SSL=true
 ENV DBMI_HEALTHCHECK=true
 ENV DBMI_FILE_PROXY=true
 ENV DBMI_FILE_PROXY_PATH=/proxy
+ENV S3_USE_SIGV4=true

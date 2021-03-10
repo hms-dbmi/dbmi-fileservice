@@ -55,6 +55,9 @@ class FileLocation(models.Model):
 
     class Meta:
         ordering = ('-creationdate',)
+        permissions = (
+            ('write_filelocation', 'Write filelocation'),
+        )
 
     def __str__(self):
         return "%s" % (self.id)
@@ -79,7 +82,7 @@ class Bucket(models.Model):
     class Meta:
         permissions = (
             ('write_bucket', 'Write to bucket'),
-        )    
+        )
 
 
 class ArchiveFile(models.Model):
@@ -277,25 +280,6 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
     """
     if created and instance.email is not 'AnonymousUser':
         Token.objects.get_or_create(user=instance)
-
-
-def location_changed(sender, instance, action, reverse, model, pk_set,**kwargs):
-    from .tasks import glacierLifecycleMove
-
-    if action == "post_add":
-        af = instance
-        for p in pk_set:
-            loc = FileLocation.objects.get(id=p)
-            bucket, path = loc.get_bucket()
-            glaciertype = "lifecycle"
-            try:
-                glaciertype = settings.BUCKETS[bucket]["glaciertype"]
-            except:
-                pass
-            if bucket and glaciertype == "lifecycle":
-                pass
-
-m2m_changed.connect(location_changed, sender=ArchiveFile.locations.through)
 
 
 class DownloadLog(models.Model):

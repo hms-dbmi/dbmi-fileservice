@@ -2,13 +2,15 @@
 
 
 from os.path import abspath, basename, dirname, join, normpath
-from sys import path
-import os, sys
-from django.utils.crypto import get_random_string
+from sys import path, stdout
+import os
+import warnings
+import logging
 
 from dbmi_client import environment
 
-########## PATH CONFIGURATION
+# PATH CONFIGURATION
+
 # Absolute filesystem path to the Django project directory:
 DJANGO_ROOT = dirname(abspath(__file__))
 
@@ -21,40 +23,41 @@ SITE_NAME = basename(DJANGO_ROOT)
 # Add our project to our pythonpath, this way we don't need to type our project
 # name in our dotted import paths:
 path.append(DJANGO_ROOT)
-########## END PATH CONFIGURATION
+
+# END PATH CONFIGURATION
 
 
-########## DEBUG CONFIGURATION
+# DEBUG CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = environment.get_bool("DJANGO_DEBUG", False)
+DEBUG = environment.get_bool("DJANGO_DEBUG", default=False)
 
-########## END DEBUG CONFIGURATION
+# END DEBUG CONFIGURATION
 
 
-########## MANAGER CONFIGURATION
+# MANAGER CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = ()
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
-########## END MANAGER CONFIGURATION
+# END MANAGER CONFIGURATION
 
 
-########## DATABASE CONFIGURATION
+# DATABASE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#databases
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': environment.get_str('MYSQL_NAME', 'fileservice'),
         'USER': environment.get_str('MYSQL_USER', 'fileservice'),
-        'PASSWORD': environment.get_str('MYSQL_PASSWORD'),
-        'HOST': environment.get_str('MYSQL_HOST'),
+        'PASSWORD': environment.get_str('MYSQL_PASSWORD', required=True),
+        'HOST': environment.get_str('MYSQL_HOST', required=True),
         'PORT': environment.get_str('MYSQL_PORT', '3306'),
     }
 }
-########## END DATABASE CONFIGURATION
+# END DATABASE CONFIGURATION
 
-########## GENERAL CONFIGURATION
+# GENERAL CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#time-zone
 TIME_ZONE = 'America/New_York'
 
@@ -72,19 +75,23 @@ USE_L10N = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
-########## END GENERAL CONFIGURATION
+
+SILENCED_SYSTEM_CHECKS = [
+    'admin.E408',  # This throws an error if normal Auth middleware is not in use
+]
+# END GENERAL CONFIGURATION
 
 
-########## MEDIA CONFIGURATION
+# MEDIA CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-root
 MEDIA_ROOT = normpath(join(SITE_ROOT, 'media'))
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = '/media/'
-########## END MEDIA CONFIGURATION
+# END MEDIA CONFIGURATION
 
 
-########## STATIC FILE CONFIGURATION
+# STATIC FILE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#static-root
 STATIC_ROOT = normpath(join(SITE_ROOT, 'assets'))
 
@@ -101,33 +108,32 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
-########## END STATIC FILE CONFIGURATION
+# END STATIC FILE CONFIGURATION
 
 
-########## SECRET CONFIGURATION
+# SECRET CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 # Note: This key should only be used for development and testing.
-chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = environment.get_str("SECRET_KEY", get_random_string(50, chars))
-########## END SECRET CONFIGURATION
+SECRET_KEY = environment.get_str("SECRET_KEY", required=True)
+# END SECRET CONFIGURATION
 
 
-########## SITE CONFIGURATION
+# SITE CONFIGURATION
 # Hosts/domain names that are valid for this site
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = environment.get_list("ALLOWED_HOSTS")
-########## END SITE CONFIGURATION
+ALLOWED_HOSTS = environment.get_list("ALLOWED_HOSTS", required=True)
+# END SITE CONFIGURATION
 
 
-########## FIXTURE CONFIGURATION
+# FIXTURE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-FIXTURE_DIRS
 FIXTURE_DIRS = (
     normpath(join(SITE_ROOT, 'fixtures')),
 )
-########## END FIXTURE CONFIGURATION
+# END FIXTURE CONFIGURATION
 
 
-########## TEMPLATE CONFIGURATION
+# TEMPLATE CONFIGURATION
 
 TEMPLATES = [
     {
@@ -145,12 +151,12 @@ TEMPLATES = [
     },
 ]
 
-########## END TEMPLATE CONFIGURATION
+# END TEMPLATE CONFIGURATION
 
 
-########## MIDDLEWARE CONFIGURATION
+# MIDDLEWARE CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#middleware-classes
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     # Default Django middleware.
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -158,17 +164,18 @@ MIDDLEWARE_CLASSES = (
     'dbmi_client.middleware.DBMIAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 )
-########## END MIDDLEWARE CONFIGURATION
+# END MIDDLEWARE CONFIGURATION
 
 
-########## URL CONFIGURATION
+# URL CONFIGURATION
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
 ROOT_URLCONF = '%s.urls' % SITE_NAME
-########## END URL CONFIGURATION
+# END URL CONFIGURATION
 
 
-########## APP CONFIGURATION
+# APP CONFIGURATION
 DJANGO_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -202,14 +209,15 @@ TAGGIT_CASE_INSENSITIVE = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
-########## END APP CONFIGURATION
+# END APP CONFIGURATION
 
 
-######## AUTH CONFIG
+# AUTH CONFIG
 AUTHENTICATION_BACKENDS = (
     'dbmi_client.authn.DBMIUsersModelAuthenticationBackend',
     'guardian.backends.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'axes.backends.AxesBackend',
 )
 
 # Custom user model
@@ -218,21 +226,22 @@ AUTH_USER_MODEL = 'filemaster.CustomUser'
 # Guardian user settings
 GUARDIAN_GET_INIT_ANONYMOUS_USER = 'filemaster.models.get_anonymous_user_instance'
 ANONYMOUS_USER_ID = 1
-##### END AUTH CONFIG
+# END AUTH CONFIG
 
 
-######## DBMI CLIENT CONFIG
+# DBMI CLIENT CONFIG
 DBMI_CLIENT_CONFIG = {
-    'CLIENT': 'dbmifileservice',
+    'CLIENT': 'dbmi',
 
     # Auth0 account details
-    'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID'),
+    'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID', required=True),
     'AUTH0_SECRET': environment.get_str('DBMI_AUTH0_SECRET'),
-    'AUTH0_TENANT': environment.get_str('DBMI_AUTH0_TENANT'),
+    'AUTH0_TENANT': environment.get_str('DBMI_AUTH0_TENANT', required=True),
     'JWT_AUTHZ_NAMESPACE': environment.get_str('DBMI_JWT_AUTHZ_NAMESPACE'),
 
     # Optionally disable logging
     'ENABLE_LOGGING': True,
+    'LOG_LEVEL': environment.get_int('DBMI_LOG_LEVEL', default=logging.WARNING),
 
     # Universal login screen branding
     'AUTHN_TITLE': 'DBMI Fileservice',
@@ -251,10 +260,10 @@ DBMI_CLIENT_CONFIG = {
     # Autocreate users
     'USER_MODEL_AUTOCREATE': True,
 }
-######## END DBMI CLIENT CONFIG
+# END DBMI CLIENT CONFIG
 
 
-######## DJANGO REST FRAMEWORK CONFIG
+# DJANGO REST FRAMEWORK CONFIG
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
@@ -271,50 +280,62 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 100
 }
-######## END DJANGO REST FRAMEWORK CONFIG
+# END DJANGO REST FRAMEWORK CONFIG
 
 
-########## AWS S3 CONFIGURATION
+# AWS S3 CONFIGURATION
 
-# Set the default S3 bucket to use when not specified
-S3_DEFAULT_BUCKET = os.environ.get('AWS_S3_UPLOAD_BUCKET')
-AWS_STS_ACCESS_KEY_ID = os.environ.get('AWS_STS_ACCESS_KEY_ID')
-AWS_STS_SECRET_ACCESS_KEY = os.environ.get('AWS_STS_SECRET_ACCESS_KEY')
+# Check for specified buckets 
+# this is for IAM roles
+if os.environ.get('DBMI_S3_BUCKETS'):
+    BUCKETS = environment.get_list('DBMI_S3_BUCKETS', default=[])
 
-BUCKETS = {
-    S3_DEFAULT_BUCKET: {
-        'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
-        'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
-    }
-}
+# Check for deprecated configuration
+# this uses IAM credentials - to be deprecated but useful for local dev environment 
+else:
+    BUCKET_CREDENTIALS = {}
 
-# Include all additional buckets and AWS credentials like follows:
-# Bucket specification format:
-# <S3 bucket name>: {
-#   "AWS_KEY_ID": <AWS STS key id>,
-#   "AWS_SECRET": <AWS STS secret key>
-# },
-BUCKETS.update({
-    bucket: {
-        'type': 's3',
-        'glaciertype': 'lifecycle',
-        'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
-        'AWS_SECRET': credentials.get('AWS_SECRET'),
-    } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
-})
+    if os.environ.get('AWS_S3_UPLOAD_BUCKET') and os.environ.get('AWS_STS_ACCESS_KEY_ID') \
+        and os.environ.get('AWS_STS_SECRET_ACCESS_KEY'):
 
-# Add glacier
-BUCKETS["Glacier"] = {"type": "glacier"}
+        # Set the default S3 bucket to use when not specified
+        S3_DEFAULT_BUCKET = environment.get_str('AWS_S3_UPLOAD_BUCKET')
+        AWS_STS_ACCESS_KEY_ID = environment.get_str('AWS_STS_ACCESS_KEY_ID')
+        AWS_STS_SECRET_ACCESS_KEY = environment.get_str('AWS_STS_SECRET_ACCESS_KEY')
 
-########## END AWS S3 CONFIGURATION
+        BUCKET_CREDENTIALS.update({
+            S3_DEFAULT_BUCKET: {
+                'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
+                'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
+            }
+        })
+
+    if os.environ.get('AWS_S3_BUCKETS'):
+        BUCKET_CREDENTIALS.update({
+            bucket: {
+                'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
+                'AWS_SECRET': credentials.get('AWS_SECRET'),
+            } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
+        })
+
+    # Retain list of buckets for updated settings configuration
+    BUCKETS = list(BUCKET_CREDENTIALS.keys())
+
+    warnings.warn(
+        'Fileservice configurations with AWS IAM user credentials should be avoided',
+        DeprecationWarning
+    )
+if not BUCKETS:
+    raise SystemError(f'Invalid configuration: DBMI_S3_BUCKETS or AWS_S3_UPLOAD_BUCKET/AWS_STS_ACCESS_KEY_ID/'
+                      f'AWS_STS_SECRET_ACCESS_KEY and/or AWS_S3_BUCKETS with credentials must be defined')
+
+# END AWS S3 CONFIGURATION
 
 
-########## LOGGING CONFIGURATION
+# LOGGING CONFIGURATION
 
 # Configure sentry
-if environment.get_str('RAVEN_URL', None):
+if environment.get_str('RAVEN_URL', default=None):
     RAVEN_CONFIG = {
         'dsn': environment.get_str('RAVEN_URL'),
         'site': 'fileservice',
@@ -339,7 +360,7 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'console',
-            'stream': sys.stdout,
+            'stream': stdout,
         }
     },
     'root': {
@@ -362,14 +383,34 @@ LOGGING = {
             'handlers': ['console'],
             'propagate': False,
         },
+        'botocore': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'boto': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'boto3': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        's3transfer': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+            'propagate': True,
+        },
     },
 }
-########## END LOGGING CONFIGURATION
+# END LOGGING CONFIGURATION
 
 
-########## TEST CONFIGURATION
+# TEST CONFIGURATION
 TEST_AWS_KEY = environment.get_str('TEST_AWS_KEY', 'AKIAxxxxx')
 TEST_AWS_SECRET = environment.get_str('TEST_AWS_SECRET', 'asdfadsfadsf')
 EXPIRATIONDATE = 200
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-########## END TEST CONFIGURATION
+# END TEST CONFIGURATION

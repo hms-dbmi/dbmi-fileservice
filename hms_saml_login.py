@@ -12,29 +12,29 @@ auth0initial = "https://hms-dbmi.auth0.com/authorize?response_type=code&scope=op
 auth0callback = "https://hms-dbmi.auth0.com/login/callback?connection=%s" % connectionstring
 
 class MyHTMLParser(HTMLParser):
-    def __init__(self, fh):
-        """
-        {fh} must be an input stream returned by open() or urllib2.urlopen()
-        """
-        HTMLParser.__init__(self)
-        self.fileids = []
-        self.fields={}
-        self.feed(fh)
-    def handle_starttag(self, tag, attrs):
-        if tag == 'input':
-            attrD = dict(attrs)
-            self.fileids.append(attrD)
-            value=None
-            try:
-            	value = attrD['value']
-            except:
-            	pass
-            try:
-            	self.fields[attrD['name']]=value
-            except Exception,e:
-            	pass
-    def get_fileids(self):
-        return self.fileids
+	def __init__(self, fh):
+		"""
+		{fh} must be an input stream returned by open() or urllib2.urlopen()
+		"""
+		HTMLParser.__init__(self)
+		self.fileids = []
+		self.fields={}
+		self.feed(fh)
+	def handle_starttag(self, tag, attrs):
+		if tag == 'input':
+			attrD = dict(attrs)
+			self.fileids.append(attrD)
+			value=None
+			try:
+				value = attrD['value']
+			except:
+				pass
+			try:
+				self.fields[attrD['name']]=value
+			except Exception as e:
+				pass
+	def get_fileids(self):
+		return self.fileids
 
 r = requests.get(auth0initial,allow_redirects=False,verify=False)
 
@@ -92,14 +92,14 @@ r5 = requests.post(
 	headers=headers2,
 	cookies=auth0cookies,
 	data={"SAMLResponse":myparser.fields['SAMLResponse']},
-    verify=False
+	verify=False
 )
 
 r6 = requests.get(
-        r5.headers['location'],
-        headers=headers2,
-        cookies=r5.cookies,
-        allow_redirects=False
-        )
-print r6.cookies['Authorization']
+		r5.headers['location'],
+		headers=headers2,
+		cookies=r5.cookies,
+		allow_redirects=False
+		)
+print(r6.cookies['Authorization'])
 #print r5.json()
