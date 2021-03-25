@@ -284,14 +284,26 @@ REST_FRAMEWORK = {
 
 
 # AWS S3 CONFIGURATION
+AWS_S3_DEFAULT_REGION = environment.get_str('AWS_S3_DEFAULT_REGION', default='us-east-1')
 
-# Check for specified buckets 
+# Check for specified buckets
 # this is for IAM roles
 if os.environ.get('DBMI_S3_BUCKETS'):
     BUCKETS = environment.get_list('DBMI_S3_BUCKETS', default=[])
 
+    # Use this dictionary to store bucket configurations (e.g. region)
+    DBMI_BUCKETS_CONFIGS = {
+        b: {
+            'AWS_REGION': AWS_S3_DEFAULT_REGION
+            }
+        for b in BUCKETS
+        }
+    DBMI_BUCKETS_CONFIGS.update(
+            environment.get_dict('DBMI_S3_BUCKETS_CONFIGS', default={})
+        )
+
 # Check for deprecated configuration
-# this uses IAM credentials - to be deprecated but useful for local dev environment 
+# this uses IAM credentials - to be deprecated but useful for local dev environment
 else:
     BUCKET_CREDENTIALS = {}
 
@@ -306,7 +318,8 @@ else:
         BUCKET_CREDENTIALS.update({
             S3_DEFAULT_BUCKET: {
                 'AWS_KEY_ID': AWS_STS_ACCESS_KEY_ID,
-                'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY
+                'AWS_SECRET': AWS_STS_SECRET_ACCESS_KEY,
+                'AWS_REGION': AWS_S3_DEFAULT_REGION,
             }
         })
 
@@ -315,11 +328,15 @@ else:
             bucket: {
                 'AWS_KEY_ID': credentials.get('AWS_KEY_ID'),
                 'AWS_SECRET': credentials.get('AWS_SECRET'),
+                'AWS_REGION': credentials.get('AWS_REGION', AWS_S3_DEFAULT_REGION),
             } for bucket, credentials in environment.get_dict('AWS_S3_BUCKETS').items()
         })
 
     # Retain list of buckets for updated settings configuration
     BUCKETS = list(BUCKET_CREDENTIALS.keys())
+
+    # Alias this property for compatibility with IAM-less configuration
+    DBMI_BUCKETS_CONFIGS = BUCKET_CREDENTIALS
 
     warnings.warn(
         'Fileservice configurations with AWS IAM user credentials should be avoided',
@@ -328,6 +345,7 @@ else:
 if not BUCKETS:
     raise SystemError(f'Invalid configuration: DBMI_S3_BUCKETS or AWS_S3_UPLOAD_BUCKET/AWS_STS_ACCESS_KEY_ID/'
                       f'AWS_STS_SECRET_ACCESS_KEY and/or AWS_S3_BUCKETS with credentials must be defined')
+
 
 # END AWS S3 CONFIGURATION
 
