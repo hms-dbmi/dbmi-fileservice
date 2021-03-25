@@ -14,7 +14,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def awsClient(service):
+def awsClient(service, region=None):
     """
     Returns a boto3 client for the passed resource. Will use local testing URLs if
     running in such an environment.
@@ -28,14 +28,16 @@ def awsClient(service):
     if os.environ.get(f'DBMI_AWS_{service.upper()}_URL'):
         kwargs['endpoint_url'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_URL')
 
-    # Check for local URL
+    # Check for region
+    if region:
+        kwargs['region_name'] = region
     if os.environ.get(f'DBMI_AWS_{service.upper()}_REGION'):
         kwargs['region_name'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_REGION')
 
     return boto3.client(service, **kwargs)
 
 
-def awsResource(service):
+def awsResource(service, region=None):
     """
     Returns a boto3 resource for the passed resource. Will use local testing URLs if
     running in such an environment.
@@ -49,12 +51,26 @@ def awsResource(service):
     if os.environ.get(f'DBMI_AWS_{service.upper()}_URL'):
         kwargs['endpoint_url'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_URL')
 
-    # Check for local URL
+    # Check for region
+    if region:
+        kwargs['region_name'] = region
     if os.environ.get(f'DBMI_AWS_{service.upper()}_REGION'):
         kwargs['region_name'] = os.environ.get(f'LOCAL_AWS_{service.upper()}_REGION')
 
     return boto3.resource(service, **kwargs)
 
+def awsBucketRegion(bucket):
+    """
+    Returns the configured region for the given bucket. If not configured
+    via secrets, the default region for the service is returned.
+
+    :param bucket: The name of the bucket
+    :type bucket: str
+    :returns: The AWS region where the bucket is located
+    :rtype: str
+    """
+    # Get region
+    return settings.DBMI_BUCKETS_CONFIGS.get(bucket, {}).get('AWS_REGION', settings.AWS_S3_DEFAULT_REGION)
 
 def awsSignedURLUpload(archiveFile=None, bucket=None, foldername=None):
 
@@ -66,8 +82,11 @@ def awsSignedURLUpload(archiveFile=None, bucket=None, foldername=None):
     fl.save()
     archiveFile.locations.add(fl)
 
+    # Get region
+    region = awsBucketRegion(bucket) if bucket else None
+
     # Get the service client with sigv4 configured
-    s3 = awsClient(service='s3')
+    s3 = awsClient(service='s3', region=region)
 
     # Generate the URL to get 'key-name' from 'bucket-name'
     # URL expires in 604800 seconds (seven days)
@@ -93,8 +112,11 @@ def signedUrlDownload(archiveFile=None, hours=24):
         if not bucket or not path:
             return False
 
+        # Get region
+        region = awsBucketRegion(bucket)
+
         # Generate the URL to get 'key-name' from 'bucket-name'
-        s3_client = awsClient(service='s3')
+        s3_client = awsClient(service='s3', region=region)
         pre_signed_url = s3_client.generate_presigned_url(
             ClientMethod='get_object',
             Params={
@@ -124,8 +146,11 @@ def awsCopyFile(archive_file, destination, origin):
     # Trim the protocol from the S3 URL
     log.debug(f'Copying file: s3://{origin.lower()}/{key} -> s3://{destination.lower()}/{key}')
 
+    # Get region
+    region = awsBucketRegion(bucket)
+
     # Do the move
-    s3 = awsClient(service='s3')
+    s3 = awsClient(service='s3', region=region)
     s3.copy_object(Bucket=destination, CopySource=f'{origin}/{key}', Key=f'{key}')
 
     # Create the new location
@@ -149,8 +174,11 @@ def awsRemoveFile(location):
     # Trim the protocol from the S3 URL
     log.debug(f'Removing file: {bucket}/{key}')
 
+    # Get region
+    region = awsBucketRegion(bucket)
+
     # Do the move
-    s3 = awsClient(service='s3')
+    s3 = awsClient(service='s3', region=region)
     s3.delete_object(Bucket=bucket, Key=f'{key}')
 
     return True

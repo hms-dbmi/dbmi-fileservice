@@ -33,7 +33,7 @@ from filemaster.aws import awsCopyFile
 from filemaster.aws import awsMoveFile
 from filemaster.aws import awsRemoveFile
 from filemaster.aws import signedUrlDownload
-from filemaster.aws import awsClient, awsResource
+from filemaster.aws import awsClient, awsResource, awsBucketRegion
 from filemaster.filters import ArchiveFileFilter
 from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
@@ -434,8 +434,11 @@ class ArchiveFileList(viewsets.ModelViewSet):
         # Build the key
         key = folder_name + "/" + archive_file.filename
 
+        # Get region
+        region = awsBucketRegion(bucket)
+
         # Generate the post
-        s3 = awsClient(service='s3')
+        s3 = awsClient(service='s3', region=region)
 
         post = s3.generate_presigned_post(
             Bucket=bucket,
@@ -481,9 +484,12 @@ class ArchiveFileList(viewsets.ModelViewSet):
         fl = FileLocation.objects.get(id=location)
         bucket, path = fl.get_bucket()
 
+        # Get region
+        region = awsBucketRegion(bucket)
+
         try:
             # Get the object if it exists
-            s3 = awsResource(service='s3')
+            s3 = awsResource(service='s3', region=region)
             k = s3.Object(bucket, path)
             fl.filesize = k.content_length
             fl.uploadComplete = datetime.now()
@@ -524,9 +530,12 @@ class ArchiveFileList(viewsets.ModelViewSet):
         fl = FileLocation.objects.get(id=location)
         bucket, path = fl.get_bucket()
 
+        # Get region
+        region = awsBucketRegion(bucket)
+
         try:
             # Get the object if it exists
-            s3 = awsResource(service='s3')
+            s3 = awsResource(service='s3', region=region)
             k = s3.Object(bucket, path)
 
             return Response(k.e_tag)
@@ -792,7 +801,7 @@ class ArchiveFileDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSimpleSerializer
     permission_classes = [IsAdminUser]
-    
+
 class FileLocationList(generics.ListCreateAPIView):
     queryset = FileLocation.objects.all()
     serializer_class = FileLocationSerializer
