@@ -13,6 +13,7 @@ from .views import logout
 
 from .files import ArchiveFileList
 from .files import ArchiveFileDetail
+from .files import ArchiveFileSearch
 from .files import DownloadLogList
 from .files import FileLocationList
 from .files import FileLocationDetail
@@ -32,6 +33,7 @@ urlpatterns = [
     url(r'^api/location/?$', FileLocationList.as_view()),
     url(r'^api/location/(?P<pk>[^/]+)/?$', FileLocationDetail.as_view()),
     url(r'^api/file-detail/(?P<pk>[^/]+)/?$', ArchiveFileDetail.as_view()),
+    url(r'^api/file-search/?$', ArchiveFileSearch.as_view()),
     url(r'^logout/?$', logout, name="logout"),
     url(r'^$', index, name="index"),
 ]
