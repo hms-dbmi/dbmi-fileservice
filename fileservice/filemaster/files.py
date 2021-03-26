@@ -801,12 +801,8 @@ class ArchiveFileDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSimpleSerializer
     permission_classes = [IsAdminUser]
-<<<<<<< HEAD
-
-=======
     filterset_fields = ['uuid', 'filename']
     
->>>>>>> add filterset fields for DRF endpoints
 class FileLocationList(generics.ListCreateAPIView):
     queryset = FileLocation.objects.all()
     serializer_class = FileLocationSerializer
