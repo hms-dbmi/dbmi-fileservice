@@ -56,6 +56,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
+    # filterset_fields = ['uuid', 'filename']
     filter_class = ArchiveFileFilter
     filter_backends = (rest_framework_filters.DjangoFilterBackend, DjangoObjectPermissionsFilter,)
 
@@ -796,6 +797,12 @@ class DownloadLogList(generics.ListAPIView):
             queryset = queryset.filter(download_requested_on__lte=download_date_lte)
 
         return queryset
+
+class ArchiveFileSearch(generics.ListAPIView):
+    queryset = ArchiveFile.objects.all()
+    serializer_class = ArchiveFileSimpleSerializer
+    permission_classes = [IsAdminUser]
+    filterset_fields = ['uuid', 'filename', 'owner', 'creationdate', 'modifydate']
 
 class ArchiveFileDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = ArchiveFile.objects.all()
