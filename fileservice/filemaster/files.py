@@ -797,17 +797,26 @@ class DownloadLogList(generics.ListAPIView):
 
         return queryset
 
+class ArchiveFileSearch(generics.ListAPIView):
+    queryset = ArchiveFile.objects.all()
+    serializer_class = ArchiveFileSimpleSerializer
+    permission_classes = [IsAdminUser]
+    filterset_fields = ['uuid', 'filename', 'owner', 'creationdate', 'modifydate']
+
 class ArchiveFileDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSimpleSerializer
     permission_classes = [IsAdminUser]
-
+    filterset_fields = ['uuid', 'filename']
+    
 class FileLocationList(generics.ListCreateAPIView):
     queryset = FileLocation.objects.all()
     serializer_class = FileLocationSerializer
     permission_classes = [IsAdminUser]
+    filterset_fields = ['storagetype', 'url']
 
 class FileLocationDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = FileLocation.objects.all()
     serializer_class = FileLocationSerializer
     permission_classes = [IsAdminUser]
+    filterset_fields = ['storagetype', 'url']
