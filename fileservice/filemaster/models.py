@@ -287,6 +287,7 @@ class DownloadLog(models.Model):
     A model used to track when a user has requested a file download.
     """
 
-    archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.PROTECT)
+    # DownloadLog is only for accounting so delete the logs if the archivefile is also deleted
+    archivefile = models.ForeignKey(ArchiveFile, blank=False, null=False, on_delete=models.CASCADE)
     download_requested_on = models.DateTimeField(blank=False, null=False, auto_now_add=True)
     requesting_user = models.ForeignKey(CustomUser, blank=False, null=False, on_delete=models.PROTECT)
