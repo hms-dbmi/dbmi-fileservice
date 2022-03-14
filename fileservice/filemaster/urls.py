@@ -19,7 +19,6 @@ from .files import FileLocationList
 from .files import FileLocationDetail
 
 from filemaster.uploader import UploaderComplete, UploaderNew, UploaderUpdate
-from filemaster.views import Healthcheck
 
 app_name = FilemasterConfig.name
 
@@ -31,7 +30,6 @@ urlpatterns = [
     url(r'^groups?/(?P<pk>[^/]+)/?$', GroupDetail.as_view()),
     url(r'^user/$', UserList.as_view()),
     url(r'^token/?$', token, name="token"),
-    url(r'^healthcheck$', Healthcheck.as_view(), name='healthcheck'),
     url(r'^uploader/complete$', UploaderComplete.as_view(), name='uploader_complete'),
     url(r'^uploader/new$', UploaderNew.as_view(), name='uploader_new'),
     url(r'^uploader/update$', UploaderUpdate.as_view(), name='uploader_update'),
