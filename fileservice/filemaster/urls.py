@@ -19,7 +19,7 @@ from .files import FileLocationList
 from .files import FileLocationDetail
 
 from filemaster.uploader import Uploader
-from fileservice.view import Healthcheck
+from filemaster.views import Healthcheck
 
 app_name = FilemasterConfig.name
 
