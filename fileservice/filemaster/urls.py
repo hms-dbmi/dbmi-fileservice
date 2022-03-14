@@ -36,9 +36,9 @@ urlpatterns = [
     url(r'^api/location/(?P<pk>[^/]+)/?$', FileLocationDetail.as_view()),
     url(r'^api/file-detail/(?P<pk>[^/]+)/?$', ArchiveFileDetail.as_view()),
     url(r'^api/file-search/?$', ArchiveFileSearch.as_view()),
-    url(r'^api/uploader/complete/$', UploaderComplete.as_view()),
-    url(r'^api/uploader/new/$', UploaderNew.as_view()),
-    url(r'^api/uploader/update/$', UploaderUpdate.as_view()),
+    url(r'^api/uploader/complete$', UploaderComplete.as_view()),
+    url(r'^api/uploader/new$', UploaderNew.as_view()),
+    url(r'^api/uploader/update$', UploaderUpdate.as_view()),
     url(r'^logout/?$', logout, name="logout"),
     url(r'^$', index, name="index"),
 ]

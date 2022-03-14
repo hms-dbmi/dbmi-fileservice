@@ -216,7 +216,7 @@ class UploaderNew(APIView):
                 'secret_key': secret_key,
                 'session_token': session_token,
                 'uuid': sequencing_file.uuid,
-            }, status=status.HTTP_200_OK)
+            }, status=status.HTTP_201_CREATED)
         except Exception as exc:
             LOGGER.exception(
                 'Error throw while attempting to create new file with name %s: %s', filename, exc)
@@ -265,7 +265,7 @@ class UploaderUpdate(APIView):
                 'secret_key': secret_key,
                 'session_token': session_token,
                 'uuid': sequencing_file.uuid,
-            }, status=status.HTTP_200_OK)
+            }, status=status.HTTP_201_CREATED)
         except Exception as exc:
             LOGGER.exception(
                 'Error thrown while attempting to add a new location to the file %s: %s', uuid, exc)
