@@ -85,13 +85,12 @@ def mark_location_complete(file_size, location):
         return False
 
 
-class Uploader(APIView):
+class UploaderComplete(APIView):
     """
-    API endpoint used by the UDN Uploader tool
+    API endpoint used by the UDN Uploader tool to mark a file as complete
     """
 
-    @action(detail=False, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
-    def complete(self, request):
+    def post(self, request):
         """
         Mark the file location, specified in the request as completed
         """
@@ -159,8 +158,13 @@ class Uploader(APIView):
                 {'error': 'Unknown error while attempting to mark file complete'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
-    def new(self, request):
+
+class UploaderNew(APIView):
+    """
+    API endpoint used by the UDN Uploader tool to upload a new file
+    """
+
+    def post(self, request):
         """
         Create a new ArchiveFile record with the data provided
         """
@@ -222,8 +226,13 @@ class Uploader(APIView):
                 {'error': 'Unknown error while attempting to create new file'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
-    def update(self, request):
+
+class UploaderUpdate(APIView):
+    """
+    API endpoint used by the UDN Uploader tool to add a new location to an existing file
+    """
+
+    def put(self, request):
         """
         Create a new ArchiveFile record with the data provided
         """
