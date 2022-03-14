@@ -1,3 +1,4 @@
+import logging
 import string
 import random
 from furl import furl
@@ -24,12 +25,9 @@ from dbmi_client.auth import dbmi_user
 from dbmi_client.authn import DBMIModelUser
 from dbmi_client.authn import logout_redirect
 
-from filemaster.models import Bucket
-from filemaster.models import GROUPTYPES
-from filemaster.serializers import SpecialGroupSerializer
-from filemaster.serializers import TokenSerializer
+from filemaster.models import ArchiveFile, Bucket, GROUPTYPES
+from filemaster.serializers import SpecialGroupSerializer, TokenSerializer
 
-import logging
 log = logging.getLogger(__name__)
 
 # Get the current user model
@@ -101,6 +99,7 @@ class GroupList(APIView):
     """
     List all groups that user can see, or create a new group.
     """
+
     def get(self, request, format=None):
 
         log.debug("[views][GroupList][get]")
@@ -114,14 +113,14 @@ class GroupList(APIView):
         if not request.user.has_perm('auth.add_group'):
             log.warning("User '{}' does not have permission 'add_group'".format(request.user.username))
             return HttpResponseForbidden()
-        sdata=[]
-        for types in GROUPTYPES: 
-            userstructure=[]           
+        sdata = []
+        for types in GROUPTYPES:
+            userstructure = []
             group, created = Group.objects.get_or_create(name=request.data['name']+"__"+types)
 
             self.request.user.groups.add(group)
             assign_perm('view_group', self.request.user, group)
-            assign_perm('add_group', self.request.user, group)                
+            assign_perm('add_group', self.request.user, group)
             assign_perm('change_group', self.request.user, group)
             assign_perm('delete_group', self.request.user, group)
 
@@ -135,9 +134,9 @@ class GroupList(APIView):
                     log.error("ERROR: %s" % e)
 
             for user in group.user_set.all():
-                userstructure.append({"email":user.email})
+                userstructure.append({"email": user.email})
 
-            sdata.append({"name":group.name, "id":group.id, "users":userstructure})
+            sdata.append({"name": group.name, "id": group.id, "users": userstructure})
 
         return Response(sdata, status=status.HTTP_201_CREATED)
 
@@ -156,7 +155,7 @@ class GroupDetail(APIView):
     def get(self, request, pk, format=None):
         group = self.get_object(pk)
         if not request.user.has_perm('auth.view_group', group):
-            return HttpResponseForbidden()        
+            return HttpResponseForbidden()
         groupstructure = serialize_group(request.user, group=group)
         serializer = SpecialGroupSerializer(groupstructure, many=False)
         return Response(serializer.data)
@@ -193,7 +192,7 @@ class GroupDetail(APIView):
         except:
             pass
 
-    def add_write_perms_for_group_to_buckets(self,request,group):
+    def add_write_perms_for_group_to_buckets(self, request, group):
         """
         Given a list of buckets, assign write bucket permissions to the group.
         """
@@ -267,6 +266,7 @@ class UserList(APIView):
     """
     List all groups that user can see, or create a new group.
     """
+
     def get(self, request, format=None):
         return Response([])
 
@@ -292,7 +292,7 @@ class UserList(APIView):
                 except Exception as e:
                     log.error("ERROR: %s" % e)
 
-        sdata.append({"users":userstructure})
+        sdata.append({"users": userstructure})
 
         return Response(sdata, status=status.HTTP_201_CREATED)
 
@@ -309,3 +309,22 @@ def token(request):
         t = Token.objects.get(user=u)
         serializer = TokenSerializer(t)
         return Response(serializer.data)
+
+
+class Healthcheck(APIView):
+    """
+    API healthcheck endpoints
+    """
+
+    def get(self, _):
+        """
+        Respond 200 if all is good with FileService, else an error code
+        """
+        try:
+            ArchiveFile.objects.first()
+
+            return Response('FileService up and running', status=status.HTTP_200_OK)
+        except Exception as exc:
+            log.error('Healthcheck failed with error: %s' % exc)
+            return Response(
+                'FileService unable to respond correctly at this time', status=status.HTTP_500_INTERNAL_SERVER_ERROR)

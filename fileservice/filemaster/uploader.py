@@ -7,11 +7,13 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from filemaster.aws import awsResource, awsBucketRegion, signedUrlUpload
 from filemaster.models import ArchiveFile
+from filemaster.permissions import DjangoObjectPermissionsAll
 
 LOGGER = logging.getLogger(__name__)
 
@@ -83,12 +85,13 @@ def mark_location_complete(file_size, location):
         return False
 
 
-class UploaderComplete(APIView):
+class Uploader(APIView):
     """
-    API endpoint used by the UDN Uploader tool to mark a file upload as completed
+    API endpoint used by the UDN Uploader tool
     """
 
-    def post(self, request):
+    @action(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    def complete(self, request):
         """
         Mark the file location, specified in the request as completed
         """
@@ -156,13 +159,8 @@ class UploaderComplete(APIView):
                 {'error': 'Unknown error while attempting to mark file complete'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-class UploaderNew(APIView):
-    """
-    API endpoint used by the UDN Uploader tool to create a new file entry
-    """
-
-    def post(self, request):
+    @action(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    def new(self, request):
         """
         Create a new ArchiveFile record with the data provided
         """
@@ -224,14 +222,8 @@ class UploaderNew(APIView):
                 {'error': 'Unknown error while attempting to create new file'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-class UploaderUpdate(APIView):
-    """
-    API endpoint used by the UDN Uploader tool to add a new location to an
-    existing file entry
-    """
-
-    def post(self, request):
+    @action(methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    def update(self, request):
         """
         Create a new ArchiveFile record with the data provided
         """
