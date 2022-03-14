@@ -10,7 +10,7 @@ django-appconf==1.0.4
 django-axes==5.4.3
 django-bootstrap3==14.1.0
 django-dbmi-client==0.3.14
-django-filter==2.3.0
+django-filter==2.4.0
 django-guardian==2.3.0
 django-health-check==3.12.1
 django-ipware==3.0.1
