@@ -19,6 +19,7 @@ from .files import FileLocationList
 from .files import FileLocationDetail
 
 from filemaster.uploader import UploaderComplete, UploaderNew, UploaderUpdate
+from fileservice.view import Healthcheck
 
 app_name = FilemasterConfig.name
 
@@ -26,6 +27,7 @@ router = DefaultRouter()
 router.register(r'file', ArchiveFileList)
 
 urlpatterns = [
+    url(r'^healthcheck/?', Healthcheck.as_view(), name='healthcheck'),
     url(r'^groups?/?$', GroupList.as_view()),
     url(r'^groups?/(?P<pk>[^/]+)/?$', GroupDetail.as_view()),
     url(r'^user/$', UserList.as_view()),
