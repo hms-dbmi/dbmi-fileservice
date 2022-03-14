@@ -159,7 +159,7 @@ class Uploader(APIView):
                 {'error': 'Unknown error while attempting to mark file complete'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(details=False, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    @action(detail=False, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
     def new(self, request):
         """
         Create a new ArchiveFile record with the data provided
