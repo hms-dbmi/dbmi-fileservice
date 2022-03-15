@@ -22,10 +22,10 @@ def is_bucket_valid(bucket):
     """
     try:
         return (
-            not hasattr(settings, 'BUCKET_CREDENTIALS') or
-            not settings.BUCKET_CREDENTIALS.get(bucket) or
-            not settings.BUCKET_CREDENTIALS[bucket].get('AWS_KEY_ID') or
-            not settings.BUCKET_CREDENTIALS[bucket].get('AWS_SECRET'))
+            hasattr(settings, 'BUCKET_CREDENTIALS') and
+            settings.BUCKET_CREDENTIALS.get(bucket) and
+            settings.BUCKET_CREDENTIALS[bucket].get('AWS_KEY_ID') and
+            settings.BUCKET_CREDENTIALS[bucket].get('AWS_SECRET')) != None
     except Exception as exc:
         LOGGER.exception('Error thrown while looking up credentials for bucket %s: %s', bucket, exc)
         return False
