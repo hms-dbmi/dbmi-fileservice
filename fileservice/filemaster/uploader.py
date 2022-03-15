@@ -223,7 +223,7 @@ class UploaderNew(APIView):
                 LOGGER.exception(
                     'Exception thrown while attempting to set permissions on a new file with name %s: %s', filename, exc)
                 return Response(
-                    {'error': 'Error thrown while attempting to create file'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    {'error': 'Exception thrown while attempting to create file'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             (access_key, folder_name, location_id, secret_key,
              session_token) = get_s3_upload_information(bucket, sequencing_file)
@@ -238,7 +238,7 @@ class UploaderNew(APIView):
             }, status=status.HTTP_201_CREATED)
         except Exception as exc:
             LOGGER.exception(
-                'Error throw while attempting to create new file with name %s: %s', filename, exc)
+                'Exception thrown while attempting to create new file with name: %s', exc)
             return Response(
                 {'error': 'Unknown error while attempting to create new file'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
