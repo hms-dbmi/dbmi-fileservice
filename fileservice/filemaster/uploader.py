@@ -109,7 +109,7 @@ class UploaderComplete(APIView):
                     {'error': 'Unable to find requested sequencing file'}, status=status.HTTP_404_NOT_FOUND)
 
             try:
-                location = sequencing_file.locations.filter(id=location_id)
+                location = sequencing_file.locations.get(id=location_id)
             except Exception:
                 LOGGER.exception(
                     'Unable to find file location %s associated with file %s to mark it as complete',
