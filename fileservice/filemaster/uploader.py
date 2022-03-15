@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -203,6 +203,7 @@ class UploaderNew(APIView):
                 return Response({'error': 'Provided bucket is not a valid upload location'}, status=status.HTTP_400_BAD_REQUEST)
 
             try:
+                User = get_user_model()
                 user = User.objects.get(email=user_email)
             except User.DoesNotExist:
                 LOGGER.exception('Unable to find user by email specified')
