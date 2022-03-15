@@ -18,6 +18,8 @@ from .files import DownloadLogList
 from .files import FileLocationList
 from .files import FileLocationDetail
 
+from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderNew, UploaderUpdate
+
 app_name = FilemasterConfig.name
 
 router = DefaultRouter()
@@ -28,6 +30,10 @@ urlpatterns = [
     url(r'^groups?/(?P<pk>[^/]+)/?$', GroupDetail.as_view()),
     url(r'^user/$', UserList.as_view()),
     url(r'^token/?$', token, name="token"),
+    url(r'^uploader/complete$', UploaderComplete.as_view(), name='uploader_complete'),
+    url(r'^uploader/check$', UploaderCheck.as_view(), name='uploader_check'),
+    url(r'^uploader/new$', UploaderNew.as_view(), name='uploader_new'),
+    url(r'^uploader/update$', UploaderUpdate.as_view(), name='uploader_update'),
     url(r'^api/', include(router.urls)),
     url(r'^api/logs/?$', DownloadLogList.as_view()),
     url(r'^api/location/?$', FileLocationList.as_view()),
