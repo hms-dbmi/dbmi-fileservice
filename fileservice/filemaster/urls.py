@@ -18,7 +18,7 @@ from .files import DownloadLogList
 from .files import FileLocationList
 from .files import FileLocationDetail
 
-from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderNew, UploaderUpdate
+from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderMetadata, UploaderNew, UploaderUpdate
 
 app_name = FilemasterConfig.name
 
@@ -32,6 +32,7 @@ urlpatterns = [
     url(r'^token/?$', token, name="token"),
     url(r'^uploader/complete$', UploaderComplete.as_view(), name='uploader_complete'),
     url(r'^uploader/check$', UploaderCheck.as_view(), name='uploader_check'),
+    url(r'^uploader/metadata$', UploaderMetadata.as_view(), name='uploader_metadata'),
     url(r'^uploader/new$', UploaderNew.as_view(), name='uploader_new'),
     url(r'^uploader/update$', UploaderUpdate.as_view(), name='uploader_update'),
     url(r'^api/', include(router.urls)),

@@ -176,6 +176,51 @@ class UploaderCheck(APIView):
                 'FileService unable to respond correctly at this time', status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class UploaderMetadata(APIView):
+    """
+    API endpoint used by the UDN Uploader tool to update an existing file's metadata
+    """
+
+    def put(self, request):
+        """
+        Update the metadata of an existing file
+        """
+        try:
+            description = request.data['description'] if 'description' in request.data else None
+            filename = request.data['filename'] if 'filename' in request.data else None
+            metadata = request.data['metadata'] if 'metadata' in request.data else None
+
+            if not description or not filename or not metadata:
+                LOGGER.exception('Request to update metadata missing required parameters')
+                return Response(
+                    {'error': 'Missing required parameters: description, filename, metadata'},
+                    status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                sequencing_file = ArchiveFile.objects.get(filename=filename)
+            except ArchiveFile.DoesNotExist:
+                LOGGER.exception('Unable to find file with name %s to update metadata', filename)
+                return Response(
+                    {'error': 'Unable to find file to update'}, status=status.HTTP_404_NOT_FOUND)
+
+            try:
+                sequencing_file.description = description
+                sequencing_file.metadata = metadata
+                sequencing_file.save()
+            except Exception as exc:
+                LOGGER.exception('Exception thrown while updating metadata for file with name %s: %s', filename, exc)
+                return Response(
+                    {'error': 'Exception thrown while updating metadata for file'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({'message': 'Metadata successfully updated'}, status=status.HTTP_200_OK)
+        except Exception as exc:
+            LOGGER.exception(
+                'Exception thrown while attempting to update metadata for file with name: %s', exc)
+            return Response(
+                {'error': 'Unknown error while attempting to update file metadata'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class UploaderNew(APIView):
     """
     API endpoint used by the UDN Uploader tool to create a new file entry
