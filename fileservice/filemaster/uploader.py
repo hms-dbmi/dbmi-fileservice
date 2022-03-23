@@ -67,12 +67,13 @@ def get_s3_upload_information(bucket, sequencing_file):
         return None, None, None, None, None
 
 
-def mark_location_complete(file_size, location):
+def mark_location_complete(file_size, location, storage_type):
     """
     Update the location's filesize and uploadComplete attributes
     """
     try:
         location.filesize = file_size
+        location.storagetype = storage_type
         location.uploadComplete = datetime.now()
         location.save()
 
@@ -126,6 +127,7 @@ class UploaderComplete(APIView):
 
             s3_data = get_file_s3_data(location)
             file_size = s3_data.content_length if s3_data and s3_data.content_length else None
+            storage_type = s3_data.storage_class.lower() if s3_data and s3_data.storage_class else 's3'
 
             if not file_size:
                 LOGGER.exception(
@@ -133,7 +135,7 @@ class UploaderComplete(APIView):
                 return Response(
                     {'error': 'Unable to get S3 data for file'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            updated = mark_location_complete(file_size, location)
+            updated = mark_location_complete(file_size, location, storage_type)
 
             if not updated:
                 LOGGER.exception(
