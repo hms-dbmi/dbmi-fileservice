@@ -147,6 +147,7 @@ class UploaderComplete(APIView):
             return Response({
                 'description': sequencing_file.description,
                 'filesize': location.filesize,
+                'storage_type': location.storagetype,
                 'upload_completed': location.uploadComplete,
             }, status=status.HTTP_200_OK)
         except Exception as exc:
