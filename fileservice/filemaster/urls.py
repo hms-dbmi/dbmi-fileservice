@@ -18,6 +18,7 @@ from .files import DownloadLogList
 from .files import FileLocationList
 from .files import FileLocationDetail
 
+from filemaster.realignment import CreateRealignedFile
 from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderMetadata, UploaderNew, UploaderUpdate
 
 app_name = FilemasterConfig.name
@@ -30,6 +31,7 @@ urlpatterns = [
     url(r'^groups?/(?P<pk>[^/]+)/?$', GroupDetail.as_view()),
     url(r'^user/$', UserList.as_view()),
     url(r'^token/?$', token, name="token"),
+    url(r'^realignment/new$', CreateRealignedFile.as_view(), name='realignment_new'),
     url(r'^uploader/complete$', UploaderComplete.as_view(), name='uploader_complete'),
     url(r'^uploader/check$', UploaderCheck.as_view(), name='uploader_check'),
     url(r'^uploader/metadata$', UploaderMetadata.as_view(), name='uploader_metadata'),
