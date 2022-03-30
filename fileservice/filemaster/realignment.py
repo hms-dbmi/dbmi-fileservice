@@ -47,9 +47,10 @@ class CreateRealignedFile(APIView):
             new_file = ArchiveFile.objects.create(
                 description=description, filename=filename, metadata=metadata, owner=user)
 
-            location = FileLocation(
+            location = FileLocation.objects.create(
                 filesize=filesize, storagetype=storagetype, uploadComplete=datetime.now(), 
                 url='S3://{}/{}/{}'.format(bucket,folder,filename))
+            
             new_file.locations.add(location)
 
             try:
