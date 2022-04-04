@@ -43,19 +43,24 @@ class CreateRealignedFile(APIView):
             except User.DoesNotExist:
                 LOGGER.exception('Unable to find user by email specified')
                 return Response({'error': 'Unable to find user by email specified'}, status=status.HTTP_403_FORBIDDEN)
-
-            new_file = ArchiveFile.objects.create(
-                description=description, filename=filename, metadata=metadata, owner=user)
+            
+            try:
+                archive_file = ArchiveFile.objects.get(filename=filename)
+            except ArchiveFile.DoesNotExist:
+                archive_file = ArchiveFile.objects.create(
+                    description=description, filename=filename, metadata=metadata, owner=user)
 
             location = FileLocation.objects.create(
                 filesize=filesize, storagetype=storagetype, uploadComplete=datetime.now(), 
                 url='S3://{}/{}/{}'.format(bucket,folder,filename))
             
-            new_file.locations.add(location)
+            archive_file.locations.add(location)
 
             try:
+                archive_file.killPerms()
+
                 for perm in permissions:
-                    new_file.setPerms(perm)
+                    archive_file.setPerms(perm)
             except Exception as exc:
                 LOGGER.exception(
                     'Exception thrown while attempting to set permissions on a new file with name %s: %s', filename, exc)
@@ -64,7 +69,7 @@ class CreateRealignedFile(APIView):
 
             return Response({
                 'location_id': location.id,
-                'uuid': new_file.uuid,
+                'uuid': archive_file.uuid,
             }, status=status.HTTP_201_CREATED)
         except Exception as exc:
             LOGGER.exception(
