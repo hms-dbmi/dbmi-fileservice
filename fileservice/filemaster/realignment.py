@@ -44,9 +44,16 @@ class CreateRealignedFile(APIView):
                 LOGGER.exception('Unable to find user by email specified')
                 return Response({'error': 'Unable to find user by email specified'}, status=status.HTTP_403_FORBIDDEN)
             
-            try:
-                archive_file = ArchiveFile.objects.get(filename=filename)
-            except ArchiveFile.DoesNotExist:
+            existing_files = ArchiveFile.objects.filter(filename=filename)
+            if existing_files:
+                if len(existing_files.all()) > 1:
+                    LOGGER.exception('More than one file present with the name provided: %s', filename)
+                    return Response(
+                        {'error': 'More than one file with the name provided exists. This should never happen!'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                archive_file = existing_files.first()
+            else:
                 archive_file = ArchiveFile.objects.create(
                     description=description, filename=filename, metadata=metadata, owner=user)
 
