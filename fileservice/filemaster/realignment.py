@@ -53,6 +53,11 @@ class CreateRealignedFile(APIView):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 archive_file = existing_files.first()
+                
+                archive_file.description = description
+                archive_file.metadata = metadata
+                archive_file.owner = user
+                archive_file.save()
             else:
                 archive_file = ArchiveFile.objects.create(
                     description=description, filename=filename, metadata=metadata, owner=user)
