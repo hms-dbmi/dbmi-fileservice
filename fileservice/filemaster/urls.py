@@ -19,7 +19,7 @@ from .files import FileLocationList
 from .files import FileLocationDetail
 
 from filemaster.realignment import CreateRealignedFile
-from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderMetadata, UploaderNew, UploaderUpdate
+from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderMetadata
 
 app_name = FilemasterConfig.name
 
@@ -35,8 +35,6 @@ urlpatterns = [
     url(r'^uploader/complete$', UploaderComplete.as_view(), name='uploader_complete'),
     url(r'^uploader/check$', UploaderCheck.as_view(), name='uploader_check'),
     url(r'^uploader/metadata$', UploaderMetadata.as_view(), name='uploader_metadata'),
-    url(r'^uploader/new$', UploaderNew.as_view(), name='uploader_new'),
-    url(r'^uploader/update$', UploaderUpdate.as_view(), name='uploader_update'),
     url(r'^api/', include(router.urls)),
     url(r'^api/logs/?$', DownloadLogList.as_view()),
     url(r'^api/location/?$', FileLocationList.as_view()),
