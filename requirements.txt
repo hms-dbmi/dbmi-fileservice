@@ -8,19 +8,19 @@ boto==2.49.0 \
     --hash=sha256:147758d41ae7240dc989f0039f27da8ca0d53734be0eb869ef16e3adcfa462e8 \
     --hash=sha256:ea0d3b40a2d852767be77ca343b58a9e3a4b00d9db440efb8da74b4e58025e5a
     # via -r requirements.in
-boto3==1.22.9 \
-    --hash=sha256:441b619067cb205bfcd0e66fe085c16989ab65bd348823013e11bef991c00a5c \
-    --hash=sha256:65e45029d234ff94ba8aa3bacb9df00fbbb2f1d9ee7fd1c2e40f4815d12ec3f5
+boto3==1.23.5 \
+    --hash=sha256:5cbbd985171b1e278b722dca48f71455b4938378962734828daeb76f73be6fba \
+    --hash=sha256:73a0d092aaea1649150f43fb3f41451d5a0883940549a64d72781a23ce6b2d44
     # via -r requirements.in
-botocore==1.25.9 \
-    --hash=sha256:71962de55b053a0124a0514155f4cdcf0bce81795ffc2bd6e000c1594e99125a \
-    --hash=sha256:a1d26b95aaa5b2e126df74b223d774fae7e6597bb55c363782178f5b87f0cad3
+botocore==1.26.5 \
+    --hash=sha256:32541873924e3ff0ad95f02dc331e9f278721a3b864a4e2a8d514346b2598ce5 \
+    --hash=sha256:805db3ecf85ff89edfb6788f862b87426f990e3e6383ef3fca3076f7659a5454
     # via
     #   boto3
     #   s3transfer
-certifi==2021.10.8 \
-    --hash=sha256:78884e7c1d4b00ce3cea67b44566851c4343c120abd683433ce934a68ea58872 \
-    --hash=sha256:d62a0163eb4c2344ac042ab2bdf75399a71a2d8c7d47eac2e2ee91b9d6339569
+certifi==2022.5.18.1 \
+    --hash=sha256:9c5705e395cd70084351dd8ad5c41e65655e08ce46f2ec9cf6c2c08390f71eb7 \
+    --hash=sha256:f1d53542ee8cbedbe2118b5686372fb33c297fcd6379b050cca0ef13a597382a
     # via requests
 cffi==1.15.0 \
     --hash=sha256:00c878c90cb53ccfaae6b8bc18ad05d2036553e6d9d1d9dbcf323bbe83854ca3 \
@@ -78,9 +78,9 @@ charset-normalizer==2.0.12 \
     --hash=sha256:2857e29ff0d34db842cd7ca3230549d1a697f96ee6d3fb071cfa6c7393832597 \
     --hash=sha256:6881edbebdb17b39b4eaaa821b438bf6eddffb4468cf344f09f89def34a8b1df
     # via requests
-croniter==1.3.4 \
-    --hash=sha256:1ac5fee61aa3467c9d998b8a889cd3acbf391ad3f473addb0212dc7733b7b5cd \
-    --hash=sha256:3169365916834be654c2cac57ea14d710e742f8eb8a5fce804f6ce548da80bf2
+croniter==1.3.5 \
+    --hash=sha256:4f72faca42c00beb6e30907f1315145f43dfbe5ec0ad4ada24b4c0d57b86a33a \
+    --hash=sha256:7592fc0e8a00d82af98dfa2768b75983b6fb4c2adc8f6d0d7c931a715b7cefee
     # via -r requirements.in
 cryptography==37.0.2 \
     --hash=sha256:093cb351031656d3ee2f4fa1be579a8c69c754cf874206be1d4cf3b542042804 \
@@ -199,8 +199,8 @@ jsonfield==3.1.0 \
     --hash=sha256:7e4e84597de21eeaeeaaa7cc5da08c61c48a9b64d0c446b2d71255d01812887a \
     --hash=sha256:df857811587f252b97bafba42e02805e70a398a7a47870bc6358a0308dd689ed
     # via -r requirements.in
-jwcrypto==1.2 \
-    --hash=sha256:edf4309321721e5161cefccdd64b04509e03924feaf3de085b47780765989ae3
+jwcrypto==1.3.1 \
+    --hash=sha256:54b551b115ffb4d12b1f1ee93b8ba2a71bb8556ba3d85d62f707549613da877c
     # via django-dbmi-client
 mysqlclient==2.1.0 \
     --hash=sha256:02c8826e6add9b20f4cb12dcf016485f7b1d6e30356a1204d05431867a1b3947 \
@@ -375,7 +375,7 @@ wrapt==1.14.1 \
     # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==62.1.0 \
-    --hash=sha256:26ead7d1f93efc0f8c804d9fafafbe4a44b179580a7105754b245155f9af05a8 \
-    --hash=sha256:47c7b0c0f8fc10eec4cf1e71c6fdadf8decaa74ffa087e68cd1c20db7ad6a592
+setuptools==62.3.2 \
+    --hash=sha256:68e45d17c9281ba25dc0104eadd2647172b3472d9e01f911efa57965e8d51a36 \
+    --hash=sha256:a43bdedf853c670e5fed28e5623403bad2f73cf02f9a2774e91def6bda8265a7
     # via django-axes
