@@ -33,8 +33,8 @@ class ArchiveFileAdmin(GuardedModelAdmin):
     fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', 'locations')
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
-    sortable_by = ('owner', 'creationdate', 'modifydate')
-    search_fields = ('owner', 'filename', 'metadata', )
+    sortable_by = ('owner__email', 'creationdate', 'modifydate')
+    search_fields = ('owner__email', 'filename', 'metadata', 'uuid', )
 
 
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
