@@ -33,8 +33,8 @@ class ArchiveFileAdmin(GuardedModelAdmin):
     fields = ('creationdate', 'uuid', 'filename', 'owner', 'tags', 'locations')
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
-    sortable_by = ('owner__email', 'creationdate', 'modifydate')
-    search_fields = ('owner__email', 'filename', 'metadata', 'uuid', )
+    sortable_by = ('owner', 'creationdate', 'modifydate')
+    search_fields = ('owner__email', 'owner__username', 'filename', 'metadata', )
 
 
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
@@ -56,7 +56,7 @@ class DownloadLogAdmin(admin.ModelAdmin):
     readonly_fields = ('download_requested_on', )
     list_display = ('archivefile', 'download_requested_on', 'requesting_user', )
     sortable_by = ('archivefile', 'download_requested_on', 'requesting_user', )
-    search_fields = ('archivefile', 'requesting_user', )
+    search_fields = ('archivefile__uuid', 'requesting_user__email', 'requesting_user__username', )
 
 
 admin.site.register(DownloadLog, DownloadLogAdmin)
