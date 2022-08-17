@@ -150,8 +150,12 @@ def awsCopyFile(archive_file, destination, origin):
     region = awsBucketRegion(bucket)
 
     # Do the move
-    s3 = awsClient(service='s3', region=region)
-    s3.copy_object(Bucket=destination, CopySource=f'{origin}/{key}', Key=f'{key}')
+    s3 = awsResource(service='s3', region=region)
+    copy_source = {
+        'Bucket': origin,
+        'Key': key
+    }
+    s3.meta.client.copy(copy_source, destination, key)
 
     # Create the new location
     new_location = FileLocation(url=f'S3://{destination.lower()}/{key}',
