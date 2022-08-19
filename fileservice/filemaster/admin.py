@@ -64,10 +64,10 @@ admin.site.register(DownloadLog, DownloadLogAdmin)
 
 
 class FileOperationAdmin(admin.ModelAdmin):
-    fields = ('uuid', 'archivefile', 'task_id', 'creationdate', 'modifydate', 'origin', 'destination', 'origin_location', 'destination_location')
-    readonly_fields = ('completed', 'task_id', 'uuid', 'creationdate', 'modifydate', 'archivefile',  'origin', 'destination', 'origin_location', 'destination_location')
-    list_display = ('uuid', 'operation', 'archivefile', 'origin', 'destination', 'completed', 'creationdate', 'modifydate', )
-    sortable_by = ('creationdate', 'modifydate', 'archivefile', 'origin', 'destination', )
+    fields = ('uuid', 'archivefile', 'task_id', 'creationdate', 'modifydate', 'origin', 'destination', 'origin_location', 'destination_location', 'completiondate', 'succeeded')
+    readonly_fields = ('completed', 'task_id', 'uuid', 'creationdate', 'modifydate', 'archivefile',  'origin', 'destination', 'origin_location', 'destination_location', 'completiondate', 'succeeded')
+    list_display = ('uuid', 'operation', 'archivefile', 'origin', 'destination', 'creationdate', 'modifydate', 'completiondate', 'succeeded')
+    sortable_by = ('creationdate', 'modifydate', 'archivefile', 'origin', 'destination', 'completiondate', 'succeeded')
 
 admin.site.register(FileOperation, FileOperationAdmin)
 
