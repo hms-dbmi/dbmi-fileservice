@@ -17,6 +17,7 @@ from .files import ArchiveFileSearch
 from .files import DownloadLogList
 from .files import FileLocationList
 from .files import FileLocationDetail
+from .files import FileOperationList
 
 from filemaster.realignment import CreateRealignedFile
 from filemaster.uploader import UploaderComplete, UploaderCheck, UploaderMetadata
@@ -41,6 +42,8 @@ urlpatterns = [
     url(r'^api/location/(?P<pk>[^/]+)/?$', FileLocationDetail.as_view()),
     url(r'^api/file-detail/(?P<pk>[^/]+)/?$', ArchiveFileDetail.as_view()),
     url(r'^api/file-search/?$', ArchiveFileSearch.as_view()),
+    url(r'^api/file-operation/?$', FileOperationList.as_view()),
+    url(r'^api/file-operation/(?P<pk>[^/]+)/?$', FileOperationList.as_view()),
     url(r'^logout/?$', logout, name="logout"),
     url(r'^$', index, name="index"),
 ]

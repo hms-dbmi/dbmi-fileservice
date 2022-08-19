@@ -8,7 +8,7 @@ from boto.sts import STSConnection
 from boto.s3.connection import S3Connection
 from django.conf import settings
 
-from .models import FileLocation
+from .models import ArchiveFile, FileLocation
 
 import logging
 log = logging.getLogger(__name__)
@@ -132,7 +132,10 @@ def signedUrlDownload(archiveFile=None, hours=24):
     return False
 
 
-def awsCopyFile(archive_file, destination, origin):
+def awsCopyFile(archive_file_uuid, destination, origin):
+
+    # Fetch it
+    archive_file = ArchiveFile.objects.get(uuid=archive_file_uuid)
 
     # Get the location
     location = archive_file.get_location(origin)
@@ -167,7 +170,7 @@ def awsCopyFile(archive_file, destination, origin):
     # Add it
     archive_file.locations.add(new_location)
 
-    return new_location
+    return new_location.id
 
 
 def awsRemoveFile(location):
@@ -188,7 +191,10 @@ def awsRemoveFile(location):
     return True
 
 
-def awsMoveFile(archive_file, destination, origin):
+def awsMoveFile(archive_file_uuid, destination, origin):
+
+    # Fetch it
+    archive_file = ArchiveFile.objects.get(uuid=archive_file_uuid)
 
     # Get the current location
     location = archive_file.get_location(origin)
@@ -197,7 +203,7 @@ def awsMoveFile(archive_file, destination, origin):
         return False
 
     # Call other methods
-    new_location = awsCopyFile(archive_file, destination, origin)
+    new_location = awsCopyFile(archive_file.uuid, destination, origin)
     if new_location:
 
         # File was copied, remove from origin
@@ -210,7 +216,7 @@ def awsMoveFile(archive_file, destination, origin):
         else:
             log.error(f'Could not delete original file after move: {archive_file.uuid}')
 
-        return new_location
+        return new_location.id
 
     return False
 

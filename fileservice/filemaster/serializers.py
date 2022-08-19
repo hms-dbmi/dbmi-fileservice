@@ -14,7 +14,7 @@ from .models import ArchiveFile
 from .models import CustomUser
 from .models import DownloadLog
 from .models import FileLocation
-
+from .models import FileOperation
 
 class WritableField(serializers.Field):
     def to_representation(self, value):
@@ -44,6 +44,15 @@ class FileLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileLocation
         fields = ('id', 'url', 'uploadComplete', 'storagetype', 'filesize')
+
+
+class FileOperationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileOperation
+        fields = (
+            'uuid', 'archivefile', 'creationdate',
+            'modifydate', 'operation', 'completed',
+        )
 
 
 class TokenSerializer(serializers.ModelSerializer):
@@ -93,10 +102,10 @@ class ArchiveFileSimpleSerializer(TaggitSerializer, serializers.ModelSerializer)
     metadata = JSONFieldSerializer(required=False)
     permissions = serializers.ListField(read_only=True, source='get_permissions_display')
     expirationdate = serializers.DateField(required=False)
-    
+
     class Meta:
         model = ArchiveFile
-        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename', 
+        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename',
         'locations', 'permissions', 'creationdate', 'modifydate', 'expirationdate')
 
 
@@ -107,7 +116,7 @@ class ArchiveFileSerializer(ArchiveFileSimpleSerializer):
     class Meta:
         model = ArchiveFile
         lookup_field = 'uuid'
-        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename', 
+        fields = ('id', 'uuid', 'description', 'metadata', 'tags', 'owner', 'filename',
         'locations', 'permissions', 'creationdate', 'modifydate', 'expirationdate')
 
     def get_locations_list(self, instance):
