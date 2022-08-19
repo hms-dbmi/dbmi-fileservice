@@ -28,6 +28,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
+from django_q.tasks import async_task, result
 
 from filemaster.aws import awsCopyFile
 from filemaster.aws import awsMoveFile
@@ -39,10 +40,13 @@ from filemaster.models import ArchiveFile
 from filemaster.models import Bucket
 from filemaster.models import DownloadLog
 from filemaster.models import FileLocation
+from filemaster.models import FileOperation
+from filemaster.models import FILE_OPERATION_MOVE, FILE_OPERATION_COPY
 from filemaster.serializers import ArchiveFileSerializer
 from filemaster.serializers import ArchiveFileSimpleSerializer
 from filemaster.serializers import DownloadLogSerializer
 from filemaster.serializers import FileLocationSerializer
+from filemaster.serializers import FileOperationSerializer
 from filemaster.permissions import DjangoObjectPermissionsAll
 from filemaster.permissions import DjangoObjectPermissionsChange
 
@@ -236,10 +240,34 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
             # Get the location
             if not origin:
-                origin, path = next(archivefile.locations).get_bucket()
+                origin, path = next(archivefile.locations.all()).get_bucket()
                 log.debug(f'Origin not provided, using "{origin}"')
-        except:
-            return HttpResponseNotFound()
+
+            else:
+
+                # Ensure file exists at origin
+                for location in archivefile.locations.all():
+
+                    bucket, key = location.get_bucket()
+                    if bucket.lower() == origin.lower() and location.uploadComplete:
+
+                        # Check size
+                        if location.filesize > 1000000000:
+                            return HttpResponseBadRequest(f"ArchiveFile size is greater than 1GB, use the 'asynccopy' endpoint")
+
+                        break
+                else:
+                    log.debug(f'Origin "{origin}" does not contain archivefile')
+                    return HttpResponseBadRequest(f"Origin '{origin}' does not contain ArchiveFile '{uuid}'")
+
+        except ArchiveFile.DoesNotExist:
+            return HttpResponseNotFound(f'ArchiveFile \'{uuid}\' could not be found')
+
+        except Exception as e:
+            log.exception(f'Copy error: {e}', exc_info=True, extra={
+                'request': request, 'uuid': uuid,
+            })
+            return HttpResponseNotFound(f'Location for ArchiveFile \'{uuid}\' could not be found')
 
         # Check request
         if not uuid or not destination or not origin:
@@ -270,15 +298,107 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         try:
             # Perform the copy
-            new_location = awsCopyFile(archivefile, destination, origin)
-            if not new_location:
+            new_location_id = awsCopyFile(archivefile.uuid, destination, origin)
+            if not new_location_id:
                 log.error(f'Could not copy file {archivefile.uuid}')
                 return HttpResponseServerError(f'Could not copy file {archivefile.uuid}')
+
+            # Get the location
+            new_location = FileLocation.objects.get(id=new_location_id)
 
             return Response({'message': 'copied', 'url': new_location.url, 'uuid': uuid})
 
         except Exception as e:
             log.exception('File move error: {}'.format(e), exc_info=True, extra={
+                'archivefile': archivefile.id, 'uuid': uuid, 'location': location.id,
+                'origin': origin, 'destination': destination,
+            })
+
+            return HttpResponseServerError('Error copying file')
+
+    @action(detail=True, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    def asynccopy(self, request, uuid):
+
+        # Get bucket
+        destination = request.query_params.get('to')
+        origin = request.query_params.get('from')
+
+        # Ensure it exists
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Get the location
+            if not origin:
+                origin, path = next(archivefile.locations.all()).get_bucket()
+                log.debug(f'Origin not provided, using "{origin}"')
+
+            else:
+
+                # Ensure file exists at origin
+                for location in archivefile.locations.all():
+
+                    bucket, key = location.get_bucket()
+                    if bucket.lower() == origin.lower() and location.uploadComplete:
+                        break
+                else:
+                    log.debug(f'Origin "{origin}" does not contain archivefile')
+                    return HttpResponseBadRequest(f"Origin '{origin}' does not contain ArchiveFile '{uuid}'")
+
+        except ArchiveFile.DoesNotExist:
+            return HttpResponseNotFound(f'ArchiveFile \'{uuid}\' could not be found')
+
+        except Exception as e:
+            log.exception(f'Copy error: {e}', exc_info=True, extra={
+                'request': request, 'uuid': uuid,
+            })
+            return HttpResponseNotFound(f'Location for ArchiveFile \'{uuid}\' could not be found')
+
+        # Check request
+        if not uuid or not destination or not origin:
+            return HttpResponseBadRequest('File UUID, origin and destination bucket are required')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=origin)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{origin}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{origin}" does not exist in Fileservice')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=destination)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{destination}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{destination}" does not exist in Fileservice')
+
+        # Check permissions on file
+        if not request.user.has_perm('filemaster.change_archivefile', archivefile):
+            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{uuid}\'')
+
+        # Get location
+        location = archivefile.get_location(origin)
+        if not location:
+            return HttpResponseBadRequest(f'File {uuid} has multiple locations, \'from\' must be specified')
+
+        try:
+            # Perform the copy
+            task_id = async_task(awsCopyFile, archivefile.uuid, destination, origin, hook="filemaster.files.async_hook")
+
+            # Create the operation
+            operation = FileOperation(
+                archivefile=archivefile,
+                operation=FILE_OPERATION_COPY,
+                task_id=task_id,
+                origin_location=location,
+                origin=origin,
+                destination=destination,
+            )
+            operation.save()
+
+            return Response(operation.uuid, status=201)
+
+        except Exception as e:
+            log.exception('File copy error: {}'.format(e), exc_info=True, extra={
                 'archivefile': archivefile.id, 'uuid': uuid, 'location': location.id,
                 'origin': origin, 'destination': destination,
             })
@@ -300,6 +420,24 @@ class ArchiveFileList(viewsets.ModelViewSet):
             if not origin and archivefile.locations.first():
                 origin, path = archivefile.locations.first().get_bucket()
                 log.debug(f'Origin not provided, using "{origin}"')
+
+            else:
+
+                # Ensure file exists at origin
+                for location in archivefile.locations.all():
+
+                    bucket, key = location.get_bucket()
+                    if bucket.lower() == origin.lower() and location.uploadComplete:
+
+                        # Check size
+                        if location.filesize > 1000000000:
+                            return HttpResponseBadRequest(f"ArchiveFile size is greater than 1GB, use the 'asyncmove' endpoint")
+
+                        break
+                else:
+                    log.debug(f'Origin "{origin}" does not contain archivefile')
+                    return HttpResponseBadRequest(f"Origin '{origin}' does not contain ArchiveFile '{uuid}'")
+
         except ArchiveFile.DoesNotExist:
             return HttpResponseNotFound(f'ArchiveFile \'{uuid}\' could not be found')
 
@@ -338,10 +476,13 @@ class ArchiveFileList(viewsets.ModelViewSet):
 
         try:
             # Perform the copy
-            new_location = awsMoveFile(archivefile, destination, origin)
+            new_location_id = awsMoveFile(archivefile.uuid, destination, origin)
             if not new_location:
                 log.error(f'Could not move file {archivefile.uuid}')
                 return HttpResponseServerError(f'Could not move file {archivefile.uuid}')
+
+            # Get the location
+            new_location = FileLocation.objects.get(id=new_location_id)
 
             return Response({'message': 'moved', 'url': new_location.url, 'uuid': uuid})
 
@@ -352,6 +493,95 @@ class ArchiveFileList(viewsets.ModelViewSet):
             })
 
             return HttpResponseServerError('Error moving file')
+
+    @action(detail=True, methods=['post'], permission_classes=[DjangoObjectPermissionsAll])
+    def asyncmove(self, request, uuid):
+
+        # Get bucket
+        destination = request.query_params.get('to')
+        origin = request.query_params.get('from')
+
+        # Ensure it exists
+        try:
+            archivefile = ArchiveFile.objects.get(uuid=uuid)
+
+            # Get the location
+            if not origin:
+                origin, path = next(archivefile.locations.all()).get_bucket()
+                log.debug(f'Origin not provided, using "{origin}"')
+
+            else:
+
+                # Ensure file exists at origin
+                for location in archivefile.locations.all():
+
+                    bucket, key = location.get_bucket()
+                    if bucket.lower() == origin.lower() and location.uploadComplete:
+                        break
+                else:
+                    log.debug(f'Origin "{origin}" does not contain archivefile')
+                    return HttpResponseBadRequest(f"Origin '{origin}' does not contain ArchiveFile '{uuid}'")
+
+        except ArchiveFile.DoesNotExist:
+            return HttpResponseNotFound(f'ArchiveFile \'{uuid}\' could not be found')
+
+        except Exception as e:
+            log.exception(f'Move error: {e}', exc_info=True, extra={
+                'request': request, 'uuid': uuid,
+            })
+            return HttpResponseNotFound(f'Location for ArchiveFile \'{uuid}\' could not be found')
+
+        # Check request
+        if not uuid or not destination or not origin:
+            return HttpResponseBadRequest('File UUID, origin and destination bucket are required')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=origin)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{origin}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{origin}" does not exist in Fileservice')
+
+        try:
+            # Check bucket perms
+            if not request.user.has_perm('filemaster.write_bucket', Bucket.objects.get(name=destination)):
+                return HttpResponseForbidden(f'User does not have permissions on Bucket "{destination}"')
+        except Bucket.DoesNotExist:
+            return HttpResponseNotFound(f'Bucket "{destination}" does not exist in Fileservice')
+
+        # Check permissions on file
+        if not request.user.has_perm('filemaster.change_archivefile', archivefile):
+            return HttpResponseForbidden(f'User does not have \'change\' permission on \'{uuid}\'')
+
+        # Get location
+        location = archivefile.get_location(origin)
+        if not location:
+            return HttpResponseBadRequest(f'File {uuid} has multiple locations, \'from\' must be specified')
+
+        try:
+            # Perform the copy
+            task_id = async_task(awsMoveFile, archivefile.uuid, destination, origin, hook="filemaster.files.async_hook")
+
+            # Create the operation
+            operation = FileOperation(
+                archivefile=archivefile,
+                operation=FILE_OPERATION_MOVE,
+                task_id=task_id,
+                origin_location=location,
+                origin=origin,
+                destination=destination,
+            )
+            operation.save()
+
+            return Response(operation.uuid, status=201)
+
+        except Exception as e:
+            log.exception('File move error: {}'.format(e), exc_info=True, extra={
+                'archivefile': archivefile.id, 'uuid': uuid, 'location': location.id,
+                'origin': origin, 'destination': destination,
+            })
+
+            return HttpResponseServerError('Error copying file')
 
     @action(detail=True, methods=['get'], permission_classes=[DjangoObjectPermissionsAll])
     def download(self, request, uuid=None):
@@ -808,7 +1038,7 @@ class ArchiveFileDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ArchiveFileSimpleSerializer
     permission_classes = [IsAdminUser]
     filterset_fields = ['uuid', 'filename']
-    
+
 class FileLocationList(generics.ListCreateAPIView):
     queryset = FileLocation.objects.all()
     serializer_class = FileLocationSerializer
@@ -820,3 +1050,35 @@ class FileLocationDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = FileLocationSerializer
     permission_classes = [IsAdminUser]
     filterset_fields = ['storagetype', 'url']
+
+class FileOperationList(generics.ListAPIView):
+    lookup_field = 'uuid'
+    queryset = FileOperation.objects.all()
+    serializer_class = FileOperationSerializer
+    permission_classes = []
+    filterset_fields = ['uuid', 'archivefile', 'task_id', 'creationdate', 'modifydate']
+
+
+def async_hook(task):
+    """
+    Handles post async task processing
+
+    :param task: The async task
+    :type task: Task
+    """
+    try:
+        # Get the operation
+        operation = FileOperation.objects.get(task_id=task.id)
+
+        # Get the destination location
+        destination_location = next(l for l in operation.archivefile.locations.all() if f"://{operation.destination}" in l.url)
+
+        # Set it
+        operation.destination_location = destination_location
+        operation.save()
+
+    except FileOperation.DoesNotExist:
+        log.exception(f"File operation does not exist")
+
+    except Exception as e:
+        log.exception(f"Operation error: {e}", exc_info=True)
