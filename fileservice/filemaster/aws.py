@@ -216,7 +216,7 @@ def awsMoveFile(archive_file_uuid, destination, origin):
         else:
             log.error(f'Could not delete original file after move: {archive_file.uuid}')
 
-        return new_location.id
+        return new_location
 
     return False
 

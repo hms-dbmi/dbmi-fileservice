@@ -46,15 +46,6 @@ class FileLocationSerializer(serializers.ModelSerializer):
         fields = ('id', 'url', 'uploadComplete', 'storagetype', 'filesize')
 
 
-class FileOperationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FileOperation
-        fields = (
-            'uuid', 'archivefile', 'creationdate',
-            'modifydate', 'operation', 'completed',
-        )
-
-
 class TokenSerializer(serializers.ModelSerializer):
     token = serializers.ReadOnlyField(source='key')
     class Meta:
@@ -178,3 +169,18 @@ class DownloadLogSerializer(serializers.ModelSerializer):
         model = DownloadLog
         fields = ('archivefile', 'download_requested_on', 'requesting_user')
         depth = 1
+
+
+class FileOperationSerializer(serializers.ModelSerializer):
+    archivefile = ArchiveFileSimpleSerializer()
+    origin_location = FileLocationSerializer()
+    destination_location = FileLocationSerializer()
+
+    class Meta:
+        model = FileOperation
+        fields = (
+            'uuid', 'archivefile', 'creationdate',
+            'modifydate', 'operation', 'completed',
+            'origin', 'destination',
+            'origin_location', 'destination_location'
+        )
