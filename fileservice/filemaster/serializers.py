@@ -180,7 +180,7 @@ class FileOperationSerializer(serializers.ModelSerializer):
         model = FileOperation
         fields = (
             'uuid', 'archivefile', 'creationdate',
-            'modifydate', 'operation', 'completed',
-            'origin', 'destination',
+            'modifydate', 'operation', 'completiondate',
+            'origin', 'destination', 'succeeded',
             'origin_location', 'destination_location'
         )

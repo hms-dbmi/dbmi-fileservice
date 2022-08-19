@@ -395,7 +395,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             )
             operation.save()
 
-            return Response(operation.uuid, status=201)
+            return HttpResponse(operation.uuid, status=201)
 
         except Exception as e:
             log.exception('File copy error: {}'.format(e), exc_info=True, extra={
@@ -573,7 +573,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
             )
             operation.save()
 
-            return Response(operation.uuid, status=201)
+            return HttpResponse(operation.uuid, status=201)
 
         except Exception as e:
             log.exception('File move error: {}'.format(e), exc_info=True, extra={
