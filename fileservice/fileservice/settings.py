@@ -202,6 +202,7 @@ LOCAL_APPS = (
     'health_check.db',
     'dbmi_client',
     'dbmi_client.login',
+    'django_q',
 )
 
 # Fixes duplicate errors in MYSQL
@@ -352,6 +353,22 @@ if not BUCKETS:
 
 # END AWS S3 CONFIGURATION
 
+# DJANGO Q CONFIGURATION
+
+Q_CLUSTER = {
+    'name': 'dbmi-fileservice',
+    'workers': 8,
+    'recycle': 500,
+    'timeout': 3600,
+    'retry': 7200,
+    'compress': True,
+    'save_limit': 250,
+    'queue_limit': 500,
+    'cpu_affinity': 1,
+    'label': 'Django Q',
+    'orm': 'default',
+    'attempt_count': 1,
+}
 
 # LOGGING CONFIGURATION
 

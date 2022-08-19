@@ -31,8 +31,9 @@ from guardian.shortcuts import assign_perm
 from guardian.shortcuts import remove_perm
 from guardian.shortcuts import get_groups_with_perms
 from taggit.managers import TaggableManager
+from django_q.tasks import fetch
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 EXPIRATIONDATE = 60
 if settings.EXPIRATIONDATE:
@@ -44,6 +45,35 @@ GROUPTYPES = ["ADMINS", "DOWNLOADERS", "READERS", "WRITERS", "UPLOADERS"]
 def id_generator(size=18, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+FILE_OPERATION_COPY = "copy"
+FILE_OPERATION_MOVE = "move"
+FILE_OPERATIONS = (
+    (FILE_OPERATION_COPY, "Copy"),
+    (FILE_OPERATION_MOVE, "Move"),
+)
+
+
+class FileOperation(models.Model):
+    uuid = UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operation = models.CharField(max_length=200, blank=False, null=False, choices=FILE_OPERATIONS)
+    task_id = models.TextField(blank=False, null=False)
+    creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
+    modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
+    archivefile = models.ForeignKey("ArchiveFile", blank=False, null=False, on_delete=models.DO_NOTHING)
+    origin_location = models.ForeignKey("FileLocation", blank=False, null=False, on_delete=models.DO_NOTHING, related_name="origin_location")
+    destination_location = models.ForeignKey("FileLocation", blank=True, null=True, on_delete=models.DO_NOTHING, related_name="destination_location")
+    origin = models.TextField(blank=False, null=False)
+    destination = models.TextField(blank=False, null=False)
+
+    @property
+    def completed(self):
+        try:
+            # Check the task result
+            return fetch(self.task_id).success
+        except Exception as e:
+            logger.exception(f"Error: {e}", exc_info=True)
+
+        return False
 
 class FileLocation(models.Model):
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
@@ -101,7 +131,7 @@ class ArchiveFile(models.Model):
     def save(self, *args, **kwargs):
         # Check if the row with this hash already exists.
         if not self.pk and not self.expirationdate:
-            self.expirationdate = date.today() + timedelta(days=EXPIRATIONDATE) 
+            self.expirationdate = date.today() + timedelta(days=EXPIRATIONDATE)
         super(ArchiveFile, self).save(*args, **kwargs)
 
     def setDefaultPerms(self, group, types):
@@ -124,8 +154,8 @@ class ArchiveFile(models.Model):
             elif types == "DOWNLOADERS":
                 assign_perm('download_archivefile', g, self)
         except Exception as e:
-            log.error("ERROR setperms %s %s %s" % (e, group, types))
-            return         
+            logger.error("ERROR setperms %s %s %s" % (e, group, types))
+            return
 
     def removeDefaultPerms(self, group, types):
         try:
@@ -147,8 +177,8 @@ class ArchiveFile(models.Model):
             elif types == "DOWNLOADERS":
                 remove_perm('download_archivefile', g, self)
         except Exception as e:
-            log.error("ERROR %s" % e)
-            return         
+            logger.error("ERROR %s" % e)
+            return
 
     def setPerms(self, permissions):
         for types in GROUPTYPES:
@@ -171,7 +201,7 @@ class ArchiveFile(models.Model):
                 if groupname not in grouplist:
                     grouplist.append(groupname)
             except:
-                log.error("Error with %s" % g.name)
+                logger.error("Error with %s" % g.name)
         return grouplist
 
     def get_location(self, bucket):

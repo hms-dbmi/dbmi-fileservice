@@ -7,6 +7,7 @@ from filemaster.models import Bucket
 from filemaster.models import CustomUser
 from filemaster.models import DownloadLog
 from filemaster.models import FileLocation
+from filemaster.models import FileOperation
 
 from guardian.admin import GuardedModelAdmin
 
@@ -22,7 +23,7 @@ class CustomUserAdmin(admin.ModelAdmin):
 admin.site.register(CustomUser, CustomUserAdmin)
 
 
-class BucketAdmin(admin.ModelAdmin):
+class BucketAdmin(GuardedModelAdmin):
     list_display = ('name', )
 
 
@@ -34,7 +35,7 @@ class ArchiveFileAdmin(GuardedModelAdmin):
     list_display = ('filename', 'uuid', 'creationdate', 'owner')
     readonly_fields = ('uuid', 'creationdate')
     sortable_by = ('owner', 'creationdate', 'modifydate')
-    search_fields = ('owner__email', 'owner__username', 'filename', 'metadata', )
+    search_fields = ('uuid', 'owner__email', 'owner__username', 'filename', 'metadata', )
 
 
 admin.site.register(ArchiveFile, ArchiveFileAdmin)
@@ -60,6 +61,15 @@ class DownloadLogAdmin(admin.ModelAdmin):
 
 
 admin.site.register(DownloadLog, DownloadLogAdmin)
+
+
+class FileOperationAdmin(admin.ModelAdmin):
+    fields = ('uuid', 'archivefile', 'task_id', 'creationdate', 'modifydate', 'origin', 'destination', 'origin_location', 'destination_location')
+    readonly_fields = ('completed', 'task_id', 'uuid', 'creationdate', 'modifydate', 'archivefile',  'origin', 'destination', 'origin_location', 'destination_location')
+    list_display = ('uuid', 'operation', 'archivefile', 'origin', 'destination', 'completed', 'creationdate', 'modifydate', )
+    sortable_by = ('creationdate', 'modifydate', 'archivefile', 'origin', 'destination', )
+
+admin.site.register(FileOperation, FileOperationAdmin)
 
 
 def patch_admin(model, admin_site=None):
