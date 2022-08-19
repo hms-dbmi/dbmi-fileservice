@@ -59,9 +59,9 @@ class FileOperation(models.Model):
     task_id = models.TextField(blank=False, null=False)
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
     modifydate = models.DateTimeField(auto_now=True, auto_now_add=False)
-    archivefile = models.ForeignKey("ArchiveFile", blank=False, null=False, on_delete=models.DO_NOTHING)
-    origin_location = models.ForeignKey("FileLocation", blank=False, null=False, on_delete=models.DO_NOTHING, related_name="origin_location")
-    destination_location = models.ForeignKey("FileLocation", blank=True, null=True, on_delete=models.DO_NOTHING, related_name="destination_location")
+    archivefile = models.ForeignKey("ArchiveFile", blank=True, null=True, on_delete=models.SET_NULL)
+    origin_location = models.ForeignKey("FileLocation", blank=True, null=True, on_delete=models.SET_NULL, related_name="origin_location")
+    destination_location = models.ForeignKey("FileLocation", blank=True, null=True, on_delete=models.SET_NULL, related_name="destination_location")
     origin = models.TextField(blank=False, null=False)
     destination = models.TextField(blank=False, null=False)
 
@@ -308,7 +308,7 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
     """
     Create a token for each created user
     """
-    if created and instance.email is not 'AnonymousUser':
+    if created and instance.email != 'AnonymousUser':
         Token.objects.get_or_create(user=instance)
 
 

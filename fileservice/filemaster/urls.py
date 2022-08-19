@@ -26,6 +26,7 @@ app_name = FilemasterConfig.name
 
 router = DefaultRouter()
 router.register(r'file', ArchiveFileList)
+router.register(r'file-operation', FileOperationList)
 
 urlpatterns = [
     url(r'^groups?/?$', GroupList.as_view()),
@@ -42,8 +43,6 @@ urlpatterns = [
     url(r'^api/location/(?P<pk>[^/]+)/?$', FileLocationDetail.as_view()),
     url(r'^api/file-detail/(?P<pk>[^/]+)/?$', ArchiveFileDetail.as_view()),
     url(r'^api/file-search/?$', ArchiveFileSearch.as_view()),
-    url(r'^api/file-operation/?$', FileOperationList.as_view()),
-    url(r'^api/file-operation/(?P<pk>[^/]+)/?$', FileOperationList.as_view()),
     url(r'^logout/?$', logout, name="logout"),
     url(r'^$', index, name="index"),
 ]

@@ -1051,7 +1051,7 @@ class FileLocationDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdminUser]
     filterset_fields = ['storagetype', 'url']
 
-class FileOperationList(generics.ListAPIView):
+class FileOperationList(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'uuid'
     queryset = FileOperation.objects.all()
     serializer_class = FileOperationSerializer
