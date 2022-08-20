@@ -69,7 +69,9 @@ class FileOperation(models.Model):
     def completiondate(self):
         try:
             # Check the task result
-            return fetch(self.task_id).stopped
+            task = fetch(self.task_id)
+            if task:
+                return task.stopped
         except Exception as e:
             logger.exception(f"Error: {e}", exc_info=True)
 
@@ -79,7 +81,9 @@ class FileOperation(models.Model):
     def succeeded(self):
         try:
             # Check the task result
-            return fetch(self.task_id).success
+            task = fetch(self.task_id)
+            if task:
+                return task.success
         except Exception as e:
             logger.exception(f"Error: {e}", exc_info=True)
 
