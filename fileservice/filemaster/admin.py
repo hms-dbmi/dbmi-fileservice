@@ -65,7 +65,7 @@ admin.site.register(DownloadLog, DownloadLogAdmin)
 
 class FileOperationAdmin(admin.ModelAdmin):
     fields = ('uuid', 'archivefile', 'task_id', 'creationdate', 'modifydate', 'origin', 'destination', 'origin_location', 'destination_location', 'completiondate', 'succeeded')
-    readonly_fields = ('completed', 'task_id', 'uuid', 'creationdate', 'modifydate', 'archivefile',  'origin', 'destination', 'origin_location', 'destination_location', 'completiondate', 'succeeded')
+    readonly_fields = ('uuid', 'task_id', 'creationdate', 'modifydate', 'archivefile',  'origin', 'destination', 'origin_location', 'destination_location', 'completiondate', 'succeeded')
     list_display = ('uuid', 'operation', 'archivefile', 'origin', 'destination', 'creationdate', 'modifydate', 'completiondate', 'succeeded')
     sortable_by = ('creationdate', 'modifydate', 'archivefile', 'origin', 'destination', 'completiondate', 'succeeded')
 
