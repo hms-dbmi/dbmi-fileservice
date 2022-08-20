@@ -66,14 +66,24 @@ class FileOperation(models.Model):
     destination = models.TextField(blank=False, null=False)
 
     @property
-    def completed(self):
+    def completiondate(self):
+        try:
+            # Check the task result
+            return fetch(self.task_id).stopped
+        except Exception as e:
+            logger.exception(f"Error: {e}", exc_info=True)
+
+        return None
+
+    @property
+    def succeeded(self):
         try:
             # Check the task result
             return fetch(self.task_id).success
         except Exception as e:
             logger.exception(f"Error: {e}", exc_info=True)
 
-        return False
+        return None
 
 class FileLocation(models.Model):
     creationdate = models.DateTimeField(auto_now=False, auto_now_add=True)
