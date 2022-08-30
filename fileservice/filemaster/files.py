@@ -477,7 +477,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
         try:
             # Perform the copy
             new_location_id = awsMoveFile(archivefile.uuid, destination, origin)
-            if not new_location:
+            if not new_location_id:
                 log.error(f'Could not move file {archivefile.uuid}')
                 return HttpResponseServerError(f'Could not move file {archivefile.uuid}')
 
