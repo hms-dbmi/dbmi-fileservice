@@ -370,6 +370,10 @@ Q_CLUSTER = {
     'attempt_count': 1,
 }
 
+# DJANGO-AXES CONFIGURATION
+
+AXES_ENABLED = environment.get_bool('DJANGO_AXES_ENABLED', True)
+
 # LOGGING CONFIGURATION
 
 # Configure sentry

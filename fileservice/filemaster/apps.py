@@ -46,6 +46,7 @@ def buckets(sender, **kwargs):
 class FilemasterConfig(AppConfig):
     name = 'filemaster'
     verbose_name = "Filemaster"
+    default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
         """
@@ -56,4 +57,3 @@ class FilemasterConfig(AppConfig):
 
         # check for all our view permissions after a syncdb
         post_migrate.connect(add_view_permissions, sender=self)
-
