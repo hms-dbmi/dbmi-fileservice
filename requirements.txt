@@ -172,9 +172,9 @@ django-bootstrap3==22.1 \
     # via
     #   -r requirements.in
     #   django-dbmi-client
-django-dbmi-client==0.5.2 \
-    --hash=sha256:270fff5b6f089858b7bb6f4c3fe64c8d616348146feb5b8c6c1f158f1dab144d \
-    --hash=sha256:4dbd944c7fd5d4f13ce073facb761df175057d24ff4e28153a8a97e38c5d93cd
+django-dbmi-client==0.5.4 \
+    --hash=sha256:b1c7f6c15d9e96fe34b268a69587a1aa73a012557b45d48e9b43879115a097ec \
+    --hash=sha256:e37597b1f0de4f62d1121a1e27eb830291c6e8ef714e8939a8ac9507486192f5
     # via -r requirements.in
 django-filter==22.1 \
     --hash=sha256:ed429e34760127e3520a67f415bec4c905d4649fbe45d0d6da37e6ff5e0287eb \
