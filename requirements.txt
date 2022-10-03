@@ -20,13 +20,13 @@ boto==2.49.0 \
     --hash=sha256:147758d41ae7240dc989f0039f27da8ca0d53734be0eb869ef16e3adcfa462e8 \
     --hash=sha256:ea0d3b40a2d852767be77ca343b58a9e3a4b00d9db440efb8da74b4e58025e5a
     # via -r requirements.in
-boto3==1.24.82 \
-    --hash=sha256:2a9b283cd4208cfcea873baac29e5ceb011afbd5a5c5b7a35cb305f377c39f60 \
-    --hash=sha256:90d590eda672775ef5ad0cdd4f5c2a51a964e3de631f3deccbc96e29cf0cd5a9
+boto3==1.24.84 \
+    --hash=sha256:6194763348545bb1669ce8d03ba104be1ba822daa184613aa10b9303a6a79017 \
+    --hash=sha256:be151711bbb4db53e85dd5bbe506002ce6f2f21fc4e45fcf6d2cf356d32cc4c6
     # via -r requirements.in
-botocore==1.27.82 \
-    --hash=sha256:034cdcfb74bcca9124fcaafed857ad78ec572ff95ed802b0608fa7505aaf4a1f \
-    --hash=sha256:b122c7048a79fef53f3d45f7ca2999c2559e15fc4531653824ebd3154d77ede5
+botocore==1.27.84 \
+    --hash=sha256:11f05d2acdf9a5f722856704b7b951b180647fb4340e1b5048b27273dc323909 \
+    --hash=sha256:da15026329706caf83323d84996f5ff5c527837347633fca9b3b1be0efa60841
     # via
     #   boto3
     #   s3transfer
@@ -279,9 +279,9 @@ python-dateutil==2.8.2 \
     #   arrow
     #   botocore
     #   croniter
-pytz==2022.2.1 \
-    --hash=sha256:220f481bdafa09c3955dfbdddb7b57780e9a94f5127e35456a48589b9e0c0197 \
-    --hash=sha256:cea221417204f2d1a2aa03ddae3e867921971d0d76f14d87abb4414415bbdcf5
+pytz==2022.4 \
+    --hash=sha256:2c0784747071402c6e99f0bafdb7da0fa22645f06554c7ae06bf6358897e9c91 \
+    --hash=sha256:48ce799d83b6f8aab2020e369b627446696619e79645419610b9facd909b3174
     # via djangorestframework
 pyyaml==6.0 \
     --hash=sha256:01b45c0191e6d66c470b6cf1b9531a771a83c1c4208272ead47a3ae4f2f603bf \
@@ -435,7 +435,7 @@ wrapt==1.14.1 \
     # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==65.4.0 \
-    --hash=sha256:a8f6e213b4b0661f590ccf40de95d28a177cd747d098624ad3f69c40287297e9 \
-    --hash=sha256:c2d2709550f15aab6c9110196ea312f468f41cd546bceb24127a1be6fdcaeeb1
+setuptools==65.4.1 \
+    --hash=sha256:1b6bdc6161661409c5f21508763dc63ab20a9ac2f8ba20029aaaa7fdb9118012 \
+    --hash=sha256:3050e338e5871e70c72983072fe34f6032ae1cdeeeb67338199c2f74e083a80e
     # via django-axes
