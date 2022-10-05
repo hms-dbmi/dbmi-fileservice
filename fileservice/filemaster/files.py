@@ -60,7 +60,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     queryset = ArchiveFile.objects.all()
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
-    filter_class = ArchiveFileFilter
+    filterset_class = ArchiveFileFilter
     filter_backends = (rest_framework_filters.DjangoFilterBackend, DjangoObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
