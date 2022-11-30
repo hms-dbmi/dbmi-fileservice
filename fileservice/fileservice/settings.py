@@ -234,12 +234,6 @@ ANONYMOUS_USER_ID = 1
 DBMI_CLIENT_CONFIG = {
     'CLIENT': 'dbmi',
 
-    # Auth0 account details
-    'AUTH0_CLIENT_ID': environment.get_str('DBMI_AUTH0_CLIENT_ID', required=True),
-    'AUTH0_SECRET': environment.get_str('DBMI_AUTH0_SECRET'),
-    'AUTH0_TENANT': environment.get_str('DBMI_AUTH0_TENANT', required=True),
-    'JWT_AUTHZ_NAMESPACE': environment.get_str('DBMI_JWT_AUTHZ_NAMESPACE'),
-
     # Optionally disable logging
     'ENABLE_LOGGING': True,
     'LOG_LEVEL': environment.get_int('DBMI_LOG_LEVEL', default=logging.WARNING),
@@ -251,6 +245,9 @@ DBMI_CLIENT_CONFIG = {
     # AuthZ groups/roles/permissions
     'AUTHZ_ADMIN_GROUP': 'DBMI',
     'AUTHZ_ADMIN_PERMISSION': 'ADMIN',
+
+    # Set auth configurations
+    'AUTH_CLIENTS': environment.get_dict('AUTH_CLIENTS', required=True),
 
     # Login redirect
     'LOGIN_REDIRECT_URL': environment.get_str('DBMI_LOGIN_REDIRECT_URL'),
