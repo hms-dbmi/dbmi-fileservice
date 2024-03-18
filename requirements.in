@@ -8,7 +8,6 @@ django-bootstrap3<23.0
 django-filter<23.0
 django-health-check<4.0
 django-guardian<3.0
-django-nose<2.0
 django-picklefield<4.0
 django-taggit<4.0
 dj-taggit-serializer<2.0
