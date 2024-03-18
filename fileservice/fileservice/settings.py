@@ -196,7 +196,6 @@ LOCAL_APPS = (
     'bootstrap3',
     'taggit',
     'taggit_serializer',
-    'django_nose',
     'axes',
     'health_check',
     'health_check.db',
@@ -445,11 +444,3 @@ LOGGING = {
     },
 }
 # END LOGGING CONFIGURATION
-
-
-# TEST CONFIGURATION
-TEST_AWS_KEY = environment.get_str('TEST_AWS_KEY', 'AKIAxxxxx')
-TEST_AWS_SECRET = environment.get_str('TEST_AWS_SECRET', 'asdfadsfadsf')
-EXPIRATIONDATE = 200
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-# END TEST CONFIGURATION
