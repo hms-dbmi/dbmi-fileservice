@@ -204,6 +204,8 @@ LOCAL_APPS = (
     'django_q',
 )
 
+EXPIRATIONDATE = 200
+
 # Fixes duplicate errors in MYSQL
 TAGGIT_CASE_INSENSITIVE = True
 
