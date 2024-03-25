@@ -196,7 +196,6 @@ LOCAL_APPS = (
     'bootstrap3',
     'taggit',
     'taggit_serializer',
-    'django_nose',
     'axes',
     'health_check',
     'health_check.db',
@@ -204,6 +203,8 @@ LOCAL_APPS = (
     'dbmi_client.login',
     'django_q',
 )
+
+EXPIRATIONDATE = 200
 
 # Fixes duplicate errors in MYSQL
 TAGGIT_CASE_INSENSITIVE = True
@@ -445,11 +446,3 @@ LOGGING = {
     },
 }
 # END LOGGING CONFIGURATION
-
-
-# TEST CONFIGURATION
-TEST_AWS_KEY = environment.get_str('TEST_AWS_KEY', 'AKIAxxxxx')
-TEST_AWS_SECRET = environment.get_str('TEST_AWS_SECRET', 'asdfadsfadsf')
-EXPIRATIONDATE = 200
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-# END TEST CONFIGURATION
