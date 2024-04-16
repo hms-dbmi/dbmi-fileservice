@@ -13,9 +13,8 @@ jobs:
   scan:
     uses: hms-dbmi/actions/.github/workflows/scan.yml@main
     secrets:
-      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-      DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      DOCKER_HUB_USERNAME: ${{ secrets.BLHMSDBMI_DOCKERHUB_USERNAME }}
+      DOCKER_HUB_PASSWORD: ${{ secrets.BLHMSDBMI_DOCKERHUB_PASSWORD }}
     with:
       repository: ${{ github.repository }}
       commit: ${{ github.sha }}
