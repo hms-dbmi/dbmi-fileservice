@@ -8,6 +8,8 @@ import warnings
 import logging
 
 from dbmi_client import environment
+from dbmi_client import reporting
+from dbmi_client.logging import config
 
 # PATH CONFIGURATION
 
@@ -372,77 +374,49 @@ Q_CLUSTER = {
 
 AXES_ENABLED = environment.get_bool('DJANGO_AXES_ENABLED', True)
 
-# LOGGING CONFIGURATION
+#####################################################################################
+# Logging settings
+#####################################################################################
 
-# Configure sentry
-if environment.get_str('RAVEN_URL', default=None):
-    RAVEN_CONFIG = {
-        'dsn': environment.get_str('RAVEN_URL'),
-        'site': 'fileservice',
-    }
+# Configure  Sentry
+reporting.sentry(
+    sentry_dsn=environment.get_str("SENTRY_DSN", required=True),
+    release=f'{environment.get_str("DBMI_APP_NAME")}@{environment.get_str("DBMI_APP_VERSION")}',
+    environment=environment.get_str("DBMI_ENV", "prod"),
+    sentry_trace_rate=environment.get_float("SENTRY_TRACES_RATE", default=0.0),
+    sentry_profile_rate=environment.get_float("SENTRY_PROFILES_RATE", default=0.0),
+)
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'console': {
-            'format': '[DBMI-Fileservice] - [%(asctime)s][%(levelname)s]'
-                      '[%(name)s.%(funcName)s:%(lineno)d] - %(message)s',
-        },
+# Output the standard logging configuration
+LOGGING = config('DBMI-FILESERVICE', root_level=logging.DEBUG)
+
+# Disable warning level for 4xx request logging
+LOGGING['loggers'].update({
+    'django.request': {
+        'handlers': ['console'],
+        'level': 'ERROR',
+        'propagate': True,
     },
-    'handlers': {
-        'sentry': {
-            'level': 'ERROR',  # To capture more than ERROR, change to WARNING, INFO, etc.
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
-            'tags': {'custom-tag': 'x'},
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'console',
-            'stream': stdout,
-        }
+    'boto3': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': True,
     },
-    'root': {
-        'handlers': ['console', 'sentry', ],
-        'level': 'DEBUG',
+    'botocore': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': True,
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console', ],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'raven': {
-            'level': 'WARNING',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-        'sentry.errors': {
-            'level': 'WARNING',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-        'botocore': {
-            'level': 'WARNING',
-            'handlers': ['console'],
-            'propagate': True,
-        },
-        'boto': {
-            'level': 'WARNING',
-            'handlers': ['console'],
-            'propagate': True,
-        },
-        'boto3': {
-            'level': 'WARNING',
-            'handlers': ['console'],
-            'propagate': True,
-        },
-        's3transfer': {
-            'level': 'WARNING',
-            'handlers': ['console'],
-            'propagate': True,
-        },
+    's3transfer': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': True,
     },
-}
-# END LOGGING CONFIGURATION
+    'urllib3': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': True,
+    },
+})
+
+#####################################################################################

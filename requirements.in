@@ -3,7 +3,7 @@ boto3<2.0
 croniter<2.0
 Django<5.0
 django-axes<5.28
-django-dbmi-client<2.0
+django-dbmi-client<3.0
 django-bootstrap3<23.0
 django-filter<23.0
 django-health-check<4.0
@@ -17,5 +17,4 @@ djangorestframework-guardian<2.0
 jsonfield<4.0
 mysqlclient<3.0
 pyyaml<7.0
-raven<7.0
 requests<3.0
