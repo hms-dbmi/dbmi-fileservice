@@ -1,4 +1,4 @@
-FROM hmsdbmitc/dbmisvc:debian12-slim-python3.11-0.6.1 AS builder
+FROM hmsdbmitc/dbmisvc:debian12-slim-python3.11-0.6.2 AS builder
 
 # Install requirements
 RUN apt-get update \
@@ -20,7 +20,23 @@ RUN pip install -U wheel \
     && pip wheel -r /requirements.txt \
         --wheel-dir=/root/wheels
 
-FROM hmsdbmitc/dbmisvc:debian12-slim-python3.11-0.6.1
+FROM hmsdbmitc/dbmisvc:debian12-slim-python3.11-0.6.2
+
+ARG APP_NAME="dbmi-fileservice"
+ARG APP_CODENAME="dbmi-fileservice"
+ARG VERSION
+ARG COMMIT
+ARG DATE
+
+LABEL org.label-schema.schema-version=1.0 \
+    org.label-schema.vendor="HMS-DBMI" \
+    org.label-schema.version=${VERSION} \
+    org.label-schema.name=${APP_NAME} \
+    org.label-schema.build-date=${DATE} \
+    org.label-schema.description="DBMI Fileservice" \
+    org.label-schema.url="https://github.com/hms-dbmi/dbmi-fileservice" \
+    org.label-schema.vcs-url="https://github.com/hms-dbmi/dbmi-fileservice" \
+    org.label-schema.vcf-ref=${COMMIT}
 
 # Copy Python wheels from builder
 COPY --from=builder /root/wheels /root/wheels
@@ -50,6 +66,10 @@ ADD docker-entrypoint-init.d/* /docker-entrypoint-init.d/
 COPY /fileservice /app
 
 # Set app parameters. These can be overridden in the ECS Task Definition's container environment variables.
+ENV DBMI_APP_NAME=${APP_NAME}
+ENV DBMI_APP_CODENAME=${APP_CODENAME}
+ENV DBMI_APP_VERSION=${VERSION}
+ENV DBMI_APP_COMMIT=${COMMIT}
 ENV DBMI_ENV=prod
 ENV DBMI_PARAMETER_STORE_PREFIX=dbmi.fileservice.${DBMI_ENV}
 ENV DBMI_PARAMETER_STORE_PRIORITY=true
