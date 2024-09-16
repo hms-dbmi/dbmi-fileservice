@@ -1,6 +1,6 @@
 [project]
 name = "dbmi-fileservice"
-version = "1.0.3-rc.1"
+version = "1.0.3"
 description = "The file service for DBMI services"
 readme = "README.md"
 requires-python = ">=3.9"
