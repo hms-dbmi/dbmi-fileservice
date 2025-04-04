@@ -1,3 +1,11 @@
+## [1.0.5-rc.1](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.4...v1.0.5-rc.1) (2025-04-04)
+
+
+### Bug Fixes
+
+* **Dockerfile:** Updated base image ([e683347](https://github.com/hms-dbmi/dbmi-fileservice/commit/e683347e64b0f6ce8b24d4e8139b41c150fa19c6))
+* **requirements:** Updated Python requirements ([8fee9b4](https://github.com/hms-dbmi/dbmi-fileservice/commit/8fee9b4810d3f2441d2293623df16e894db41ef8))
+
 ## [1.0.4](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.3...v1.0.4) (2024-09-24)
 
 
