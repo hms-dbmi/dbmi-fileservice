@@ -1,3 +1,10 @@
+## [1.0.7-rc.1](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.6...v1.0.7-rc.1) (2025-10-31)
+
+
+### Bug Fixes
+
+* **files:** Updated import due to removal from recent version ([3b53c09](https://github.com/hms-dbmi/dbmi-fileservice/commit/3b53c091ece73eab43ddb92b1d8c8e7b2dd589fd))
+
 ## [1.0.6](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.5...v1.0.6) (2025-10-28)
 
 
