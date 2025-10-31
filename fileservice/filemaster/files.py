@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 
 from django_filters import rest_framework as rest_framework_filters
-from rest_framework_guardian.filters import DjangoObjectPermissionsFilter
+from rest_framework_guardian.filters import ObjectPermissionsFilter
 from guardian.shortcuts import get_objects_for_user
 
 from django.http import HttpResponseBadRequest
@@ -61,7 +61,7 @@ class ArchiveFileList(viewsets.ModelViewSet):
     serializer_class = ArchiveFileSerializer
     lookup_field = 'uuid'
     filterset_class = ArchiveFileFilter
-    filter_backends = (rest_framework_filters.DjangoFilterBackend, DjangoObjectPermissionsFilter,)
+    filter_backends = (rest_framework_filters.DjangoFilterBackend, ObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
         log.debug("[files][ArchiveFileList][pre_savepre_save] - Making user owner.")
