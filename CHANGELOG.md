@@ -1,3 +1,10 @@
+## [1.0.10-rc.2](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.10-rc.1...v1.0.10-rc.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* **requirements:** Updated Python requirements ([656e35c](https://github.com/hms-dbmi/dbmi-fileservice/commit/656e35c5935c401df5d6c888a7c1a4f4ec84447c))
+
 ## [1.0.10-rc.1](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.9...v1.0.10-rc.1) (2026-02-02)
 
 
