@@ -1,3 +1,10 @@
+## [1.0.12-rc.1](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.11...v1.0.12-rc.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* **dependencies:** Updated django-axes to v8 ([8dd5f68](https://github.com/hms-dbmi/dbmi-fileservice/commit/8dd5f685cf111237c27933a25a65846f6e62740d))
+
 ## [1.0.11](https://github.com/hms-dbmi/dbmi-fileservice/compare/v1.0.10...v1.0.11) (2026-03-12)
 
 
